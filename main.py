@@ -1,16 +1,39 @@
-# This is a sample Python script.
+import geopandas as gpd
+import pyogrio
+import os
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+layers = pyogrio.list_layers(
+    r"Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb"
+)
+
+print(layers)
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+gdf = gpd.read_file(
+    r"Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
+    layer="Campsites"
+)
+def get_open_campsites():
+    return gdf[gdf["STATUS"] == "open"]
 
+def get_campsites_on_lake(lake):
+    return gdf[
+        (gdf["LAKE_NAME"] == lake)
+        &
+        (gdf["STATUS"] == "open")
+    ]
+# print(gdf.head())
+# print()
+# print(gdf.columns)
+# print()
+# print(gdf.info())
+print(gdf["LAKE_NAME"].nunique())
+# print(sorted(gdf["LAKE_NAME"].unique()))
+# print(gdf[gdf["LAKE_NAME"].str.contains("Insula")])
+#
+# print(gdf["STATUS"].value_counts())
+# print(get_open_campsites())
+Lake = "Davis Lake"
+print("campsites on " + Lake)
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+print(get_campsites_on_lake(Lake))
