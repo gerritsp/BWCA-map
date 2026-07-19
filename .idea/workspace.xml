@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="ujk" />
+    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="ujk">
+      <change afterPath="$PROJECT_DIR$/Lake.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Portage.py" beforeDir="false" afterPath="$PROJECT_DIR$/Portage.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -23,12 +27,12 @@
     &quot;assignee&quot;: &quot;gerritsp&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/gerritsp/BWCA-map.git&quot;,
-    &quot;accountId&quot;: &quot;68bf418f-cdde-43d9-b1bd-d7ed0c61d8f1&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/gerritsp/BWCA-map.git",
+    "accountId": "d54b3067-2030-4eb4-95eb-7fdee4120d6c"
   }
-}</component>
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1,
   &quot;fromUser&quot;: false
@@ -81,7 +85,15 @@
       <option name="project" value="LOCAL" />
       <updated>1784431403930</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="ujk">
+      <option name="closed" value="true" />
+      <created>1784473492727</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1784473492727</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

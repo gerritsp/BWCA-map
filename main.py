@@ -22,6 +22,16 @@ def get_campsites_on_lake(lake):
         &
         (gdf["STATUS"] == "open")
     ]
+def get_num_campsites(num):
+    lake_name = []
+    for lake in gdf["LAKE_NAME"].unique():
+        x = get_campsites_on_lake(lake)
+        if x.shape[0] == num:
+            lake_name.append(lake)
+
+
+    return  len(lake_name), lake_name
+
 def get_geometry(gdf):
     gdf["x"] = gdf.geometry.x
     gdf["y"] = gdf.geometry.y
@@ -46,8 +56,12 @@ print(gdf["LAKE_NAME"].nunique())
 # print("campsites on " + Lake)
 #
 # print(get_campsites_on_lake(Lake))
-print(gdf.crs)
-print(get_geometry(gdf))
+# print(gdf.crs)
+# print(get_geometry(gdf))
 # print(highest["LatWGS84_DDM"])
 # print(highest["LongWGS84_DDM"])
+# print(get_num_campsites(1))
+counts = gdf["LAKE_NAME"].value_counts()
 
+# print(counts[counts == 1])
+print(counts.head())
