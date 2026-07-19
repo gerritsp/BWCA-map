@@ -1,20 +1,60 @@
 import geopandas as gpd
 import pyogrio
 import os
+from Campsite import Campsite
 
 layers = pyogrio.list_layers(
-    r"Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb"
+    r"Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb"
 )
-
-print(layers)
-
-
+water_layers = pyogrio.list_layers(
+    "data/lakes/water_dnr_hydrography.gdb"
+)
 gdf = gpd.read_file(
-    r"Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
+    r"Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
     layer="Campsites"
 )
-def get_open_campsites():
-    return gdf[gdf["STATUS"] == "open"]
+# print(layers)
+
+
+def create_Lake_objects(gdf):
+    lakes = {}
+    for lake_name in gdf["LAKE_NAME"].unique():
+        lake_data = get_campsites_on_lake(lake_name)
+
+        avg_x = lake_data.geometry.x.mean()
+        avg_y = lake_data.geometry.y.mean()
+
+        lakes[lake_name] = Lake(
+            name=lake_name,
+            x=avg_x,
+            y=avg_y
+        )
+    return lakes
+def create_campsites(gdf,lakes):
+    campsites = []
+
+    for _, row in gdf.iterrows():
+        lake = lakes[row["LAKE_NAME"]]
+        campsite = Campsite(
+            site_number=row["CSITENO"],
+            lake=lake,
+            status=row["STATUS"],
+            district=row["District"],
+            utm_x=row.geometry.x,
+            utm_y=row.geometry.y
+        )
+
+        lake.campsites.append(campsite)
+
+def create_map(gdf):
+    lakes = create_lake_objects(gdf)
+
+    create_campsites(gdf, lakes)
+
+    return lakes
+
+
+
 
 def get_campsites_on_lake(lake):
     return gdf[
@@ -22,15 +62,7 @@ def get_campsites_on_lake(lake):
         &
         (gdf["STATUS"] == "open")
     ]
-def get_num_campsites(num):
-    lake_name = []
-    for lake in gdf["LAKE_NAME"].unique():
-        x = get_campsites_on_lake(lake)
-        if x.shape[0] == num:
-            lake_name.append(lake)
 
-
-    return  len(lake_name), lake_name
 
 def get_geometry(gdf):
     gdf["x"] = gdf.geometry.x
@@ -41,27 +73,4 @@ def get_geometry(gdf):
     west = gdf.loc[gdf["x"].idxmin()]
     return highest, lowest,east,west
 
-# print(gdf.head())
-# print()
-# print(gdf.columns)
-# print()
-# print(gdf.info())
-print(gdf["LAKE_NAME"].nunique())
-# print(sorted(gdf["LAKE_NAME"].unique()))
-# print(gdf[gdf["LAKE_NAME"].str.contains("Insula")])
-#
-# print(gdf["STATUS"].value_counts())
-# print(get_open_campsites())
-# Lake = "Davis Lake"
-# print("campsites on " + Lake)
-#
-# print(get_campsites_on_lake(Lake))
-# print(gdf.crs)
-# print(get_geometry(gdf))
-# print(highest["LatWGS84_DDM"])
-# print(highest["LongWGS84_DDM"])
-# print(get_num_campsites(1))
-counts = gdf["LAKE_NAME"].value_counts()
 
-# print(counts[counts == 1])
-print(counts.head())
