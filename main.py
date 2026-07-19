@@ -6,9 +6,9 @@ from Campsite import Campsite
 layers = pyogrio.list_layers(
     r"Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb"
 )
-water_layers = pyogrio.list_layers(
-    "data/lakes/water_dnr_hydrography.gdb"
-)
+# water_layers = pyogrio.list_layers(
+#     r"Data/Lakes/water_dnr_hydrography.gdb"
+# )
 gdf = gpd.read_file(
     r"Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
     layer="Campsites"
