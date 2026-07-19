@@ -2,66 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Campsite.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000001.TablesByName.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000001.freelist" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000001.gdbindexes" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000001.gdbtable" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000001.gdbtablx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000002.gdbtable" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000002.gdbtablx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000003.gdbindexes" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000003.gdbtable" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000003.gdbtablx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000004.CatItemsByPhysicalName.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000004.CatItemsByType.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000004.FDO_UUID.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000004.freelist" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000004.gdbindexes" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000004.gdbtable" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000004.gdbtablx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000004.horizon" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000004.spx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000005.CatItemTypesByName.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000005.CatItemTypesByParentTypeID.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000005.CatItemTypesByUUID.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000005.gdbindexes" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000005.gdbtable" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000005.gdbtablx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000006.CatRelsByDestinationID.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000006.CatRelsByOriginID.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000006.CatRelsByType.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000006.FDO_UUID.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000006.freelist" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000006.gdbindexes" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000006.gdbtable" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000006.gdbtablx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000007.CatRelTypesByBackwardLabel.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000007.CatRelTypesByDestItemTypeID.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000007.CatRelTypesByForwardLabel.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000007.CatRelTypesByName.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000007.CatRelTypesByOriginItemTypeID.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000007.CatRelTypesByUUID.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000007.gdbindexes" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000007.gdbtable" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000007.gdbtablx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000009.freelist" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000009.gdbtable" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000009.gdbtablx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000009.horizon" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a00000009.spx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a0000000a.FDO_GlobalID.atx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a0000000a.freelist" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a0000000a.gdbindexes" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a0000000a.gdbtable" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a0000000a.gdbtablx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a0000000a.horizon" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/a0000000a.spx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/gdb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Data/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb/timestamps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Map.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Portage.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Campsite.py" beforeDir="false" afterPath="$PROJECT_DIR$/Campsite.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -79,22 +20,22 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "gerritsp"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;gerritsp&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/gerritsp/BWCA-map.git",
-    "accountId": "68bf418f-cdde-43d9-b1bd-d7ed0c61d8f1"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/gerritsp/BWCA-map.git&quot;,
+    &quot;accountId&quot;: &quot;68bf418f-cdde-43d9-b1bd-d7ed0c61d8f1&quot;
   }
-}]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 1,
-  "fromUser": false
-}]]></component>
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1,
+  &quot;fromUser&quot;: false
+}</component>
   <component name="ProjectId" id="3GdkZGqm2lCbsC23mCIWid93N3d" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -106,10 +47,13 @@
     "Python.main.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/gerritsp/PycharmProjects/BWCA map/Data"
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/Users/gerritsp/PycharmProjects/BWCA map",
+    "nodejs_package_manager_path": "npm"
   }
 }]]></component>
   <component name="RecentsManager">
