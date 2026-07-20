@@ -42,11 +42,11 @@ def get_geometry(gdf):
     return highest, lowest,east,west
 
 
-# print(gdf.head())
-# print()
-# print(gdf.columns)
-# print()
-# print(gdf.info())
+print(gdf.head())
+print()
+print(gdf.columns)
+print()
+print(gdf.info())
 print(gdf["LAKE_NAME"].nunique())
 # print(sorted(gdf["LAKE_NAME"].unique()))
 # print(gdf[gdf["LAKE_NAME"].str.contains("Insula")])

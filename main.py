@@ -13,6 +13,10 @@ gdf = gpd.read_file(
     r"Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
     layer="Campsites"
 )
+gdfhydro = gpd.read_file(
+    "Data/Lakes/water_dnr_hydrography.gdb",
+    layer="dnr_hydro_features_all"
+)
 # print(layers)
 
 
