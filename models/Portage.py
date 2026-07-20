@@ -1,4 +1,4 @@
-from Lake import Lake
+from models.Lake import Lake
 class Portage:
     def __init__(self, Lake_a: Lake, Lake_b: Lake, length_rods: int):
 

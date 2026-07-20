@@ -2,10 +2,10 @@ import geopandas as gpd
 import pyogrio
 import os
 layers = pyogrio.list_layers(
-    r"Data/Lakes/water_dnr_hydrography_uncompressed.gdb"
+    r"../Data/Lakes/water_dnr_hydrography_uncompressed.gdb"
 )
 gdf = gpd.read_file(
-    "Data/Lakes/water_dnr_hydrography_uncompressed.gdb",
+    "../Data/Lakes/water_dnr_hydrography_uncompressed.gdb",
     layer="dnr_hydro_features_all"
 )
 # print(layers)
@@ -18,7 +18,5 @@ gdf = gpd.read_file(
 lakefinder = gdf[gdf["in_lakefinder"] == "Y"]
 print(len(lakefinder))
 
-# bwca_lakes.to_file(
-#     "data/processed/bwca_lakes.geojson",
-#     driver="GeoJSON"
-# )
+
+print(gdf["wb_class"].value_counts())

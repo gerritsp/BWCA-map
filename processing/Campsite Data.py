@@ -1,16 +1,14 @@
 import geopandas as gpd
 import pyogrio
-import os
-from Campsite import Campsite
 
 layers = pyogrio.list_layers(
-    r"Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb"
+    r"../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb"
 )
 gdf = gpd.read_file(
-    r"Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
+    r"../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
     layer="Campsites"
 )
-# print(layers)
+print(layers)
 
 
 def get_open_campsites():
@@ -42,16 +40,16 @@ def get_geometry(gdf):
     return highest, lowest,east,west
 
 
-print(gdf.head())
-print()
-print(gdf.columns)
-print()
-print(gdf.info())
+# print(gdf.head())
+# print()
+# print(gdf.columns)
+# print()
+# print(gdf.info())
 print(gdf["LAKE_NAME"].nunique())
 # print(sorted(gdf["LAKE_NAME"].unique()))
 # print(gdf[gdf["LAKE_NAME"].str.contains("Insula")])
 #
-# print(gdf["STATUS"].value_counts())
+print(gdf["STATUS"].value_counts())
 # print(get_open_campsites())
 # Lake = "Amber Lake"
 # print("campsites on " + Lake)
@@ -62,8 +60,8 @@ print(gdf["LAKE_NAME"].nunique())
 # print(highest["LatWGS84_DDM"])
 # print(highest["LongWGS84_DDM"])
 # print(get_num_campsites(1))
-counts = gdf["LAKE_NAME"].value_counts()
-
-print(counts[counts == 1])
-print(counts.head(10))
+# counts = gdf["LAKE_NAME"].value_counts()
+#
+# print(counts[counts == 1])
+# print(counts.head(10))
 

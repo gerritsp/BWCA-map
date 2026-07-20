@@ -1,7 +1,6 @@
 import geopandas as gpd
 import pyogrio
-import os
-from Campsite import Campsite
+from models.Campsite import Campsite
 
 layers = pyogrio.list_layers(
     r"Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb"
