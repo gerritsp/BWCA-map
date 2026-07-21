@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="new dataset hydrowhatever">
-      <change afterPath="$PROJECT_DIR$/Data/processed/bwca_lakes" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Campsite Data.py" beforeDir="false" afterPath="$PROJECT_DIR$/Campsite Data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LakeData.py" beforeDir="false" afterPath="$PROJECT_DIR$/LakeData.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="merged almost ready to write to file">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Data/processed/bwca_lakes" beforeDir="false" afterPath="$PROJECT_DIR$/processing/processed_datasets.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Map.py" beforeDir="false" afterPath="$PROJECT_DIR$/Map.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/Campsite.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Campsite.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/fileCreator.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/fileCreator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,7 +49,11 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "Python.Campsite Data.executor": "Run",
     "Python.LakeData.executor": "Run",
+    "Python.Map.executor": "Run",
+    "Python.boundariesData.executor": "Run",
+    "Python.fileCreator.executor": "Run",
     "Python.main.executor": "Run",
+    "Python.processed_datasets.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
@@ -65,6 +70,8 @@
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\Data" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\models" />
+      <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\processing" />
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\Data\Campsites" />
     </key>
   </component>
@@ -131,7 +138,23 @@
       <option name="project" value="LOCAL" />
       <updated>1784502385413</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="new dataset hydrowhatever">
+      <option name="closed" value="true" />
+      <created>1784557396882</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1784557396882</updated>
+    </task>
+    <task id="LOCAL-00008" summary="merged almost ready to write to file">
+      <option name="closed" value="true" />
+      <created>1784582272200</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1784582272200</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -142,6 +165,7 @@
     <MESSAGE value="new classes" />
     <MESSAGE value="one model" />
     <MESSAGE value="new dataset hydrowhatever" />
-    <option name="LAST_COMMIT_MESSAGE" value="new dataset hydrowhatever" />
+    <MESSAGE value="merged almost ready to write to file" />
+    <option name="LAST_COMMIT_MESSAGE" value="merged almost ready to write to file" />
   </component>
 </project>

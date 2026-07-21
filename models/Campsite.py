@@ -4,6 +4,7 @@ from Lake import Lake
 @dataclass
 class Campsite:
     site_number: int
+    camp_id: str
     lake: Lake
     status: str
     district: str

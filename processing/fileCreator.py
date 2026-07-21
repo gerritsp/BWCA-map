@@ -22,36 +22,41 @@ bwca_lakes = gpd.clip(
     lakes,
     boundary
 )
+
 raw_campesites = raw_campesites.to_crs(bwca_lakes.crs)
 raw_campesites = raw_campesites[
     raw_campesites["STATUS"] == "open"
 ]
 
-raw_campesites = raw_campesites[
-    [
-        "CSITENO",
-        "LAKE_NAME",
-        "STATUS",
-        "District",
-        "geometry"
-    ]
-]
 
 campsites = gpd.sjoin_nearest(
     raw_campesites,
     bwca_lakes,
-    how="left"
+    how="left",
+    distance_col="distance_to_lake"
+)
+
+campsites["camp_id"] = (
+    campsites["LAKE_NAME"]
+    + "_"
+    + campsites["CSITENO"].astype(str)
 )
 campsites = campsites[
     [
+        "camp_id",
         "CSITENO",
-        "LAKE_NAME",
+        "LAKE_NAME",      # USFS name
+        "map_label",      # DNR name
+        "fw_id",
         "STATUS",
         "District",
-        "fw_id",
+        "acres",
+        "shore_mi",
+        "distance_to_lake",
         "geometry"
     ]
 ]
+
 print(campsites.columns)
 print("Total campsites:", len(campsites))
 print("Matched:", campsites["fw_id"].notna().sum())
@@ -83,10 +88,10 @@ print(len(campsites))
 # [1947 rows x 6 columns]
 # 4514
 # 2021
-# bwca_lakes.to_parquet(
-#     "../Data/Processed/bwca_lakes.parquet"
-# )
-#
-# campsites.to_parquet(
-#     "../Data/Processed/bwca_campsites.parquet"
-# )
+bwca_lakes.to_parquet(
+    "../Data/Processed/bwca_lakes.parquet"
+)
+
+campsites.to_parquet(
+    "../Data/Processed/bwca_campsites.parquet"
+)
