@@ -1,14 +1,21 @@
+
 from dataclasses import dataclass
-from Lake import Lake
 
 @dataclass
 class Campsite:
-    site_number: int
+
     camp_id: str
+
+    site_number: int
+
     lake_name: str
-    # lake: Lake
+
+    fw_id: int
+
     status: str
+
     district: str
+
     geometry: object
-    # utm_x: float
-    # utm_y: float
+
+    lake = None

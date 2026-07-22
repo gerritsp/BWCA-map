@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="merged almost ready to write to file">
+    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="gfjfdsa">
+      <change afterPath="$PROJECT_DIR$/models/bwca_graph.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Data/processed/bwca_lakes" beforeDir="false" afterPath="$PROJECT_DIR$/processing/processed_datasets.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Map.py" beforeDir="false" afterPath="$PROJECT_DIR$/Map.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/Campsite.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Campsite.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/fileCreator.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/fileCreator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/Lake.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Lake.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/graph.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,7 +52,9 @@
     "Python.LakeData.executor": "Run",
     "Python.Map.executor": "Run",
     "Python.boundariesData.executor": "Run",
+    "Python.bwca_graph.executor": "Run",
     "Python.fileCreator.executor": "Run",
+    "Python.graph.executor": "Run",
     "Python.main.executor": "Run",
     "Python.processed_datasets.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
@@ -74,6 +77,12 @@
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\processing" />
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\Data\Campsites" />
     </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="main" type="PythonDapAttachConfiguration">
+      <option name="localRoot" value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -154,7 +163,23 @@
       <option name="project" value="LOCAL" />
       <updated>1784582272200</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="wow real map very cool">
+      <option name="closed" value="true" />
+      <created>1784611172873</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1784611172873</updated>
+    </task>
+    <task id="LOCAL-00010" summary="gfjfdsa">
+      <option name="closed" value="true" />
+      <created>1784692459939</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1784692459939</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -166,6 +191,8 @@
     <MESSAGE value="one model" />
     <MESSAGE value="new dataset hydrowhatever" />
     <MESSAGE value="merged almost ready to write to file" />
-    <option name="LAST_COMMIT_MESSAGE" value="merged almost ready to write to file" />
+    <MESSAGE value="wow real map very cool" />
+    <MESSAGE value="gfjfdsa" />
+    <option name="LAST_COMMIT_MESSAGE" value="gfjfdsa" />
   </component>
 </project>
