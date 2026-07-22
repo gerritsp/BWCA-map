@@ -5,8 +5,10 @@ from Lake import Lake
 class Campsite:
     site_number: int
     camp_id: str
-    lake: Lake
+    lake_name: str
+    # lake: Lake
     status: str
     district: str
-    utm_x: float
-    utm_y: float
+    geometry: object
+    # utm_x: float
+    # utm_y: float

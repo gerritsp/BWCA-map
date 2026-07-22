@@ -83,7 +83,7 @@ for _, row in campsites.iterrows():
 
     popup = folium.Popup(
         f"""
-        <h4>Campsite {row['CSITENO']}</h4>
+        <h4>Campsite: {row['camp_id']}</h4>
         <b>Lake:</b> {row['LAKE_NAME']}<br>
         <b>Status:</b> {row['STATUS']}<br>
         <b>District:</b> {row['District']}<br>
@@ -102,11 +102,4 @@ for _, row in campsites.iterrows():
         popup=popup
     ).add_to(cluster)
 
-m.save("maps/bwca_map_Campesites.html")
-# print(campsites.iloc[0])
-#
-# fw = campsites.iloc[0]["fw_id"]
-#
-# print(lakes[lakes["fw_id"] == fw][["map_label", "fw_id"]])
-# print(campsites["fw_id"].isna().sum())
-# print(lakes["fw_id"].isna().sum())
+m.save("maps/bwca_map_Campsites.html")
