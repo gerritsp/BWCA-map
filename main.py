@@ -10,5 +10,19 @@ graph.connect_campsites()
 
 knife = graph.find_lake(3731)
 
+davis = graph.find_lake("Davis")
+
 print(knife.name)
 print(len(knife.campsites))
+print(davis.campsites)
+# for lake in graph.lakes.values():
+#
+#     if "Davis lake" in lake.name.lower():
+#
+#         print(lake.name)
+basswood = graph.find_lake_by_name("Basswood Lake")
+
+print(basswood.name)
+
+for camp in basswood.campsites[:10]:
+    print(camp.lake_name)

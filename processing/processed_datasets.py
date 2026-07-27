@@ -34,37 +34,9 @@ print(campsites.columns)
 
 
 #
-# minx, miny, maxx, maxy = lakes.total_bounds
-# center = [(miny + maxy) / 2, (minx + maxx) / 2]
-# print(center)
+
 #
-# lakes = lakes[[
-#     "map_label",
-#     "acres",
-#     "geometry"
-# ]]
-#
-# m = folium.Map(
-#     location=[48.0, -91.5],
-#     zoom_start=8
-# )
-#
-# folium.GeoJson(lakes).add_to(m)
-# # #
-# # # m.save("../maps/bwca_map.html")
-# #
-# #
-# folium.GeoJson(
-#     lakes,
-#     tooltip=folium.GeoJsonTooltip(
-#         fields=["map_label", "acres"],
-#         aliases=["Lake", "Acres"]
-#     )
-# ).add_to(m)
-# # m.save("../maps/bwca_map_labels.html")
-# print(lakes["map_label"].head(20))
-#
-# print(campsites["LAKE_NAME"].head(20))
+print(campsites["LAKE_NAME"].head(20))
 camp_counts = campsites.groupby("LAKE_NAME").size()
 print(camp_counts["Knife Lake"])
 lakes = lakes.merge(
@@ -86,14 +58,7 @@ tooltip = folium.GeoJsonTooltip(
         "Campsites"
     ]
 )
-# geojson = folium.GeoJson(
-#     lakes,
-#     tooltip=tooltip
-# )
-#
-# geojson.add_to(m)
-#
-# m.save("../maps/bwca_map_Campsites.html")
+
 print(campsites.iloc[0])
 
 fw = campsites.iloc[0]["fw_id"]
