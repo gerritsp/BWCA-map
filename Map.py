@@ -15,8 +15,14 @@ lakes = lakes.to_crs(epsg=4326)
 campsites = gpd.read_parquet("Data/processed/bwca_campsites.parquet")
 campsites = campsites.to_crs(epsg=4326)
 
-
+print(campsites[campsites["LAKE_NAME"].str.contains("Davis", case=False)])
+print(lakes[lakes["map_label"].str.contains("Davis", case=False)])
 print(len(campsites))
+print(lakes[[
+    "map_label",
+    "pw_parent_name",
+    "pw_sub_name"
+]].head(20))
 # minx, miny, maxx, maxy = lakes.total_bounds
 # center = [(miny + maxy) / 2, (minx + maxx) / 2]
 # print(center)
@@ -75,31 +81,31 @@ folium.GeoJson(
 #     tooltip=tooltip
 # )geojson.add_to(m)
 
-cluster = MarkerCluster().add_to(m)
-for _, row in campsites.iterrows():
-
-    lat = row.geometry.y
-    lon = row.geometry.x
-
-    popup = folium.Popup(
-        f"""
-        <h4>Campsite: {row['camp_id']}</h4>
-        <b>Lake:</b> {row['LAKE_NAME']}<br>
-        <b>Status:</b> {row['STATUS']}<br>
-        <b>District:</b> {row['District']}<br>
-        <b>Distance to matched lake:</b> {row['distance_to_lake']:.1f} m
-        """,
-        max_width=250
-    )
-
-    folium.CircleMarker(
-        location=[lat, lon],
-        radius=3,
-        color="red",
-        fill=True,
-        fill_color="red",
-        fill_opacity=1,
-        popup=popup
-    ).add_to(cluster)
-
-m.save("maps/bwca_map_Campsites.html")
+# cluster = MarkerCluster().add_to(m)
+# for _, row in campsites.iterrows():
+#
+#     lat = row.geometry.y
+#     lon = row.geometry.x
+#
+#     popup = folium.Popup(
+#         f"""
+#         <h4>Campsite: {row['camp_id']}</h4>
+#         <b>Lake:</b> {row['LAKE_NAME']}<br>
+#         <b>Status:</b> {row['STATUS']}<br>
+#         <b>District:</b> {row['District']}<br>
+#         <b>Distance to matched lake:</b> {row['distance_to_lake']:.1f} m
+#         """,
+#         max_width=250
+#     )
+#
+#     folium.CircleMarker(
+#         location=[lat, lon],
+#         radius=3,
+#         color="red",
+#         fill=True,
+#         fill_color="red",
+#         fill_opacity=1,
+#         popup=popup
+#     ).add_to(cluster)
+#
+# m.save("maps/bwca_map_Campsites.html")

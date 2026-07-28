@@ -66,3 +66,5 @@ camp = knife.campsites[0]
 print(camp.site_number)
 
 print(camp.lake.name)
+print(lake.name)
+print(type(lake.name))

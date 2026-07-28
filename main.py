@@ -8,18 +8,26 @@ graph.load_campsites("Data/processed/bwca_campsites.parquet")
 
 graph.connect_campsites()
 
-knife = graph.find_lake(3731)
 
-davis = graph.find_lake("Davis")
+davis = graph.find_lake_by_name("Davis Lake")
 
-print(knife.name)
-print(len(knife.campsites))
+print("davis" in graph.lakes_by_name)
+print("davis lake" in graph.lakes_by_name)
+
+print(graph.lakes_by_name.get("davis"))
+print(graph.lakes_by_name.get("davis lake"))
+#
+# print(knife.name)
+# print(len(knife.campsites))
+# print(graph.lakes[424].name)
+print(len(graph.lakes))
+print(graph.lakes[424])
+print(davis)
+print(type(davis))
+# print(davis.name)
+print(graph.get_num_campsites(davis))
 print(davis.campsites)
-# for lake in graph.lakes.values():
-#
-#     if "Davis lake" in lake.name.lower():
-#
-#         print(lake.name)
+
 basswood = graph.find_lake_by_name("Basswood Lake")
 
 print(basswood.name)

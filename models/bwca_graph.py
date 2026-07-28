@@ -2,17 +2,23 @@
 import geopandas as gpd
 from models.Campsite import Campsite
 from models.Lake import Lake
+import pandas as pd
+
 
 class bwca_graph:
 
     def __init__(self):
 
         self.lakes = {}
-
+        self.lakes_by_name = {}  # name -> Lake
         self.campsites = {}
 
+    @staticmethod
+    def normalize_name(name):
+        if pd.isna(name):
+            return None
 
-
+        return str(name).strip().lower()
 
     lakes = {}
     def load_lakes(self,filename):
@@ -28,6 +34,11 @@ class bwca_graph:
             )
 
             self.lakes[lake.fw_id] = lake
+            normalized = self.normalize_name(lake.name)
+
+            if normalized is not None:
+                self.lakes_by_name[normalized] = lake
+                self.lakes_by_name[normalized + " lake"] = lake
 
 
     def load_campsites(self,filename):
@@ -59,23 +70,29 @@ class bwca_graph:
     def connect_campsites(self):
 
         for campsite in self.campsites.values():
+            lake = self.lakes.get(campsite.fw_id)
 
-            if campsite.fw_id in self.lakes:
-                lake = self.lakes[campsite.fw_id]
-
+            if lake:
                 campsite.lake = lake
-
                 lake.campsites.append(campsite)
 
-    def find_lake(self, fw_id):
+        # for campsite in self.campsites.values():
+
+            # if campsite.fw_id in self.lakes:
+            #     lake = self.lakes[campsite.fw_id]
+            #
+            #     campsite.lake = lake
+            #
+            #     lake.campsites.append(campsite)
+
+    def find_lake_by_id(self, fw_id):
 
         return self.lakes.get(fw_id)
 
     def find_lake_by_name(self, name):
 
-        for lake in self.lakes.values():
-
-            if lake.name.lower() == name.lower():
-                return lake
-
-        return None
+        return self.lakes_by_name.get(self.normalize_name(name))
+    def find_campsite(self, campsite_id):
+        return self.campsites.get(campsite_id)
+    def get_num_campsites(self, lake):
+        return len(lake.campsites)
