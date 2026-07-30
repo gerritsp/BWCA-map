@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="gfjfdsa">
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/processed_datasets.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/processed_datasets.py" afterDir="false" />
+    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="oi8y">
+      <change afterPath="$PROJECT_DIR$/processing/portage_file_creator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/portages_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/portages_data.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,12 +27,12 @@
     &quot;assignee&quot;: &quot;gerritsp&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/gerritsp/BWCA-map.git",
-    "accountId": "d54b3067-2030-4eb4-95eb-7fdee4120d6c"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/gerritsp/BWCA-map.git&quot;,
+    &quot;accountId&quot;: &quot;d54b3067-2030-4eb4-95eb-7fdee4120d6c&quot;
   }
-}]]></component>
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1,
   &quot;fromUser&quot;: false
@@ -52,6 +53,8 @@
     "Python.fileCreator.executor": "Run",
     "Python.graph.executor": "Run",
     "Python.main.executor": "Run",
+    "Python.portage_file_creator.executor": "Run",
+    "Python.portages_data.executor": "Run",
     "Python.processed_datasets.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
@@ -73,12 +76,6 @@
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\processing" />
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\Data\Campsites" />
     </key>
-  </component>
-  <component name="RunManager">
-    <configuration name="main" type="PythonDapAttachConfiguration">
-      <option name="localRoot" value="$PROJECT_DIR$" />
-      <method v="2" />
-    </configuration>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -183,7 +180,23 @@
       <option name="project" value="LOCAL" />
       <updated>1784698627711</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="wasnt fully commited">
+      <option name="closed" value="true" />
+      <created>1785164358131</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1785164358131</updated>
+    </task>
+    <task id="LOCAL-00013" summary="oi8y">
+      <option name="closed" value="true" />
+      <created>1785266424365</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1785266424365</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -197,6 +210,8 @@
     <MESSAGE value="merged almost ready to write to file" />
     <MESSAGE value="wow real map very cool" />
     <MESSAGE value="gfjfdsa" />
-    <option name="LAST_COMMIT_MESSAGE" value="gfjfdsa" />
+    <MESSAGE value="wasnt fully commited" />
+    <MESSAGE value="oi8y" />
+    <option name="LAST_COMMIT_MESSAGE" value="oi8y" />
   </component>
 </project>

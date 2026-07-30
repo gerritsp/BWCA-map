@@ -24,7 +24,6 @@ boundary = gpd.read_file(
 )
 lakes = gpd.read_parquet("../Data/processed/bwca_lakes.parquet")
 
-
 def parse_comment(comment):
     data = {}
 
@@ -38,65 +37,23 @@ def parse_comment(comment):
         data[key.strip()] = value.strip()
 
     return data
-# print(wpts.columns)
-# print(len(wpts))
-# print(wpts.head())
-# print(wpts[["name", "sym", "type", "desc", "cmt"]].head(30))
-# print(wpts["sym"].value_counts())
-# print(wpts["type"].value_counts())
 portages = wpts[
     wpts["name"].str.startswith("Portage ", na=False)
 ].copy()
-# print(portages.info())
-# print(f"Total portage waypoints: {len(portages)}")
-# print(portages["name"].head(20).tolist())
-# print(portages.isnull().sum())
-# duplicates = portages["name"].duplicated().sum()
-# print("Duplicate names:", duplicates)
-# print(portages.geometry.is_empty.sum())
-# print(portages.geometry.isna().sum())
+
+portages["portage_num"] = (
+    portages["name"]
+        .str.extract(r"Portage (\d+)")
+        .astype(int)
+)
+print(portages[["name", "portage_num"]].head())
 inside = portages.within(boundary.geometry.iloc[0])
-#
-# print("Inside:", inside.sum())
-# print("Outside:", (~inside).sum())
-# print(portages.crs)
-# print(boundary.crs)
-# print(portages.iloc[0]["cmt"])
-# print(portages["fw_id_a"].isna().sum())
-# print(portages["fw_id_b"].isna().sum())
-# print(portages["dist_lake_a"].describe())
-# print(portages["dist_lake_b"].describe())
-# print(portages["rods"].describe())
-# numbers = (
-#     portages["name"]
-#     .str.extract(r"Portage (\d+)")[0]
-#     .astype(int)
-# )
-#
-# print(numbers.min())
-# print(numbers.max())
-# print(numbers.nunique())
-# ids = portages["cmt"].str.extract(r"USFS ID:\s*(\d+)")[0]
-#
-# print(ids.nunique())
 
 parsed = parse_comment(portages.iloc[0]["cmt"])
 
 start_lat, start_lon = map(float, parsed["Start"].split(","))
 end_lat, end_lon = map(float, parsed["End"].split(","))
 
-record = {
-    "name": portages.iloc[0]["name"],
-    "waterbody": parsed["Waterbody"],
-    "usfs_id": int(parsed["USFS ID"]),
-    "rods": float(parsed["Rods"]),
-    "start_lat": start_lat,
-    "start_lon": start_lon,
-    "end_lat": end_lat,
-    "end_lon": end_lon
-}
-
-# print(record)
 records = []
 for _, row in portages.iterrows():
 
@@ -114,9 +71,8 @@ for _, row in portages.iterrows():
         "end_lat": end_lat,
         "end_lon": end_lon
     })
-# print(len(records))
 portage_df = pd.DataFrame(records)
-# print(portage_df.head())
+
 start_gdf = gpd.GeoDataFrame(
     portage_df.copy(),
     geometry=gpd.points_from_xy(
@@ -136,8 +92,6 @@ end_gdf = gpd.GeoDataFrame(
 )
 start_gdf = start_gdf.to_crs(lakes.crs)
 end_gdf = end_gdf.to_crs(lakes.crs)
-print(start_gdf.crs)
-print(lakes.crs)
 start_join = gpd.sjoin_nearest(
     start_gdf,
     lakes[["fw_id", "geometry"]],
@@ -151,15 +105,7 @@ end_join = gpd.sjoin_nearest(
     how="left",
     distance_col="distance_m"
 )
-# print(start_join["fw_id"].isna().sum())
-# print(end_join["fw_id"].isna().sum())
-# # print(lakes.geom_type.value_counts())
-# # print(lakes.columns)
-# # print(lakes.head())
-# # print(start_join["distance_m"].describe())
-# print((start_join["distance_m"] < 25).sum())
-# print((start_join["distance_m"] < 50).sum())
-# print((start_join["distance_m"] < 100).sum())
+
 records = []
 
 for portage_num, group in portages.groupby("portage_num"):
