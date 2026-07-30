@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="oi8y">
-      <change afterPath="$PROJECT_DIR$/processing/portage_file_creator.py" afterDir="false" />
+    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="almost to the new parquet">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/portages_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/portages_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/portage_file_creator.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/portage_file_creator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -196,7 +195,15 @@
       <option name="project" value="LOCAL" />
       <updated>1785266424365</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="almost to the new parquet">
+      <option name="closed" value="true" />
+      <created>1785384292260</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1785384292260</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -212,6 +219,7 @@
     <MESSAGE value="gfjfdsa" />
     <MESSAGE value="wasnt fully commited" />
     <MESSAGE value="oi8y" />
-    <option name="LAST_COMMIT_MESSAGE" value="oi8y" />
+    <MESSAGE value="almost to the new parquet" />
+    <option name="LAST_COMMIT_MESSAGE" value="almost to the new parquet" />
   </component>
 </project>

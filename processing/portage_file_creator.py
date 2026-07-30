@@ -41,12 +41,7 @@ portages = wpts[
     wpts["name"].str.startswith("Portage ", na=False)
 ].copy()
 
-portages["portage_num"] = (
-    portages["name"]
-        .str.extract(r"Portage (\d+)")
-        .astype(int)
-)
-print(portages[["name", "portage_num"]].head())
+
 inside = portages.within(boundary.geometry.iloc[0])
 
 parsed = parse_comment(portages.iloc[0]["cmt"])
@@ -105,67 +100,62 @@ end_join = gpd.sjoin_nearest(
     how="left",
     distance_col="distance_m"
 )
+# print(len(start_gdf))
+# print(len(start_join))
+# print(start_join.index.duplicated().sum())
+# print(start_join.index.value_counts().head(20))
+start_join = start_join[~start_join.index.duplicated(keep="first")]
+end_join = end_join[~end_join.index.duplicated(keep="first")]
+portage_df["start_fw_id"] = start_join["fw_id"].values
+portage_df["start_distance_m"] = start_join["distance_m"].values
+
+portage_df["end_fw_id"] = end_join["fw_id"].values
+portage_df["end_distance_m"] = end_join["distance_m"].values
+
+# duplicates = start_join[start_join.index.duplicated(keep=False)]
+#
+# print(duplicates[["fw_id", "distance_m"]].head(20))
+# print(lakes[lakes["fw_id"] == 88888][
+#     ["fw_id", "map_label", "pw_basin_name", "wb_class", "acres"]
+# ])
+# duplicates = start_join[start_join.index.duplicated(keep=False)]
+#
+# print(duplicates["fw_id"].value_counts().head(20))
+
+
 
 records = []
-
-for portage_num, group in portages.groupby("portage_num"):
-
-    # Every physical portage should have exactly two rows
-    if len(group) != 2:
-        print(f"Skipping Portage {portage_num}: expected 2 rows, found {len(group)}")
-        continue
-
-    row1 = group.iloc[0]
-    row2 = group.iloc[1]
-
-    # Create a line connecting the two landings
-    line = LineString([
-        (row1.start_lon, row1.start_lat),
-        (row1.end_lon, row1.end_lat)
-    ])
-
-    # Confidence rating
-    max_distance = max(row1.distance_m, row2.distance_m)
-
-    if max_distance <= 10:
-        quality = "excellent"
-    elif max_distance <= 25:
-        quality = "good"
-    elif max_distance <= 100:
-        quality = "fair"
-    else:
-        quality = "poor"
-
-    records.append({
-        "portage_num": portage_num,
-        "usfs_id": row1.usfs_id,
-        "rods": row1.rods,
-
-        "start_lat": row1.start_lat,
-        "start_lon": row1.start_lon,
-        "end_lat": row1.end_lat,
-        "end_lon": row1.end_lon,
-
-        "fw_id_a": row1.fw_id,
-        "fw_id_b": row2.fw_id,
-
-        "distance_a_m": row1.distance_m,
-        "distance_b_m": row2.distance_m,
-
-        "quality": quality,
-
-        "geometry": line,
-        "max_distance_m": max(row1.distance_m, row2.distance_m),
-        "uncertain": max_distance > 25
-    })
-
+portage_df["portage_num"] = (
+    portage_df["name"]
+        .str.extract(r"Portage (\d+)")
+        .astype(int)
+)
+print(portage_df[["name", "portage_num"]].head())
+portages_clean = portage_df[
+    portage_df["name"].str.contains(r"\(A to B\)")
+].copy()
+portages_clean["max_distance_m"] = (
+    portages_clean[
+        ["start_distance_m", "end_distance_m"]
+    ].max(axis=1)
+)
+portages_clean["uncertain"] = (
+    portages_clean["max_distance_m"] > 25
+)
+portages_clean["geometry"] = portages_clean.apply(
+    lambda r: LineString([
+        (r.start_lon, r.start_lat),
+        (r.end_lon, r.end_lat)
+    ]),
+    axis=1
+)
 portages_clean = gpd.GeoDataFrame(
-    records,
+    portages_clean,
     geometry="geometry",
     crs="EPSG:4326"
 )
 
-output_path = "Data/Processed/processed_portages_interim.parquet"
+output_path = "../Data/Processed/processed_portages_interim.parquet"
 
 portages_clean.to_parquet(output_path)
 
