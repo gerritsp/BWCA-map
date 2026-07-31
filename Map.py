@@ -1,3 +1,5 @@
+from turtledemo.round_dance import stop
+
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import folium
@@ -15,14 +17,17 @@ lakes = lakes.to_crs(epsg=4326)
 campsites = gpd.read_parquet("Data/processed/bwca_campsites.parquet")
 campsites = campsites.to_crs(epsg=4326)
 
-print(campsites[campsites["LAKE_NAME"].str.contains("Davis", case=False)])
-print(lakes[lakes["map_label"].str.contains("Davis", case=False)])
-print(len(campsites))
-print(lakes[[
-    "map_label",
-    "pw_parent_name",
-    "pw_sub_name"
-]].head(20))
+portages = gpd.read_parquet("Data/processed/processed_portages_interim.parquet")
+portages = portages.to_crs(epsg=4326)
+print(portages.info())
+# print(campsites[campsites["LAKE_NAME"].str.contains("Davis", case=False)])
+# print(lakes[lakes["map_label"].str.contains("Davis", case=False)])
+# print(len(campsites))
+# print(lakes[[
+#     "map_label",
+#     "pw_parent_name",
+#     "pw_sub_name"
+# ]].head(20))
 # minx, miny, maxx, maxy = lakes.total_bounds
 # center = [(miny + maxy) / 2, (minx + maxx) / 2]
 # print(center)
@@ -50,62 +55,90 @@ folium.GeoJson(
         aliases=["Lake", "Acres"]
     )
 ).add_to(m)
-# # m.save("../maps/bwca_map_labels.html")
+# m.save("../maps/bwca_map_labels.html")
 
 # print(lakes["map_label"].head(20))
 #
 # print(campsites["LAKE_NAME"].head(20))
 
-# camp_counts = campsites.groupby("LAKE_NAME").size()
-# lakes = lakes.merge(
-#     camp_counts.rename("num_campsites"),
-#     left_on="map_label",
-#     right_index=True,
-#     how="left"
-# )
-# lakes["num_campsites"] = lakes["num_campsites"].fillna(0).astype(int)
-# tooltip = folium.GeoJsonTooltip(
-#     fields=[
-#         "map_label",
-#         "acres",
-#         "num_campsites"
-#     ],
-#     aliases=[
-#         "Lake",
-#         "Acres",
-#         "Campsites"
-#     ]
-# )
-# geojson = folium.GeoJson(
-#     lakes,
-#     tooltip=tooltip
-# )geojson.add_to(m)
+camp_counts = campsites.groupby("LAKE_NAME").size()
+lakes = lakes.merge(
+    camp_counts.rename("num_campsites"),
+    left_on="map_label",
+    right_index=True,
+    how="left"
+)
+lakes["num_campsites"] = lakes["num_campsites"].fillna(0).astype(int)
+tooltip = folium.GeoJsonTooltip(
+    fields=[
+        "map_label",
+        "acres",
+        "num_campsites"
+    ],
+    aliases=[
+        "Lake",
+        "Acres",
+        "Campsites"
+    ]
+)
+geojson = folium.GeoJson(
+    lakes,
+    tooltip=tooltip
+)
+geojson.add_to(m)
 
-# cluster = MarkerCluster().add_to(m)
-# for _, row in campsites.iterrows():
-#
-#     lat = row.geometry.y
-#     lon = row.geometry.x
-#
-#     popup = folium.Popup(
-#         f"""
-#         <h4>Campsite: {row['camp_id']}</h4>
-#         <b>Lake:</b> {row['LAKE_NAME']}<br>
-#         <b>Status:</b> {row['STATUS']}<br>
-#         <b>District:</b> {row['District']}<br>
-#         <b>Distance to matched lake:</b> {row['distance_to_lake']:.1f} m
-#         """,
-#         max_width=250
-#     )
-#
-#     folium.CircleMarker(
-#         location=[lat, lon],
-#         radius=3,
-#         color="red",
-#         fill=True,
-#         fill_color="red",
-#         fill_opacity=1,
-#         popup=popup
-#     ).add_to(cluster)
-#
+cluster = MarkerCluster().add_to(m)
+for _, row in campsites.iterrows():
+
+    lat = row.geometry.y
+    lon = row.geometry.x
+
+    popup = folium.Popup(
+        f"""
+        <h4>Campsite: {row['camp_id']}</h4>
+        <b>Lake:</b> {row['LAKE_NAME']}<br>
+        <b>Status:</b> {row['STATUS']}<br>
+        <b>District:</b> {row['District']}<br>
+        <b>Distance to matched lake:</b> {row['distance_to_lake']:.1f} m
+        """,
+        max_width=250
+    )
+
+    folium.CircleMarker(
+        location=[lat, lon],
+        radius=3,
+        color="red",
+        fill=True,
+        fill_color="red",
+        fill_opacity=1,
+        popup=popup
+    ).add_to(cluster)
+
 # m.save("maps/bwca_map_Campsites.html")
+portages["miles"]  = (portages["rods"]/320).round(3)
+
+def style(feature):
+    if feature["properties"]["uncertain"]:
+        return {
+            "color": "purple",
+            "weight": 3,
+            "opacity": 0.9
+        }
+    else:
+        return {
+            "color": "green",
+            "weight": 3,
+            "opacity": 0.9
+        }
+
+folium.GeoJson(
+    portages,
+    style_function=style,
+    tooltip=folium.GeoJsonTooltip(
+        fields=["portage_num", "rods", "miles"],
+        aliases=["Portage", "Rods","miles"]
+    )
+).add_to(m)
+
+m.save("maps/bwca_map_portage.html")
+# m.save("../maps/bwca_map_labels.html")
