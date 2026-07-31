@@ -13,9 +13,9 @@ wpts = gpd.read_file(
     "../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx",
     layer="waypoints"
 )
-layers = pyogrio.list_layers(
-    "../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb"
-)
+# layers = pyogrio.list_layers(
+#     "../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb"
+# )
 
 
 boundary = gpd.read_file(
