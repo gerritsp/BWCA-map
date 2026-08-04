@@ -18,4 +18,6 @@ class Campsite:
 
     geometry: object
 
+    distance_to_lake : float
+
     lake = None

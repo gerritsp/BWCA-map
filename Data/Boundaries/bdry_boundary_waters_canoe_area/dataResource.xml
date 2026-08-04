@@ -1,0 +1,27 @@
+
+<!DOCTYPE dataResource SYSTEM "dataResource.dtd" >
+<dataResource>
+    <baseName>bdry_boundary_waters_canoe_area</baseName>
+    <descriptiveName>Boundary Waters Canoe Area Wilderness</descriptiveName>
+    <publisher>Minnesota DNR - Division of Lands &amp; Minerals</publisher>
+    <publisherID>us_mn_state_dnr</publisherID>
+    <currentAsofDate>2002-12-28</currentAsofDate>
+    <resourceType>ESRI File Geodatabase</resourceType>
+    <topicCategories>
+        <topicCategory type="ISO 19115">boundaries</topicCategory>
+    </topicCategories>
+    <resourceIdentifiers>
+        <resourceID>6</resourceID>
+        <resourceGUID>{2d6d3614-bbf9-45ae-82e3-c35f96bb5585}</resourceGUID>
+    </resourceIdentifiers>
+    <dataSubResources>
+        <dataSubResource>
+            <subResourceType>fgdb</subResourceType>
+            <subResourceIdentifiers>
+                <subResourceGUID>{e7b8e551-0a15-4ca9-a7ba-d217a2746018}</subResourceGUID>
+            </subResourceIdentifiers>
+            <subResourceAccess>
+            </subResourceAccess>
+        </dataSubResource>
+    </dataSubResources>
+</dataResource>

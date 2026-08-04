@@ -1,9 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="almost to the new parquet">
+    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="still no entry points">
+      <change afterPath="$PROJECT_DIR$/APP.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000001.TablesByName.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000001.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000001.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000001.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000002.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000002.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000003.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000003.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000003.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000004.CatItemsByPhysicalName.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000004.CatItemsByType.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000004.FDO_UUID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000004.freelist" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000004.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000004.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000004.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000004.spx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000005.CatRelsByDestinationID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000005.CatRelsByOriginID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000005.CatRelsByType.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000005.FDO_UUID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000005.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000005.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000005.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByBackwardLabel.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByDestItemTypeID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByForwardLabel.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByName.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByOriginItemTypeID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByUUID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000006.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000006.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000006.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000007.CatItemTypesByName.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000007.CatItemTypesByParentTypeID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000007.CatItemTypesByUUID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000007.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000007.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000007.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000009.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000009.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000009.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a00000009.spx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a0000000a.AnnoClassID_Index_8.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a0000000a.Status_Index_8.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a0000000a.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a0000000a.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a0000000a.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/a0000000a.spx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/gdb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb/timestamps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/dataResource.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/Boundary Waters Canoe Area Wilderness.lyr" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000001.TablesByName.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000001.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000001.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000001.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000002.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000002.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000003.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000003.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000003.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000004.CatItemsByPhysicalName.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000004.CatItemsByType.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000004.FDO_UUID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000004.freelist" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000004.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000004.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000004.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000004.horizon" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000004.spx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000005.CatRelsByDestinationID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000005.CatRelsByOriginID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000005.CatRelsByType.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000005.FDO_UUID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000005.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000005.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000005.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByBackwardLabel.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByDestItemTypeID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByForwardLabel.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByName.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByOriginItemTypeID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000006.CatRelTypesByUUID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000006.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000006.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000006.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000007.CatItemTypesByName.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000007.CatItemTypesByParentTypeID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000007.CatItemTypesByUUID.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000007.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000007.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000007.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000009.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000009.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000009.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000009.horizon" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a00000009.spx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a0000000a.AnnoClassID_Index_8.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a0000000a.Status_Index_8.atx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a0000000a.gdbindexes" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a0000000a.gdbtable" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a0000000a.gdbtablx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/a0000000a.spx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/gdb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/fgdb/bdry_boundary_waters_canoe_area.gdb/timestamps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/metadata/Thumbs.db" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/metadata/metadata.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/metadata/metadata.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/metadata/preview.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Data/Boundaries/bdry_boundary_waters_canoe_area/resource_info.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/final_map.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/maps/bwca_map.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/maps/bwca_map_Campsites.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/maps/bwca_map_labels.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/maps/bwca_map_portage.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/portage_file_creator.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/portage_file_creator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/Campsite.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Campsite.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/Portage.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Portage.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/bwca_graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/bwca_graph.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/processed_datasets.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/processed_datasets.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -13,6 +134,7 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
+        <option value="HTML File" />
         <option value="Python Script" />
       </list>
     </option>
@@ -43,12 +165,15 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.APP.executor": "Run",
     "Python.Campsite Data.executor": "Run",
     "Python.LakeData.executor": "Run",
     "Python.Map.executor": "Run",
     "Python.boundariesData.executor": "Run",
     "Python.bwca_graph.executor": "Run",
+    "Python.entrypointData.executor": "Run",
     "Python.fileCreator.executor": "Run",
     "Python.graph.executor": "Run",
     "Python.main.executor": "Run",
@@ -203,11 +328,54 @@
       <option name="project" value="LOCAL" />
       <updated>1785384292260</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="new interim parquet will need another">
+      <option name="closed" value="true" />
+      <created>1785440037279</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1785440037279</updated>
+    </task>
+    <task id="LOCAL-00016" summary="new interim parquet will need another">
+      <option name="closed" value="true" />
+      <created>1785441139869</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1785441139870</updated>
+    </task>
+    <task id="LOCAL-00017" summary="no entry points">
+      <option name="closed" value="true" />
+      <created>1785517775504</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1785517775504</updated>
+    </task>
+    <task id="LOCAL-00018" summary="no entry points">
+      <option name="closed" value="true" />
+      <created>1785517787818</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1785517787818</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="ujk" />
@@ -220,6 +388,10 @@
     <MESSAGE value="wasnt fully commited" />
     <MESSAGE value="oi8y" />
     <MESSAGE value="almost to the new parquet" />
-    <option name="LAST_COMMIT_MESSAGE" value="almost to the new parquet" />
+    <MESSAGE value="new interim parquet will need another" />
+    <MESSAGE value="no entry points2" />
+    <MESSAGE value="no entry points" />
+    <MESSAGE value="still no entry points" />
+    <option name="LAST_COMMIT_MESSAGE" value="still no entry points" />
   </component>
 </project>
