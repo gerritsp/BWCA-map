@@ -20,6 +20,13 @@ campsites = campsites.to_crs(epsg=4326)
 portages = gpd.read_parquet("Data/processed/processed_portages_interim.parquet")
 portages = portages.to_crs(epsg=4326)
 print(portages.info())
+
+entry_points = gpd.read_parquet("Data/processed/entry_points.parquet")
+entry_points = entry_points.to_crs(epsg=4326)
+new_portages = gpd.read_parquet("Data/processed/portages.parquet")
+new_portages = new_portages.to_crs(epsg=4326)
+final_portage = gpd.read_parquet("Data/processed/portages_final.parquet")
+final_portage = final_portage.to_crs(epsg=4326)
 # print(campsites[campsites["LAKE_NAME"].str.contains("Davis", case=False)])
 # print(lakes[lakes["map_label"].str.contains("Davis", case=False)])
 # print(len(campsites))
@@ -115,30 +122,54 @@ for _, row in campsites.iterrows():
     ).add_to(cluster)
 
 # m.save("maps/bwca_map_Campsites.html")
-portages["miles"]  = (portages["rods"]/320).round(3)
+# portages["miles"]  = (portages["rods"]/320).round(3)
+# new_portages["miles"] = (new_portages["rods"]/320).round(3)
 
-def style(feature):
-    if feature["properties"]["uncertain"]:
-        return {
-            "color": "purple",
-            "weight": 3,
-            "opacity": 0.9
-        }
-    else:
-        return {
-            "color": "green",
-            "weight": 3,
-            "opacity": 0.9
-        }
+
 
 folium.GeoJson(
-    portages,
-    style_function=style,
+    final_portage,
+    name="Portages",
+    style_function=lambda feature: {
+        "color": "purple",
+        "weight": 3,
+        "opacity": 0.8
+    },
     tooltip=folium.GeoJsonTooltip(
-        fields=["portage_num", "rods", "miles"],
-        aliases=["Portage", "Rods","miles"]
+        fields=[
+            "name",
+            "rods",
+            "lake1",
+            "lake2",
+            "meters"
+        ],
+        aliases=[
+            "Portage",
+            "Rods",
+            "Lake A",
+            "Lake B",
+            "Meters"
+        ]
     )
 ).add_to(m)
 
-m.save("maps/bwca_map_portage.html")
+entry_cluster = MarkerCluster(name="Entry Points").add_to(m)
+
+for _, row in entry_points.iterrows():
+
+    folium.CircleMarker(
+        location=[row.geometry.y, row.geometry.x],
+        radius=6,
+        color="green",
+        fill=True,
+        fill_color="green",
+        fill_opacity=1,
+        popup=f"""
+        <b>Entry Point {row['code']}</b><br>
+        {row['name']}
+        """
+    ).add_to(entry_cluster)
+
+folium.LayerControl().add_to(m)
+m.save("maps/bwca_map_entry.html")
 # m.save("../maps/bwca_map_labels.html")

@@ -17,3 +17,5 @@ class Lake:
     campsites: list = field(default_factory=list)
 
     connections: list = field(default_factory=list)
+
+    self.entry_points = []
