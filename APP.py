@@ -62,29 +62,36 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     }).addTo(map);
 
     const CONFIDENT_PORTAGE_STYLE = { color: "#0f5c2e", weight: 3, opacity: 0.9 };
-    const UNCERTAIN_PORTAGE_STYLE = { color: "#dc2626", weight: 3, opacity: 0.9, dashArray: "8 6" };
+const UNCERTAIN_PORTAGE_STYLE = { color: "#dc2626", weight: 3, opacity: 0.9, dashArray: "8 6" };
+console.log(portages);
+console.log(portages.features.length);
 
-    const portagesLayer = L.geoJSON(portages, {
-        style: (feature) =>
-            feature.properties.lake_match_uncertain ? UNCERTAIN_PORTAGE_STYLE : CONFIDENT_PORTAGE_STYLE,
-        onEachFeature: function (feature, layer) {
-            const p = feature.properties;
-            const waterbody = p.waterbody || "(unnamed in source data)";
-            const confidence = p.lake_match_uncertain
-                ? '<span style="color:#dc2626;">Uncertain match</span>'
-                : '<span style="color:#0f5c2e;">Confident match</span>';
-            layer.bindPopup(
-                `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
-                `${waterbody} &mdash; ${p.length_rods.toFixed(1)} rods<br>` +
-                `${p.lake_a} &rarr; ${p.lake_b}<br>` +
-                `${confidence}<br>` +
-                `<span style="font-size:11px; color:#555;">` +
-                `fw_id_a=${p.fw_id_a} (${p.dist_lake_a.toFixed(1)}m) &middot; ` +
-                `fw_id_b=${p.fw_id_b} (${p.dist_lake_b.toFixed(1)}m)</span>`
-            );
-        }
-    }).addTo(map);
+const portagesLayer = L.geoJSON(portages, {
+    style: (feature) =>
+        feature.properties.lake_match_uncertain ? UNCERTAIN_PORTAGE_STYLE : CONFIDENT_PORTAGE_STYLE,
+    onEachFeature: function (feature, layer) {
+        const p = feature.properties;
+        const waterbody = p.waterbody || "(unnamed in source data)";
+        const confidence = p.lake_match_uncertain
+            ? '<span style="color:#dc2626;">Uncertain match</span>'
+            : '<span style="color:#0f5c2e;">Confident match</span>';
 
+        // 1. ADD SAFE DISTANCE CONSTANTS HERE
+        const distA = p.dist_lake_a == null ? "N/A" : `${p.dist_lake_a.toFixed(1)}m`;
+        const distB = p.dist_lake_b == null ? "N/A" : `${p.dist_lake_b.toFixed(1)}m`;
+
+        layer.bindPopup(
+            `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
+            `${waterbody} &mdash; ${p.length_rods.toFixed(1)} rods<br>` +
+            `${p.lake_a} &rarr; ${p.lake_b}<br>` +
+            `${confidence}<br>` +
+            // 2. REPLACED THE BOTTOM SPAN TO USE distA AND distB
+            `<span style="font-size:11px; color:#555;">` +
+            `fw_id_a=${p.fw_id_a ?? 'N/A'} (${distA}) &middot; ` +
+            `fw_id_b=${p.fw_id_b ?? 'N/A'} (${distB})</span>`
+        );
+    }
+}).addTo(map);
     const legend = L.control({ position: "bottomright" });
     legend.onAdd = function () {
         const div = L.DomUtil.create("div", "legend");
@@ -96,7 +103,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         return div;
     };
     legend.addTo(map);
-
+    map.fitBounds(portagesLayer.getBounds());
+    console.log(portagesLayer.getLayers().length);
     const campsitesLayer = L.markerClusterGroup();
     L.geoJSON(campsites, {
         pointToLayer: function (feature, latlng) {
@@ -470,6 +478,7 @@ def build_graph():
 
     graph.load_portages("Data/processed/processed_portages_interim.parquet")
     graph.connect_portages()
+    # print(len(graph.portages))
 
     return graph
 
@@ -547,6 +556,9 @@ def portages_geojson(graph):
         geometry=[p.geometry for p in portages],
         crs=SOURCE_CRS,
     )
+    # print(f"Exporting {len(portages)} portages")
+    # print(gdf.head())
+    # print(gdf.geometry.iloc[0])
     return json.loads(gdf.to_crs(4326).to_json())
 
 

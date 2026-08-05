@@ -17,8 +17,9 @@ portages = portages.to_crs(epsg=4326)
 # print(campsites.crs)
 # print(portages.shape)
 # print(portages.info())
+print(portages.geom_type.value_counts())
 # print(campsites.columns)
-print(campsites.info())
+# print(campsites.info())
 # print(lakes.head())
 # print()
 # print(lakes.columns)
@@ -41,9 +42,9 @@ print(campsites.info())
 #
 
 #
-print(campsites["LAKE_NAME"].head(20))
+# print(campsites["LAKE_NAME"].head(20))
 camp_counts = campsites.groupby("LAKE_NAME").size()
-print(camp_counts["Knife Lake"])
+# print(camp_counts["Knife Lake"])
 lakes = lakes.merge(
     camp_counts.rename("num_campsites"),
     left_on="map_label",
@@ -64,10 +65,10 @@ tooltip = folium.GeoJsonTooltip(
     ]
 )
 
-print(campsites.iloc[0])
+# print(campsites.iloc[0])
 
 fw = campsites.iloc[0]["fw_id"]
-
-print(lakes[lakes["fw_id"] == fw][["map_label", "fw_id"]])
-print(campsites["fw_id"].isna().sum())
-print(lakes["fw_id"].isna().sum())
+#
+# print(lakes[lakes["fw_id"] == fw][["map_label", "fw_id"]])
+# print(campsites["fw_id"].isna().sum())
+# print(lakes["fw_id"].isna().sum())
