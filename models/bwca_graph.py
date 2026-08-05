@@ -4,16 +4,17 @@ from models.Campsite import Campsite
 from models.Lake import Lake
 import pandas as pd
 from models.Portage import Portage
-
+from models.EntryPoint import EntryPoint
 
 class bwca_graph:
 
     def __init__(self):
 
         self.lakes = {}
-        self.lakes_by_name = {}  # name -> Lake
+        self.lakes_by_name = {} # name -> Lake
         self.campsites = {}
-        self.portages = []
+        self.portages = {}
+        self.entry_points = {}
 
     @staticmethod
     def normalize_name(name):
@@ -76,30 +77,40 @@ class bwca_graph:
 
         for _, row in portage_df.iterrows():
             portage = Portage(
-
-                portage_number=row["portage_num"],
-
-                usfs_id=row["usfs_id"],
-
-                fw_id_a=row["start_fw_id"],
-
-                fw_id_b=row["end_fw_id"],
-
-                length_rods=row["rods"],
-
-                geometry=row.geometry,
-
-                waterbody=row["name"],
-
-                dist_lake_a=row["start_distance_m"],
-
-                dist_lake_b=row["end_distance_m"],
-
-                lake_match_uncertain=row["uncertain"]
-
+                usfs_id=row["usfsid"],
+                portage_num=row["portage_num"],
+                name=row["name"],
+                rods=row["rods"],
+                meters=row["meters"],
+                miles=row["miles"],
+                start_lat=row["startlat"],
+                start_lon=row["startlon"],
+                end_lat=row["endlat"],
+                end_lon=row["endlon"],
+                lake1_name=row["lake1"],
+                lake2_name=row["lake2"],
+                start_fw_id=row["start_fw_id"],
+                end_fw_id=row["end_fw_id"],
+                geometry=row.geometry
             )
+            self.portages[portage.usfs_id] = portage
 
-            self.portages.append(portage)
+    def load_entry_points(self, filename):
+        entry_points_df = gpd.read_parquet(filename)
+        for _, row in entry_points_df.iterrows():
+            entry = EntryPoint(
+                id = row["id"],
+                code=row["code"],
+                name = row["name"],
+                fw_id=row["fw_id"],
+                lat=row["latitude"],
+                lon=row["longitude"],
+                geometry=row.geometry
+            )
+            self.entry_points[entry.code] = entry
+
+
+
 
     def connect_campsites(self):
 
@@ -112,7 +123,7 @@ class bwca_graph:
 
     def connect_portages(self):
 
-        for portage in self.portages:
+        for portage in self.portages.values():
 
             lake_a = self.lakes.get(portage.fw_id_a)
             lake_b = self.lakes.get(portage.fw_id_b)
@@ -120,11 +131,38 @@ class bwca_graph:
             if lake_a is None or lake_b is None:
                 continue
 
-            portage.Lake_a = lake_a
-            portage.Lake_b = lake_b
+            portage.lake_a = lake_a
+            portage.lake_b = lake_b
 
-            lake_a.connections.append(portage)
-            lake_b.connections.append(portage)
+            lake_a.portages.append(portage)
+            lake_b.portages.append(portage)
+
+
+
+    def connect_entry_points(self):
+
+        for entry in self.entry_points.values():
+
+            lake = self.lakes.get(entry.fw_id)
+
+            if lake:
+                entry.lake = lake
+
+                lake.entry_points.append(entry)
+
+
+
+
+    def connect(self):
+
+        self.connect_campsites()
+
+        self.connect_portages()
+
+        self.connect_entry_points()
+
+
+
 
     def find_lake_by_id(self, fw_id):
         return self.lakes.get(fw_id)
@@ -135,3 +173,7 @@ class bwca_graph:
         return self.campsites.get(campsite_id)
     def get_num_campsites(self, lake):
         return len(lake.campsites)
+
+    def find_entry_point(self, code):
+
+        return self.entry_points.get(str(code))

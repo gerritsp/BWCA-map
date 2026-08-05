@@ -1,14 +1,14 @@
 import geopandas as gpd
 
-entries = gpd.read_parquet("../Data/processed/entry_points.parquet")
-portages = gpd.read_parquet("../Data/processed/portages.parquet")
-mine = gpd.read_parquet("../Data/processed/processed_portages_interim.parquet")
+entries = gpd.read_parquet("../Data/entry_raw/entry_points.parquet")
+portages = gpd.read_parquet("../Data/portages_raw/portages.parquet")
+mine = gpd.read_parquet("../Data/portages_raw/processed_portages_interim.parquet")
 final_portage = gpd.read_parquet("../Data/processed/portages_final.parquet")
-portages["miles"] = portages["meters"]*0.000621371
-portages["code"] = portages["code"].astype(int)
-mine["portage_num"] = mine["portage_num"].astype(int)
-final_portage["miles"] = final_portage["miles"].round(3)
-final_portage["meters"] = final_portage["meters"].astype(int)
+# portages["miles"] = portages["meters"]*0.000621371
+# portages["code"] = portages["code"].astype(int)
+# mine["portage_num"] = mine["portage_num"].astype(int)
+# final_portage["miles"] = final_portage["miles"].round(3)
+# final_portage["meters"] = final_portage["meters"].astype(int)
 # merged = portages.merge(
 #     mine[
 #         [
@@ -28,5 +28,6 @@ final_portage["meters"] = final_portage["meters"].astype(int)
 #     (merged["start_distance_m"] > 25)
 #     | (merged["end_distance_m"] > 25)
 # )
-final_portage.to_parquet("../Data/processed/portages_final.parquet")
-#
+
+
+print(entries.columns.tolist())

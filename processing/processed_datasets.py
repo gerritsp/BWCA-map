@@ -12,7 +12,7 @@ lakes = lakes.to_crs(epsg=4326)
 campsites = gpd.read_parquet("../Data/processed/bwca_campsites.parquet")
 campsites = campsites.to_crs(epsg=4326)
 
-portages = gpd.read_parquet("../Data/processed/processed_portages_interim.parquet")
+portages = gpd.read_parquet("../Data/portages_raw/processed_portages_interim.parquet")
 portages = portages.to_crs(epsg=4326)
 # print(campsites.crs)
 # print(portages.shape)

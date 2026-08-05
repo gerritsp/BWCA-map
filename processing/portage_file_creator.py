@@ -155,7 +155,7 @@ portages_clean = gpd.GeoDataFrame(
     crs="EPSG:4326"
 )
 
-output_path = "../Data/Processed/processed_portages_interim.parquet"
+output_path = "../Data/portages_raw/processed_portages_interim.parquet"
 
 portages_clean.to_parquet(output_path)
 
