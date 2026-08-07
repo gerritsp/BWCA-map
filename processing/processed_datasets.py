@@ -17,7 +17,8 @@ portages = portages.to_crs(epsg=4326)
 # print(campsites.crs)
 # print(portages.shape)
 # print(portages.info())
-print(portages.geom_type.value_counts())
+# print(portages.geom_type.value_counts())
+# print(lakes.info())
 # print(campsites.columns)
 # print(campsites.info())
 # print(lakes.head())
@@ -43,32 +44,33 @@ print(portages.geom_type.value_counts())
 
 #
 # print(campsites["LAKE_NAME"].head(20))
-camp_counts = campsites.groupby("LAKE_NAME").size()
+# camp_counts = campsites.groupby("LAKE_NAME").size()
 # print(camp_counts["Knife Lake"])
-lakes = lakes.merge(
-    camp_counts.rename("num_campsites"),
-    left_on="map_label",
-    right_index=True,
-    how="left"
-)
-lakes["num_campsites"] = lakes["num_campsites"].fillna(0).astype(int)
-tooltip = folium.GeoJsonTooltip(
-    fields=[
-        "map_label",
-        "acres",
-        "num_campsites"
-    ],
-    aliases=[
-        "Lake",
-        "Acres",
-        "Campsites"
-    ]
-)
+# lakes = lakes.merge(
+#     camp_counts.rename("num_campsites"),
+#     left_on="map_label",
+#     right_index=True,
+#     how="left"
+# )
+# lakes["num_campsites"] = lakes["num_campsites"].fillna(0).astype(int)
+# tooltip = folium.GeoJsonTooltip(
+#     fields=[
+#         "map_label",
+#         "acres",
+#         "num_campsites"
+#     ],
+#     aliases=[
+#         "Lake",
+#         "Acres",
+#         "Campsites"
+#     ]
+# )
 
 # print(campsites.iloc[0])
 
-fw = campsites.iloc[0]["fw_id"]
+# fw = campsites.iloc[0]["fw_id"]
 #
 # print(lakes[lakes["fw_id"] == fw][["map_label", "fw_id"]])
 # print(campsites["fw_id"].isna().sum())
 # print(lakes["fw_id"].isna().sum())
+print(lakes[lakes["map_label"].str.contains("gasket", case=False, na=False)])

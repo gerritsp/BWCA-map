@@ -27,6 +27,8 @@ new_portages = gpd.read_parquet("Data/portages_raw/portages.parquet")
 new_portages = new_portages.to_crs(epsg=4326)
 final_portage = gpd.read_parquet("Data/processed/portages_final.parquet")
 final_portage = final_portage.to_crs(epsg=4326)
+fires = gpd.read_parquet("Data/processed/fires2026.parquet")
+fires = fires.to_crs(epsg=4326)
 # print(campsites[campsites["LAKE_NAME"].str.contains("Davis", case=False)])
 # print(lakes[lakes["map_label"].str.contains("Davis", case=False)])
 # print(len(campsites))
@@ -170,6 +172,33 @@ for _, row in entry_points.iterrows():
         """
     ).add_to(entry_cluster)
 
+folium.GeoJson(
+    fires,
+    name="2026 Fires",
+    style_function=lambda feature: {
+        "fillColor": "#6e2c00",
+        "color": "#ff6600",
+        "weight": 2,
+        "fillOpacity": 0.8,
+    },
+    highlight_function=lambda feature: {
+        "weight": 4,
+        "color": "yellow",
+        "fillOpacity": 0.45,
+    },
+    tooltip=folium.GeoJsonTooltip(
+        fields=[
+            "incident_name",
+            "acres",
+            "status"
+        ],
+        aliases=[
+            "Fire:",
+            "Acres:",
+            "Status:"
+        ]
+    )
+).add_to(m)
 folium.LayerControl().add_to(m)
-m.save("maps/bwca_map_entry.html")
+m.save("maps/bwca_map_fires.html")
 # m.save("../maps/bwca_map_labels.html")
