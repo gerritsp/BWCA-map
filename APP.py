@@ -642,7 +642,7 @@ def render_map(graph, out_path="maps/bwca_graph_map.html", burn_areas_path="Data
         .replace("__CAMPSITES_GEOJSON__", json.dumps(campsites_geojson(graph)))
         .replace("__PORTAGES_GEOJSON__", json.dumps(portages_geojson(graph)))
         .replace("__ENTRY_POINTS_GEOJSON__", json.dumps(entry_points_geojson(graph)))
-        .replace("__BURN_AREAS_GEOJSON__", json.dumps({"type": "FeatureCollection", "features": []}))
+        .replace("__BURN_AREAS_GEOJSON__", json.dumps(burn_areas_geojson(burn_areas_path)))
     )
 
     out_path = Path(out_path)

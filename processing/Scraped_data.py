@@ -6,6 +6,7 @@ mine = gpd.read_parquet("../Data/portages_raw/processed_portages_interim.parquet
 final_portage = gpd.read_parquet("../Data/processed/portages_final.parquet")
 fires = gpd.read_parquet("../Data/processed/fires2026.parquet")
 bwca = gpd.read_file("../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb", layer="boundary_waters_canoe_area_wilderness")
+lakes = gpd.read_parquet("../Data/Processed/bwca_lakes.parquet")
 # portages["miles"] = portages["meters"]*0.000621371
 # portages["code"] = portages["code"].astype(int)
 # mine["portage_num"] = mine["portage_num"].astype(int)
@@ -77,5 +78,9 @@ bwca = gpd.read_file("../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_bo
 # )
 # print(fires["incident_name"])
 # print(fires["acres"])
-print(fires.crs)
+# print(fires.crs)
 print(len(fires))
+print(fires.columns.tolist())
+print(lakes.info())
+# print(fires.geometry.iloc[0])
+print(lakes.geometry.iloc[0])

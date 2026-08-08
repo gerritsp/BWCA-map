@@ -12,7 +12,7 @@ lakes = lakes.to_crs(epsg=4326)
 campsites = gpd.read_parquet("../Data/processed/bwca_campsites.parquet")
 campsites = campsites.to_crs(epsg=4326)
 
-portages = gpd.read_parquet("../Data/portages_raw/processed_portages_interim.parquet")
+portages =gpd.read_parquet("../Data/processed/portages_final.parquet")
 portages = portages.to_crs(epsg=4326)
 # print(campsites.crs)
 # print(portages.shape)
@@ -74,3 +74,7 @@ portages = portages.to_crs(epsg=4326)
 # print(campsites["fw_id"].isna().sum())
 # print(lakes["fw_id"].isna().sum())
 print(lakes[lakes["map_label"].str.contains("gasket", case=False, na=False)])
+p553 = portages[portages["portage_num"] == 539]
+
+print(p553[["lake1", "lake2", "geometry"]])
+print.ln('Filter functions')

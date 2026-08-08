@@ -201,4 +201,6 @@ folium.GeoJson(
 ).add_to(m)
 folium.LayerControl().add_to(m)
 m.save("maps/bwca_map_fires.html")
+
+
 # m.save("../maps/bwca_map_labels.html")

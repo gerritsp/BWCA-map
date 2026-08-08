@@ -1,18 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="got it all">
-      <change afterPath="$PROJECT_DIR$/processing/columns.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/processing/spatial_join.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Data/processed/processed_portages_interim.parquet" beforeDir="false" afterPath="$PROJECT_DIR$/Data/portages_raw/processed_portages_interim.parquet" afterDir="false" />
+    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="burn areas sort of in there">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/APP.py" beforeDir="false" afterPath="$PROJECT_DIR$/APP.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Map.py" beforeDir="false" afterPath="$PROJECT_DIR$/Map.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/EntryPoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/EntryPoint.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/Lake.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Lake.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/Portage.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Portage.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/bwca_graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/bwca_graph.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/LakeData.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/LakeData.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/processing/Scraped_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/Scraped_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/portage_file_creator.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/portage_file_creator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/processing/processed_datasets.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/processed_datasets.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -61,6 +55,7 @@
     "Python.LakeData.executor": "Run",
     "Python.Map.executor": "Run",
     "Python.Scraped_data.executor": "Run",
+    "Python.Test.executor": "Run",
     "Python.boundariesData.executor": "Run",
     "Python.bwca_graph.executor": "Run",
     "Python.columns.executor": "Run",
@@ -72,6 +67,7 @@
     "Python.portages_data.executor": "Run",
     "Python.processed_datasets.executor": "Run",
     "Python.spatial_join.executor": "Run",
+    "Python.testingmap.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
@@ -302,7 +298,23 @@
       <option name="project" value="LOCAL" />
       <updated>1785959581973</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="got the graph working">
+      <option name="closed" value="true" />
+      <created>1785964404897</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1785964404897</updated>
+    </task>
+    <task id="LOCAL-00026" summary="burn areas sort of in there">
+      <option name="closed" value="true" />
+      <created>1786071056277</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1786071056277</updated>
+    </task>
+    <option name="localTasksCounter" value="27" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -335,6 +347,8 @@
     <MESSAGE value="no entry points" />
     <MESSAGE value="still no entry points" />
     <MESSAGE value="got it all" />
-    <option name="LAST_COMMIT_MESSAGE" value="got it all" />
+    <MESSAGE value="got the graph working" />
+    <MESSAGE value="burn areas sort of in there" />
+    <option name="LAST_COMMIT_MESSAGE" value="burn areas sort of in there" />
   </component>
 </project>
