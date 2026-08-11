@@ -1,12 +1,12 @@
 import geopandas as gpd
 lakes = gpd.read_file(
-    "../Data/Lakes/water_dnr_hydrography_uncompressed.gdb",
+    "../Data/processed/bwca_lakes.parquet",
     layer="dnr_hydro_features_all"
 )
-boundary = gpd.read_file(
-    "../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
-    layer="boundary_waters_canoe_area_wilderness"
-)
+# boundary = gpd.read_file(
+#     "../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
+#     layer="boundary_waters_canoe_area_wilderness"
+# )
 raw_campesites = gpd.read_file(
     "../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
     layer="Campsites"
@@ -15,14 +15,14 @@ raw_campesites = gpd.read_file(
 lakes = lakes[
     lakes["wb_class"] == "Lake or Pond"
 ]
-boundary = boundary.to_crs(lakes.crs)
+# boundary = boundary.to_crs(lakes.crs)
 
-
-bwca_lakes = gpd.clip(
-    lakes,
-    boundary
-)
-
+#
+# bwca_lakes = gpd.clip(
+#     lakes,
+#     boundary
+# )
+bwca_lakes = lakes
 raw_campesites = raw_campesites.to_crs(bwca_lakes.crs)
 raw_campesites = raw_campesites[
     raw_campesites["STATUS"] == "open"
@@ -43,19 +43,10 @@ campsites["camp_id"] = (
 )
 campsites = campsites[
     [
-        "camp_id",
-        "CSITENO",
-        "LAKE_NAME",      # USFS name
-        "map_label",      # DNR name
-        "fw_id",
-        "STATUS",
-        "District",
-        "acres",
-        "shore_mi",
-        "distance_to_lake",
-        "geometry"
+        "camp_id", "CSITENO", "LAKE_NAME", "map_label", "fw_id", "unique_guid",
+        "STATUS", "District", "acres", "shore_mi", "distance_to_lake", "geometry"
     ]
-]
+].rename(columns={"unique_guid": "lake_unid"})
 
 print(campsites.columns)
 print("Total campsites:", len(campsites))
@@ -88,10 +79,10 @@ print(len(campsites))
 # [1947 rows x 6 columns]
 # 4514
 # 2021
-bwca_lakes.to_parquet(
-    "../Data/Processed/bwca_lakes.parquet"
-)
+# bwca_lakes.to_parquet(
+#     "../Data/Processed/bwca_lakes.parquet"
+# )
 
-campsites.to_parquet(
-    "../Data/Processed/bwca_campsites.parquet"
-)
+# campsites.to_parquet(
+#     "../Data/Processed/bwca_campsites.parquet"
+# )

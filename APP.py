@@ -635,7 +635,7 @@ def entry_points_geojson(graph):
     return json.loads(gdf.to_crs(4326).to_json())
 
 
-def render_map(graph, out_path="maps/bwca_graph_map.html", burn_areas_path="Data/processed/fires2026.parquet"):
+def render_map(graph, out_path="maps/bwca_graph_map.html", burn_areas_path="Data/processed/fires2026_reduced.parquet"):
     html = (
         HTML_TEMPLATE
         .replace("__LAKES_GEOJSON__", json.dumps(lakes_geojson(graph)))

@@ -10,63 +10,74 @@ graph.load_lakes("Data/processed/bwca_lakes.parquet")
 graph.load_campsites("Data/processed/bwca_campsites.parquet")
 graph.load_portages("Data/processed/portages_final.parquet")
 graph.load_entry_points("Data/processed/entry_points_joined.parquet")
+graph.connect()
 
-print("Loaded:")
-print(f"Lakes:        {len(graph.lakes)}")
-print(f"Campsites:   {len(graph.campsites)}")
-print(f"Portages:    {len(graph.portages)}")
-print(f"EntryPoints: {len(graph.entry_points)}")
+unresolved = [p for p in graph.portages.values() if p.lake_a is None or p.lake_b is None]
+same_lake = [p for p in graph.portages.values() if p.lake_a and p.lake_b and p.lake_a is p.lake_b]
+
+print(f"{len(unresolved)} / {len(graph.portages)} portages have at least one unresolved endpoint")
+print(f"{len(same_lake)} portages resolved to the SAME lake on both ends")
+
+for p in same_lake[:5]:
+    print(p.portage_num, p.name, "->", p.lake_a.fw_id, p.lake_a.name)
+# print("Loaded:")
+# print(f"Lakes:        {len(graph.lakes)}")
+# print(f"Campsites:   {len(graph.campsites)}")
+# print(f"Portages:    {len(graph.portages)}")
+# print(f"EntryPoints: {len(graph.entry_points)}")
+
+
 
 # -----------------------------
 # Connect everything
 # -----------------------------
-entry = next(iter(graph.entry_points.values()))
-
-print(entry.code)
-print(entry.fw_id)
-print(entry.name)
-graph.connect_campsites()
-graph.connect_portages()
-count = 0
-
-
-graph.connect_entry_points()
-connected = 0
-
-for e in graph.entry_points.values():
-    if hasattr(e, "lake"):
-        connected += 1
-
-print(connected)
-matched_a = 0
-matched_b = 0
-
-for p in graph.portages.values():
-    if graph.lakes.get(p.fw_id_a) is not None:
-        matched_a += 1
-
-    if graph.lakes.get(p.fw_id_b) is not None:
-        matched_b += 1
-
-print("Lake A matches:", matched_a)
-print("Lake B matches:", matched_b)
-print(type(next(iter(graph.lakes.keys()))))
+# entry = next(iter(graph.entry_points.values()))
 #
-# p = next(iter(graph.portages.values()))
-# print(type(p.fw_id_a))
-# print(type(p.fw_id_b))
-# print(p.fw_id_a)
-# print(p.fw_id_b)
-# print(len(graph.lakes))
-# print(len(graph.campsites))
-# print(len(graph.portages))
-# print(len(graph.entry_points))
-lake = graph.find_lake_by_name("Brule Lake")
-
-print(lake.name)
-print(len(lake.campsites))
-print(len(lake.portages))
-print(len(lake.entry_points))
+# print(entry.code)
+# print(entry.fw_id)
+# print(entry.name)
+# graph.connect_campsites()
+# graph.connect_portages()
+# count = 0
+#
+#
+# graph.connect_entry_points()
+# connected = 0
+#
+# for e in graph.entry_points.values():
+#     if hasattr(e, "lake"):
+#         connected += 1
+#
+# print(connected)
+# matched_a = 0
+# matched_b = 0
+#
+# for p in graph.portages.values():
+#     if graph.lakes.get(p.fw_id_a) is not None:
+#         matched_a += 1
+#
+#     if graph.lakes.get(p.fw_id_b) is not None:
+#         matched_b += 1
+#
+# print("Lake A matches:", matched_a)
+# print("Lake B matches:", matched_b)
+# print(type(next(iter(graph.lakes.keys()))))
+# #
+# # p = next(iter(graph.portages.values()))
+# # print(type(p.fw_id_a))
+# # print(type(p.fw_id_b))
+# # print(p.fw_id_a)
+# # print(p.fw_id_b)
+# # print(len(graph.lakes))
+# # print(len(graph.campsites))
+# # print(len(graph.portages))
+# # print(len(graph.entry_points))
+# lake = graph.find_lake_by_name("Brule Lake")
+#
+# print(lake.name)
+# print(len(lake.campsites))
+# print(len(lake.portages))
+# print(len(lake.entry_points))
 # missing = 0
 
 # for p in graph.portages.values():

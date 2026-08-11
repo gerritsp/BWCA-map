@@ -73,8 +73,19 @@ portages = portages.to_crs(epsg=4326)
 # print(lakes[lakes["fw_id"] == fw][["map_label", "fw_id"]])
 # print(campsites["fw_id"].isna().sum())
 # print(lakes["fw_id"].isna().sum())
-print(lakes[lakes["map_label"].str.contains("gasket", case=False, na=False)])
-p553 = portages[portages["portage_num"] == 539]
+# print(lakes[lakes["map_label"].str.contains("gasket", case=False, na=False)])
+# p553 = portages[portages["portage_num"] == 539]
+#
+# print(p553[["lake1", "lake2", "geometry"]])
+# print.ln('Filter functions')
+print(lakes.info())
+# print(lakes[lakes["Lake"] == 16034800])
+# print(lakes.head(1).columns.tolist())
+# print(lakes.head(1).values.tolist())
+# #add search functions to show the routes
+# print(lakes["fw_id"].eq(99999).sum())
+# print(lakes["unique_id"].eq(99999).sum())
 
-print(p553[["lake1", "lake2", "geometry"]])
-print.ln('Filter functions')
+print("lakes unid nulls:", lakes["unique_guid"].isna().sum(), "/ unique:", lakes["unique_guid"].nunique(), "/", len(lakes))
+print("campsites columns:", [c for c in campsites.columns if "unique_guid" in c.lower() or "fw_id" in c.lower()])
+print("portages columns:", [c for c in portages.columns if "unique_guid" in c.lower() or "fw_id" in c.lower()])

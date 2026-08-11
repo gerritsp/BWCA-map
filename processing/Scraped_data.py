@@ -1,10 +1,10 @@
 import geopandas as gpd
-
+import json
 entries = gpd.read_parquet("../Data/entry_raw/entry_points.parquet")
 portages = gpd.read_parquet("../Data/portages_raw/portages.parquet")
 mine = gpd.read_parquet("../Data/portages_raw/processed_portages_interim.parquet")
 final_portage = gpd.read_parquet("../Data/processed/portages_final.parquet")
-fires = gpd.read_parquet("../Data/processed/fires2026.parquet")
+burn = gpd.read_parquet("../Data/processed/fires2026.parquet")
 bwca = gpd.read_file("../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb", layer="boundary_waters_canoe_area_wilderness")
 lakes = gpd.read_parquet("../Data/Processed/bwca_lakes.parquet")
 # portages["miles"] = portages["meters"]*0.000621371
@@ -12,6 +12,7 @@ lakes = gpd.read_parquet("../Data/Processed/bwca_lakes.parquet")
 # mine["portage_num"] = mine["portage_num"].astype(int)
 # final_portage["miles"] = final_portage["miles"].round(3)
 # final_portage["meters"] = final_portage["meters"].astype(int)
+
 # merged = portages.merge(
 #     mine[
 #         [
@@ -79,8 +80,42 @@ lakes = gpd.read_parquet("../Data/Processed/bwca_lakes.parquet")
 # print(fires["incident_name"])
 # print(fires["acres"])
 # print(fires.crs)
-print(len(fires))
-print(fires.columns.tolist())
+print(len(burn))
+print(burn.columns.tolist())
 print(lakes.info())
 # print(fires.geometry.iloc[0])
-print(lakes.geometry.iloc[0])
+# print(lakes.geometry.iloc[0])
+# print(sum(len(g.exterior.coords) if g.geom_type == "Polygon" else sum(len(p.exterior.coords) for p in g.geoms) for g in burn.geometry))
+# def vertex_count(geom):
+#     if geom.geom_type == "Polygon":
+#         return len(geom.exterior.coords)
+#     return sum(len(p.exterior.coords) for p in geom.geoms)
+#
+# before = sum(vertex_count(g) for g in burn.geometry)
+# print("before:", before)
+#
+# simplified = burn.geometry.simplify(0.0003, preserve_topology=True)
+# after = sum(vertex_count(g) for g in simplified)
+# print("after:", after)
+# burn.to_parquet("../Data/processed/fires2026_reduced.parquet")
+#
+# geojson = json.loads(burn.to_json())
+# def round_coords(obj):
+#     if isinstance(obj, list):
+#         if obj and isinstance(obj[0], (int, float)):
+#             return [round(x, 5) for x in obj]
+#         return [round_coords(x) for x in obj]
+#     return obj
+#
+#
+# for feature in geojson["features"]:
+#     feature["geometry"]["coordinates"] = round_coords(feature["geometry"]["coordinates"])
+
+
+
+print("Total lake rows:", len(lakes))
+print("Unique fw_id values:", lakes["fw_id"].nunique())
+
+# dupes = lakes[lakes.duplicated("fw_id", keep=False)].sort_values("fw_id")
+# print(f"\n{len(dupes)} rows share a duplicated fw_id:")
+# print(dupes[["fw_id", "map_label"]].to_string())
