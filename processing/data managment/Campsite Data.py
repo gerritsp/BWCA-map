@@ -2,10 +2,10 @@ import geopandas as gpd
 import pyogrio
 
 layers = pyogrio.list_layers(
-    r"../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb"
+    r"../../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb"
 )
 gdf = gpd.read_file(
-    r"../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
+    r"../../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
     layer="Campsites"
 )
 print(layers)

@@ -2,10 +2,10 @@ import geopandas as gpd
 import pyogrio
 import os
 layers = pyogrio.list_layers(
-    r"../Data/Lakes/water_dnr_hydrography_uncompressed.gdb"
+    r"../../Data/Lakes/water_dnr_hydrography_uncompressed.gdb"
 )
 hydro = gpd.read_file(
-    "../Data/Lakes/water_dnr_hydrography_uncompressed.gdb",
+    "../../Data/Lakes/water_dnr_hydrography_uncompressed.gdb",
     layer="dnr_hydro_features_all"
 )
 # print(layers)

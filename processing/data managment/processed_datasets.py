@@ -4,15 +4,15 @@ import folium
 
 
 
-lakes = gpd.read_parquet("../Data/processed/bwca_lakes.parquet")
+lakes = gpd.read_parquet("../../Data/processed/bwca_lakes.parquet")
 lakes["acres"] = lakes["acres"].round(2)
 lakes = lakes.to_crs(epsg=4326)
 
 
-campsites = gpd.read_parquet("../Data/processed/bwca_campsites.parquet")
+campsites = gpd.read_parquet("../../Data/processed/bwca_campsites.parquet")
 campsites = campsites.to_crs(epsg=4326)
 
-portages =gpd.read_parquet("../Data/processed/portages_final.parquet")
+portages =gpd.read_parquet("../../Data/processed/portages_final.parquet")
 portages = portages.to_crs(epsg=4326)
 # print(campsites.crs)
 # print(portages.shape)

@@ -1,8 +1,8 @@
 import geopandas as gpd
 
-entries = gpd.read_parquet("../Data/entry_raw/entry_points.parquet")  # or wherever the raw source is
-bwca_lakes = gpd.read_parquet("../Data/Processed/bwca_lakes.parquet")
-final_entries = gpd.read_parquet("../Data/Processed/entry_points_joined.parquet")
+entries = gpd.read_parquet("../../Data/entry_raw/entry_points.parquet")  # or wherever the raw source is
+bwca_lakes = gpd.read_parquet("../../Data/processed/bwca_lakes.parquet")
+final_entries = gpd.read_parquet("../../Data/processed/entry_points_joined.parquet")
 
 entries = entries.to_crs(bwca_lakes.crs)
 

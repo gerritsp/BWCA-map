@@ -6,11 +6,11 @@ from models.Lake import Lake
 from shapely.geometry import Point
 import re
 
-layers = gpd.list_layers("../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx")
+layers = gpd.list_layers("../../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx")
 
 # print(layers)
 wpts = gpd.read_file(
-    "../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx",
+    "../../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx",
     layer="waypoints"
 )
 # layers = pyogrio.list_layers(
@@ -19,10 +19,10 @@ wpts = gpd.read_file(
 
 
 boundary = gpd.read_file(
-    "../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
+    "../../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
     layer="boundary_waters_canoe_area_wilderness"
 )
-lakes = gpd.read_parquet("../Data/processed/bwca_lakes.parquet")
+lakes = gpd.read_parquet("../../Data/processed/bwca_lakes.parquet")
 
 
 def parse_comment(comment):

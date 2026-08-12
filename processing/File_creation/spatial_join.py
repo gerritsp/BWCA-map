@@ -1,7 +1,7 @@
 import geopandas as gpd
 
-entries = gpd.read_parquet("../Data/entry_raw/entry_points.parquet")
-lakes = gpd.read_parquet("../Data/processed/bwca_lakes.parquet")
+entries = gpd.read_parquet("../../Data/entry_raw/entry_points.parquet")
+lakes = gpd.read_parquet("../../Data/processed/bwca_lakes.parquet")
 entries = entries.to_crs(lakes.crs)
 
 joined = gpd.sjoin_nearest(

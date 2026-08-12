@@ -6,10 +6,10 @@ from models.Lake import Lake
 from shapely.geometry import Point
 import re
 
-layers = gpd.list_layers("../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx")
+layers = gpd.list_layers("../../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx")
 print(layers)
 wpts = gpd.read_file(
-    "../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx",
+    "../../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx",
     layer="waypoints"
 )
 print(wpts.info())

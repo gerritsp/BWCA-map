@@ -1,6 +1,6 @@
 import geopandas as gpd
 
-gasket = gpd.read_file("../Data/Lakes/test.gpkg")
+gasket = gpd.read_file("../../Data/Lakes/test.gpkg")
 #
 # print(gasket.crs)
 # print(gasket.columns.tolist())

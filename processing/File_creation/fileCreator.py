@@ -1,13 +1,13 @@
 import geopandas as gpd
 lakes = gpd.read_parquet(
-    "../Data/processed/bwca_lakes.parquet",
+    "../../Data/processed/bwca_lakes.parquet",
 )
-# boundary = gpd.read_file(
-#     "../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
-#     layer="boundary_waters_canoe_area_wilderness"
-# )
+boundary = gpd.read_file(
+    "../../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
+    layer="boundary_waters_canoe_area_wilderness"
+)
 raw_campesites = gpd.read_file(
-    "../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
+    "../../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
     layer="Campsites"
 )
 
