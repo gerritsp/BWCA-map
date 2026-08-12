@@ -10,15 +10,18 @@ lakes = gpd.read_parquet("../Data/Processed/bwca_lakes.parquet")
 # portages["miles"] = portages["meters"]*0.000621371
 # portages["code"] = portages["code"].astype(int)
 # mine["portage_num"] = mine["portage_num"].astype(int)
-# final_portage["miles"] = final_portage["miles"].round(3)
-# final_portage["meters"] = final_portage["meters"].astype(int)
-
+#
+# portages["miles"] = portages["miles"].round(3)
+# portages["meters"] = portages["meters"].astype(int)
+#
 # merged = portages.merge(
 #     mine[
 #         [
 #             "portage_num",
 #             "start_fw_id",
 #             "end_fw_id",
+#             "start_unid",
+#             "end_unid",
 #             "start_distance_m",
 #             "end_distance_m",
 #         ]
@@ -32,11 +35,13 @@ lakes = gpd.read_parquet("../Data/Processed/bwca_lakes.parquet")
 #     (merged["start_distance_m"] > 25)
 #     | (merged["end_distance_m"] > 25)
 # )
+### merged.to_parquet("../Data/processed/portages_final.parquet")
+print(final_portage.info())
 #
 # print(fires.columns)
 #
 # print(fires.crs)
-#
+
 # print(len(fires))
 #
 # print(fires.geometry.geom_type.value_counts())
@@ -80,9 +85,9 @@ lakes = gpd.read_parquet("../Data/Processed/bwca_lakes.parquet")
 # print(fires["incident_name"])
 # print(fires["acres"])
 # print(fires.crs)
-print(len(burn))
-print(burn.columns.tolist())
-print(lakes.info())
+# print(len(burn))
+# print(burn.columns.tolist())
+# print(lakes.info())
 # print(fires.geometry.iloc[0])
 # print(lakes.geometry.iloc[0])
 # print(sum(len(g.exterior.coords) if g.geom_type == "Polygon" else sum(len(p.exterior.coords) for p in g.geoms) for g in burn.geometry))
@@ -112,10 +117,12 @@ print(lakes.info())
 #     feature["geometry"]["coordinates"] = round_coords(feature["geometry"]["coordinates"])
 
 
-
-print("Total lake rows:", len(lakes))
-print("Unique fw_id values:", lakes["fw_id"].nunique())
-
+#
+# print("Total lake rows:", len(lakes))
+# print("Unique fw_id values:", lakes["fw_id"].nunique())
+# print(mine.info())
 # dupes = lakes[lakes.duplicated("fw_id", keep=False)].sort_values("fw_id")
 # print(f"\n{len(dupes)} rows share a duplicated fw_id:")
 # print(dupes[["fw_id", "map_label"]].to_string())
+print(entries.info())
+print(entries[entries["code"] == 88888])

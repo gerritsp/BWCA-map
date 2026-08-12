@@ -89,3 +89,8 @@ print(lakes.info())
 print("lakes unid nulls:", lakes["unique_guid"].isna().sum(), "/ unique:", lakes["unique_guid"].nunique(), "/", len(lakes))
 print("campsites columns:", [c for c in campsites.columns if "unique_guid" in c.lower() or "fw_id" in c.lower()])
 print("portages columns:", [c for c in portages.columns if "unique_guid" in c.lower() or "fw_id" in c.lower()])
+print(portages.info())
+print(lakes.info())
+match = lakes[lakes["map_label"]=="Knife"]
+print(match.info())
+print(match.values)

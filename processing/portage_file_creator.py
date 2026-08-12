@@ -89,14 +89,14 @@ start_gdf = start_gdf.to_crs(lakes.crs)
 end_gdf = end_gdf.to_crs(lakes.crs)
 start_join = gpd.sjoin_nearest(
     start_gdf,
-    lakes[["fw_id", "geometry"]],
+    lakes[["fw_id","unique_guid", "geometry"]],
     how="left",
     distance_col="distance_m"
 )
 
 end_join = gpd.sjoin_nearest(
     end_gdf,
-    lakes[["fw_id", "geometry"]],
+    lakes[["fw_id", "unique_guid","geometry"]],
     how="left",
     distance_col="distance_m"
 )
@@ -107,9 +107,11 @@ end_join = gpd.sjoin_nearest(
 start_join = start_join[~start_join.index.duplicated(keep="first")]
 end_join = end_join[~end_join.index.duplicated(keep="first")]
 portage_df["start_fw_id"] = start_join["fw_id"].values
+portage_df["start_unid"] = start_join["unique_guid"].values
 portage_df["start_distance_m"] = start_join["distance_m"].values
 
 portage_df["end_fw_id"] = end_join["fw_id"].values
+portage_df["end_unid"] = end_join["unique_guid"].values
 portage_df["end_distance_m"] = end_join["distance_m"].values
 
 # duplicates = start_join[start_join.index.duplicated(keep=False)]

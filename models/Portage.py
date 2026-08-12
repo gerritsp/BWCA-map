@@ -15,6 +15,8 @@ class Portage:
         lake2_name: str,
         start_fw_id: int | None,
         end_fw_id: int | None,
+        start_unid: str,
+        end_unid: str,
         geometry
     ):
 
@@ -43,6 +45,9 @@ class Portage:
         # Graph IDs
         self.fw_id_a = start_fw_id
         self.fw_id_b = end_fw_id
+
+        self.end_unid = end_unid
+        self.start_unid = start_unid
 
         # Actual Lake objects (filled in later)
         self.lake_a = None

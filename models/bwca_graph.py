@@ -33,10 +33,11 @@ class bwca_graph:
                 name=row["map_label"],
                 geometry=row.geometry,
                 acres=row["acres"],
-                shoreline_miles=row["shore_mi"]
+                shoreline_miles=row["shore_mi"],
+                unique_guid=row["unique_guid"]
             )
 
-            self.lakes[lake.fw_id] = lake
+            self.lakes[lake.unique_guid] = lake
             normalized = self.normalize_name(lake.name)
 
             if normalized is not None:
@@ -65,7 +66,10 @@ class bwca_graph:
 
                 distance_to_lake=row["distance_to_lake"],
 
+                lake_unid= row["lake_unid"],
+
                 geometry=row.geometry
+
 
             )
 
@@ -91,6 +95,8 @@ class bwca_graph:
                 lake2_name=row["lake2"],
                 start_fw_id=row["start_fw_id"],
                 end_fw_id=row["end_fw_id"],
+                start_unid=row["start_unid"],
+                end_unid=row["end_unid"],
                 geometry=row.geometry
             )
             self.portages[portage.usfs_id] = portage
@@ -105,6 +111,7 @@ class bwca_graph:
                 fw_id=row["fw_id"],
                 lat=row["latitude"],
                 lon=row["longitude"],
+                lake_unid=row["lake_unid"],
                 geometry=row.geometry
             )
             self.entry_points[entry.code] = entry
@@ -115,7 +122,7 @@ class bwca_graph:
     def connect_campsites(self):
 
         for campsite in self.campsites.values():
-            lake = self.lakes.get(campsite.fw_id)
+            lake = self.lakes.get(campsite.lake_unid)
 
             if lake:
                 campsite.lake = lake
@@ -125,8 +132,8 @@ class bwca_graph:
 
         for portage in self.portages.values():
 
-            lake_a = self.lakes.get(portage.fw_id_a)
-            lake_b = self.lakes.get(portage.fw_id_b)
+            lake_a = self.lakes.get(portage.start_unid)
+            lake_b = self.lakes.get(portage.end_unid)
 
             if lake_a is None or lake_b is None:
                 continue
@@ -143,7 +150,7 @@ class bwca_graph:
 
         for entry in self.entry_points.values():
 
-            lake = self.lakes.get(entry.fw_id)
+            lake = self.lakes.get(entry.lake_unid)
 
             if lake:
                 entry.lake = lake

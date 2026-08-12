@@ -3,6 +3,7 @@ from pathlib import Path
 
 import geopandas as gpd
 
+from models.Lake import Lake
 from models.bwca_graph import bwca_graph
 
 # Data/processed/*.parquet is written in NAD83 / UTM zone 15N (see CLAUDE.md's
@@ -83,7 +84,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 `${label} &mdash; ${rods} (${meters} / ${miles})<br>` +
                 `${p.lake_a || "?"} &rarr; ${p.lake_b || "?"}<br>` +
                 `<span style="font-size:11px; color:#555;">` +
-                `fw_id_a=${p.fw_id_a ?? 'N/A'} &middot; fw_id_b=${p.fw_id_b ?? 'N/A'}</span>`
+                `start_unid=${p.start_unid ?? 'N/A'} &middot; end_unid=${p.end_unid ?? 'N/A'}</span>`
             );
         }
     }).addTo(map);
@@ -186,7 +187,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     // safe undercount, not a wrong route, and good enough for a demo.
     const ROD_TO_METERS = 5.0292;
 
-    const lakesById = new Map(lakes.features.map((f) => [f.properties.fw_id, f]));
+    const lakesById = new Map(lakes.features.map((f) => [f.properties.unique_guid, f]));
     const nodes = new Map(); // nodeId -> { lakeId, coord: [lon, lat] }
     const adjacency = new Map(); // nodeId -> [{ to, weight, kind, geometry }]
     const accessPointsByLake = new Map(); // lakeId -> [nodeId, ...]
@@ -329,8 +330,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const coords = feature.geometry.coordinates;
         const nodeA = `portage:${p.portage_num}:a`;
         const nodeB = `portage:${p.portage_num}:b`;
-        addNode(nodeA, p.fw_id_a, coords[0]);
-        addNode(nodeB, p.fw_id_b, coords[coords.length - 1]);
+        addNode(nodeA, p.start_unid, coords[0]);
+        addNode(nodeB, p.end_unid, coords[coords.length - 1]);
         addEdge(nodeA, nodeB, p.length_rods * ROD_TO_METERS, "portage", feature.geometry);
     }
 
@@ -500,7 +501,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         const role = nodes.has("start") ? "end" : "start";
-        addNode(role, lakeFeature.properties.fw_id, snappedCoord);
+        addNode(role, lakeFeature.properties.unique_guid, snappedCoord);
         const marker = L.marker([snappedCoord[1], snappedCoord[0]], {
             title: role === "start" ? "Start" : "End"
         }).addTo(map);
@@ -544,6 +545,7 @@ def lakes_geojson(graph):
             "name": [lake.name for lake in lakes],
             "acres": [lake.acres for lake in lakes],
             "shoreline_miles": [lake.shoreline_miles for lake in lakes],
+            "unique_guid" : [lake.unique_guid for lake in lakes],
             "num_campsites": [len(lake.campsites) for lake in lakes],
         },
         geometry=[lake.geometry for lake in lakes],
@@ -560,6 +562,7 @@ def campsites_geojson(graph):
             "lake_name": [c.lake_name for c in campsites],
             "status": [c.status for c in campsites],
             "district": [c.district for c in campsites],
+            "lake_unid": [c.lake_unid for c in campsites],
             "distance_to_lake": [c.distance_to_lake for c in campsites],
         },
         geometry=[c.geometry for c in campsites],
@@ -602,6 +605,8 @@ def portages_geojson(graph):
             "length_rods": [p.length_rods for p in portages],
             "length_meters": [p.length_meters for p in portages],
             "length_miles": [p.length_miles for p in portages],
+            "start_unid": [p.start_unid for p in portages],
+            "end_unid":[p.end_unid for p in portages],
         },
         geometry=[p.geometry for p in portages],
         crs="EPSG:4326",  # portages_final.parquet is already lon/lat, unlike lakes/campsites (see CLAUDE.md)
@@ -628,6 +633,7 @@ def entry_points_geojson(graph):
             "name": [e.name for e in entries],
             "fw_id": [e.fw_id for e in entries],
             "lake_name": [e.lake.name if e.lake else None for e in entries],
+            "lake_unid": [e.lake_unid for e in entries],
         },
         geometry=[e.geometry for e in entries],
         crs=SOURCE_CRS,
@@ -642,7 +648,8 @@ def render_map(graph, out_path="maps/bwca_graph_map.html", burn_areas_path="Data
         .replace("__CAMPSITES_GEOJSON__", json.dumps(campsites_geojson(graph)))
         .replace("__PORTAGES_GEOJSON__", json.dumps(portages_geojson(graph)))
         .replace("__ENTRY_POINTS_GEOJSON__", json.dumps(entry_points_geojson(graph)))
-        .replace("__BURN_AREAS_GEOJSON__", json.dumps(burn_areas_geojson(burn_areas_path)))
+        .replace("__BURN_AREAS_GEOJSON__", json.dumps({"type": "FeatureCollection", "features": []}))
+        # .replace("__BURN_AREAS_GEOJSON__", json.dumps(burn_areas_geojson(burn_areas_path)))
     )
 
     out_path = Path(out_path)

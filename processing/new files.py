@@ -1,28 +1,18 @@
 import geopandas as gpd
 
-raw_campsites = gpd.read_file(
-    "../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
-    layer="Campsites"
-)
+entries = gpd.read_parquet("../Data/entry_raw/entry_points.parquet")  # or wherever the raw source is
 bwca_lakes = gpd.read_parquet("../Data/Processed/bwca_lakes.parquet")
+final_entries = gpd.read_parquet("../Data/Processed/entry_points_joined.parquet")
 
-raw_campsites = raw_campsites.to_crs(bwca_lakes.crs)
-raw_campsites = raw_campsites[raw_campsites["STATUS"] == "open"]
+entries = entries.to_crs(bwca_lakes.crs)
 
-campsites = gpd.sjoin_nearest(
-    raw_campsites,
-    bwca_lakes,
+entries_joined = gpd.sjoin_nearest(
+    entries,
+    bwca_lakes[["fw_id", "unique_guid", "geometry"]],
     how="left",
     distance_col="distance_to_lake"
-)
-
-campsites["camp_id"] = campsites["LAKE_NAME"] + "_" + campsites["CSITENO"].astype(str)
-
-campsites = campsites[
-    [
-        "camp_id", "CSITENO", "LAKE_NAME", "map_label", "fw_id", "unique_guid",
-        "STATUS", "District", "acres", "shore_mi", "distance_to_lake", "geometry"
-    ]
-].rename(columns={"unique_guid": "lake_unid"})
-
-campsites.to_parquet("../Data/Processed/bwca_campsites.parquet")
+).rename(columns={"unique_guid": "lake_unid"})
+# entries_joined = entries_joined["id","name","code","longitude","latitude","fw_id","lake_unid","distace_to_lake"]
+print(entries_joined.info())
+print(final_entries.info())
+entries_joined.to_parquet("../Data/processed/entry_points_joined.parquet")

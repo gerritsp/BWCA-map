@@ -10,6 +10,8 @@ class Lake:
     acres: float
     shoreline_miles: float
 
+    unique_guid : str
+
     campsites: list = field(default_factory=list)
 
     portages: list = field(default_factory=list)

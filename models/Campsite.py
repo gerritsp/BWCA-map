@@ -20,4 +20,6 @@ class Campsite:
 
     distance_to_lake : float
 
+    lake_unid : str
+
     lake = None
