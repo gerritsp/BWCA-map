@@ -4,21 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="fish">
-      <change afterPath="$PROJECT_DIR$/processing/File_creation/rivers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/Campsite Data.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/data managment/Campsite Data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/LakeData.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/data managment/LakeData.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/boundariesData.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/data managment/boundariesData.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/entrypointData.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/data managment/entrypointData.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/fileCreator.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/File_creation/fileCreator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/new files.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/File_creation/new files.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/new_lake_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/File_creation/new_lake_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/portage_file_creator.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/File_creation/portage_file_creator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/portages_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/data managment/portages_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/pre.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/data managment/pre.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/processed_datasets.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/data managment/processed_datasets.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/processing/spatial_join.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/File_creation/spatial_join.py" afterDir="false" />
+    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="rivers">
+      <change afterPath="$PROJECT_DIR$/processing/File_creation/Hopefully_campsites.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/processing/File_creation/River_creator.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/processing/File_creation/campesite_creator.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/processing/File_creation/waters.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/processing/missing campesites.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Data/processed/bwca_campsites.parquet" beforeDir="false" afterPath="$PROJECT_DIR$/Data/processed/old/bwca_campsites.parquet" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Map.py" beforeDir="false" afterPath="$PROJECT_DIR$/Map.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/graph.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/File_creation/rivers.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/File_creation/rivers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/columns.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/columns.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/data managment/LakeData.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/data managment/LakeData.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/data managment/processed_datasets.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/data managment/processed_datasets.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,18 +61,22 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "Python.APP.executor": "Run",
     "Python.Campsite Data.executor": "Run",
+    "Python.Hopefully_campsites.executor": "Run",
     "Python.LakeData.executor": "Run",
     "Python.Map.executor": "Run",
+    "Python.River_creator.executor": "Run",
     "Python.Scraped_data.executor": "Run",
     "Python.Test.executor": "Run",
     "Python.boundariesData.executor": "Run",
     "Python.bwca_graph.executor": "Run",
+    "Python.campesite_creator.executor": "Run",
     "Python.columns.executor": "Run",
     "Python.entrypointData.executor": "Run",
     "Python.fileCreator.executor": "Run",
     "Python.fish.executor": "Run",
     "Python.graph.executor": "Run",
     "Python.main.executor": "Run",
+    "Python.missing campesites.executor": "Run",
     "Python.new files.executor": "Run",
     "Python.new_lake_data.executor": "Run",
     "Python.portage_file_creator.executor": "Run",
@@ -83,6 +85,7 @@
     "Python.rivers.executor": "Run",
     "Python.spatial_join.executor": "Run",
     "Python.testingmap.executor": "Run",
+    "Python.waters.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
@@ -103,11 +106,11 @@
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\Data" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\Data\processed\old" />
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\processing\data managment" />
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\processing\File_creation" />
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\Data\Lakes" />
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\Data\entry_raw" />
-      <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\Data\portages_raw" />
     </key>
   </component>
   <component name="SharedIndexes">
@@ -357,7 +360,15 @@
       <option name="project" value="LOCAL" />
       <updated>1786561950630</updated>
     </task>
-    <option name="localTasksCounter" value="30" />
+    <task id="LOCAL-00030" summary="rivers">
+      <option name="closed" value="true" />
+      <created>1786565102008</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1786565102008</updated>
+    </task>
+    <option name="localTasksCounter" value="31" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -395,6 +406,7 @@
     <MESSAGE value="ytiugyoijp" />
     <MESSAGE value="dafdaf" />
     <MESSAGE value="fish" />
-    <option name="LAST_COMMIT_MESSAGE" value="fish" />
+    <MESSAGE value="rivers" />
+    <option name="LAST_COMMIT_MESSAGE" value="rivers" />
   </component>
 </project>

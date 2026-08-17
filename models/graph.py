@@ -3,7 +3,7 @@ import geopandas as gpd
 from Campsite import Campsite
 from Lake import Lake
 
-gdf = gpd.read_parquet("../Data/processed/bwca_campsites.parquet")
+gdf = gpd.read_parquet("../Data/processed/old/bwca_campsites.parquet")
 lake_df = gpd.read_parquet("../Data/processed/bwca_lakes.parquet")
 
 lakes = {}

@@ -7,14 +7,22 @@ from folium.plugins import MarkerCluster
 
 
 
+waters = gpd.read_parquet("Data/processed/bwca_waters.parquet")
+waters = waters.to_crs(epsg=4326)
+for col in waters.select_dtypes(include=["datetime", "datetimetz"]).columns:
+    waters[col] = waters[col].astype(str)
 
+waters = waters.to_crs(epsg=4326)
 
 lakes = gpd.read_parquet("Data/processed/bwca_lakes.parquet")
+for col in lakes.select_dtypes(include=["datetime", "datetimetz"]).columns:
+    lakes[col] = lakes[col].astype(str)
+
 lakes["acres"] = lakes["acres"].round(2)
 lakes = lakes.to_crs(epsg=4326)
 
 
-campsites = gpd.read_parquet("Data/processed/bwca_campsites.parquet")
+campsites = gpd.read_parquet("Data/processed/bwca_campsites_river.parquet")
 campsites = campsites.to_crs(epsg=4326)
 
 portages = gpd.read_parquet("Data/portages_raw/processed_portages_interim.parquet")
@@ -29,72 +37,96 @@ final_portage = gpd.read_parquet("Data/processed/portages_final.parquet")
 final_portage = final_portage.to_crs(epsg=4326)
 fires = gpd.read_parquet("Data/processed/fires2026.parquet")
 fires = fires.to_crs(epsg=4326)
-# print(campsites[campsites["LAKE_NAME"].str.contains("Davis", case=False)])
-# print(lakes[lakes["map_label"].str.contains("Davis", case=False)])
-# print(len(campsites))
-# print(lakes[[
-#     "map_label",
-#     "pw_parent_name",
-#     "pw_sub_name"
-# ]].head(20))
-# minx, miny, maxx, maxy = lakes.total_bounds
-# center = [(miny + maxy) / 2, (minx + maxx) / 2]
-# print(center)
-#
-lakes = lakes[[
-    "map_label",
-    "acres",
-    "geometry"
-]]
-#
+
+print("\n========== WATER DATA ==========")
+print("Total water features:", len(waters))
+
+print("\nWater classes:")
+print(waters["wb_class"].value_counts(dropna=False))
+
+print("\nGeometry types:")
+print(waters.geometry.geom_type.value_counts())
+
+print("\nCRS:")
+print(waters.crs)
+
+print("\nBounds:")
+print(waters.total_bounds)
+
+print("================================")
 m = folium.Map(
     location=[48.0, -91.5],
     zoom_start=8
 )
-#
-folium.GeoJson(lakes).add_to(m)
-# # #
-# # # m.save("../maps/bwca_map.html")
-# #
-# #
-folium.GeoJson(
-    lakes,
-    tooltip=folium.GeoJsonTooltip(
-        fields=["map_label", "acres"],
-        aliases=["Lake", "Acres"]
-    )
+
+lake_layer = folium.FeatureGroup(
+    name="Lakes",
+    show=True
 ).add_to(m)
-# m.save("../maps/bwca_map_labels.html")
-
-# print(lakes["map_label"].head(20))
-#
-# print(campsites["LAKE_NAME"].head(20))
-
 camp_counts = campsites.groupby("LAKE_NAME").size()
+
 lakes = lakes.merge(
     camp_counts.rename("num_campsites"),
     left_on="map_label",
     right_index=True,
     how="left"
 )
-lakes["num_campsites"] = lakes["num_campsites"].fillna(0).astype(int)
-tooltip = folium.GeoJsonTooltip(
-    fields=[
-        "map_label",
-        "acres",
-        "num_campsites"
-    ],
-    aliases=[
-        "Lake",
-        "Acres",
-        "Campsites"
-    ]
-)
-geojson = folium.GeoJson(
+folium.GeoJson(
     lakes,
-    tooltip=tooltip
+    tooltip=folium.GeoJsonTooltip(
+        fields=["map_label", "acres", "num_campsites"],
+        aliases=["Lake", "Acres", "Campsites"]
+    ),
+    style_function=lambda feature: {
+        "color": "blue",
+        "weight": 1,
+        "fillColor": "blue",
+        "fillOpacity": 0.25
+    }
+).add_to(lake_layer)
+
+
+
+water_layer = folium.FeatureGroup(
+    name="Rivers / Intermittent Water",
+    show=True
+).add_to(m)
+
+
+
+
+
+folium.GeoJson(
+    waters,
+    style_function=lambda feature: {
+        "color": "cyan",
+        "weight": 2,
+        "fillColor": "cyan",
+        "fillOpacity": 0.35
+    },
+    tooltip=folium.GeoJsonTooltip(
+        fields=[
+            "map_label",
+            "wb_class",
+            "unique_guid"
+        ],
+        aliases=[
+            "Water",
+            "Type",
+            "Water ID"
+        ]
+    )
+).add_to(water_layer)
+
+
+
+lakes["num_campsites"] = (
+    lakes["num_campsites"]
+    .fillna(0)
+    .astype(int)
 )
-geojson.add_to(m)
+
+
 
 cluster = MarkerCluster().add_to(m)
 for _, row in campsites.iterrows():
@@ -107,7 +139,6 @@ for _, row in campsites.iterrows():
         <h4>Campsite: {row['camp_id']}</h4>
         <b>Lake:</b> {row['LAKE_NAME']}<br>
         <b>Status:</b> {row['STATUS']}<br>
-        <b>District:</b> {row['District']}<br>
         <b>Distance to matched lake:</b> {row['distance_to_lake']:.1f} m
         """,
         max_width=250

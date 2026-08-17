@@ -6,8 +6,16 @@ layers = pyogrio.list_layers(
 )
 hydro = gpd.read_file(
     "../../Data/Lakes/water_dnr_hydrography_uncompressed.gdb",
-    layer="dnr_hydro_features_all"
+    layer="dnr_rivers_and_streams"
 )
+boundary = gpd.read_file(
+    "../../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
+    layer="boundary_waters_canoe_area_wilderness"
+)
+streams = gpd.read_file(hydro, layer="dnr_rivers_and_streams")
+boundary = boundary.to_crs(streams.crs)
+bwca_streams = gpd.clip(streams, boundary)
+print(len(bwca_streams))  # should be a small fraction of 133
 # print(layers)
 # print(gdf.geometry.iloc[0])
 # print(gdf.geometry.iloc[0].geom_type)
@@ -20,12 +28,6 @@ hydro = gpd.read_file(
 
 
 # print(gdf["wb_class"].value_counts())
-for col in hydro.columns:
-    if hydro[col].dtype == object:
-        matches = hydro[
-            hydro[col].astype(str).str.contains("gasket", case=False, na=False)
-        ]
-
-        if len(matches):
-            print(f"\nFound in {col}")
-            print(matches[[col]])
+print(hydro.head())
+print(hydro.info())
+print(hydro.columns.to_list())
