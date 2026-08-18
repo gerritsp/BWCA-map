@@ -5,6 +5,8 @@ from models.Lake import Lake
 import pandas as pd
 from models.Portage import Portage
 from models.EntryPoint import EntryPoint
+from models.RiverSegment import RiverSegment
+
 
 class bwca_graph:
 
@@ -15,6 +17,7 @@ class bwca_graph:
         self.campsites = {}
         self.portages = {}
         self.entry_points = {}
+        self.river_segments = {}
 
     @staticmethod
     def normalize_name(name):
@@ -116,7 +119,26 @@ class bwca_graph:
             )
             self.entry_points[entry.code] = entry
 
+    def load_rivers(self, filename):
+        river_df = gpd.read_parquet(filename)
 
+        for _, row in river_df.iterrows():
+            segment = RiverSegment(
+                river_id=row["river_id"],
+                name=row["name"],
+                strm_type=row["strm_type"],
+                routable=row["routable"],
+                node_a=row["node_a"],
+                node_b=row["node_b"],
+                length_m=row["length_m"],
+                unid_a=row["unid_a"],
+                unid_b=row["unid_b"],
+                geometry=row.geometry
+            )
+            self.river_segments[segment.river_id] = segment
+
+    def load_river_adjacency(self, filename):
+        self._river_adjacency_df = pd.read_parquet(filename)
 
 
     def connect_campsites(self):
@@ -157,16 +179,43 @@ class bwca_graph:
 
                 lake.entry_points.append(entry)
 
+    def connect_rivers(self):
+        for segment in self.river_segments.values():
+            lake_a = self.lakes.get(segment.unid_a)
+            lake_b = self.lakes.get(segment.unid_b)
+
+            if lake_a:
+                segment.lake_a = lake_a
+                lake_a.river_segments.append(segment)
+            if lake_b:
+                segment.lake_b = lake_b
+                lake_b.river_segments.append(segment)
+
+    def connect_river_adjacency(self):
+        # wire segment-to-segment neighbors from the junction table
+        if not hasattr(self, "_river_adjacency_df"):
+            return
+
+        for _, row in self._river_adjacency_df.iterrows():
+            seg_a = self.river_segments.get(row["segment_a"])
+            seg_b = self.river_segments.get(row["segment_b"])
+
+            if seg_a is None or seg_b is None:
+                continue
+
+            seg_a.neighbors.append(seg_b)
+            seg_b.neighbors.append(seg_a)
+
 
 
 
     def connect(self):
 
         self.connect_campsites()
-
         self.connect_portages()
-
         self.connect_entry_points()
+        self.connect_rivers()  # new
+        self.connect_river_adjacency()  # new
 
 
 

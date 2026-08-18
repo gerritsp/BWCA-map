@@ -18,4 +18,4 @@ class Lake:
 
     entry_points: list = field(default_factory=list)
 
-    connections: list = field(default_factory=list)
+    river_segments: list = field(default_factory=list)
