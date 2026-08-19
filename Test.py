@@ -3,6 +3,7 @@ from pathlib import Path
 
 import geopandas as gpd
 
+from models.Lake import Lake
 from models.bwca_graph import bwca_graph
 
 # Data/processed/*.parquet is written in NAD83 / UTM zone 15N (see CLAUDE.md's
@@ -41,6 +42,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     const campsites = __CAMPSITES_GEOJSON__;
     const portages = __PORTAGES_GEOJSON__;
     const entryPoints = __ENTRY_POINTS_GEOJSON__;
+    const burnAreas = __BURN_AREAS_GEOJSON__;
 
     const map = L.map("map");
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -73,14 +75,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
             const rods = p.length_rods == null ? "N/A" : `${p.length_rods.toFixed(1)} rods`;
+            const meters = p.length_meters == null ? "N/A" : `${p.length_meters.toFixed(0)} m`;
+            const miles = p.length_miles == null ? "N/A" : `${p.length_miles.toFixed(2)} mi`;
             const label = p.name || `${p.lake1_name || "?"} &harr; ${p.lake2_name || "?"}`;
 
             layer.bindPopup(
                 `<b>Portage #${p.portage_num}</b> (USFS ID ${p.usfs_id})<br>` +
-                `${label} &mdash; ${rods}<br>` +
+                `${label} &mdash; ${rods} (${meters} / ${miles})<br>` +
                 `${p.lake_a || "?"} &rarr; ${p.lake_b || "?"}<br>` +
                 `<span style="font-size:11px; color:#555;">` +
-                `fw_id_a=${p.fw_id_a ?? 'N/A'} &middot; fw_id_b=${p.fw_id_b ?? 'N/A'}</span>`
+                `start_unid=${p.start_unid ?? 'N/A'} &middot; end_unid=${p.end_unid ?? 'N/A'}</span>`
             );
         }
     }).addTo(map);
@@ -134,6 +138,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
     }).addTo(map);
 
+    // Burn areas: rendered but excluded from routing only when the checkbox
+    // is checked (see avoidBurnAreas below). Kept as its own layer so it can
+    // be toggled visually independent of the routing behavior if you ever
+    // want "show but don't avoid" as a separate state.
+    const BURN_AREA_STYLE = {
+        color: "#9a3412",
+        weight: 1.5,
+        fillColor: "#ea580c",
+        fillOpacity: 0.35,
+        dashArray: "4 3"
+    };
+    const burnAreasLayer = L.geoJSON(burnAreas, {
+        style: BURN_AREA_STYLE,
+        onEachFeature: function (feature, layer) {
+            const p = feature.properties || {};
+            const label = p.name || p.fire_name || "Burn area";
+            const year = p.year || p.fire_year;
+            layer.bindTooltip(year ? `${label} (${year})` : label);
+        }
+    }).addTo(map);
+
+    let avoidBurnAreas = false;
+
     const legend = L.control({ position: "bottomright" });
     legend.onAdd = function () {
         const div = L.DomUtil.create("div", "legend");
@@ -141,7 +168,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <b>Legend</b><br>
             <span style="display:inline-block;width:20px;border-top:3px solid #0f5c2e;margin-right:4px;"></span>Portage<br>
             <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f59e0b;border:2px solid white;box-shadow:0 0 2px rgba(0,0,0,0.5);margin-right:4px;vertical-align:middle;"></span>Entry point<br>
-            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c53030;margin-right:6px;vertical-align:middle;"></span>Campsite
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c53030;margin-right:6px;vertical-align:middle;"></span>Campsite<br>
+            <span style="display:inline-block;width:14px;height:10px;background:#ea580c;opacity:0.5;border:1px dashed #9a3412;margin-right:4px;vertical-align:middle;"></span>Burn area
         `;
         return div;
     };
@@ -159,14 +187,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     // safe undercount, not a wrong route, and good enough for a demo.
     const ROD_TO_METERS = 5.0292;
 
-    const lakesById = new Map(lakes.features.map((f) => [f.properties.fw_id, f]));
+    const lakesById = new Map(lakes.features.map((f) => [f.properties.unique_guid, f]));
     const nodes = new Map(); // nodeId -> { lakeId, coord: [lon, lat] }
     const adjacency = new Map(); // nodeId -> [{ to, weight, kind, geometry }]
     const accessPointsByLake = new Map(); // lakeId -> [nodeId, ...]
 
+    // Checked once per edge at creation time (not per-search) since burn
+    // areas don't change during a session - keeps route lookups cheap even
+    // though turf.booleanIntersects itself isn't free.
+    function edgeCrossesBurnArea(lineGeometry) {
+        if (!burnAreas.features || burnAreas.features.length === 0) return false;
+        const line = turf.feature(lineGeometry);
+        return burnAreas.features.some((burn) => {
+            try {
+                return turf.booleanIntersects(line, burn);
+            } catch {
+                return false; // malformed burn polygon shouldn't take down routing
+            }
+        });
+    }
+
     function addEdge(a, b, weight, kind, geometry) {
-        adjacency.get(a).push({ to: b, weight, kind, geometry });
-        adjacency.get(b).push({ to: a, weight, kind, geometry });
+        const crossesBurn = edgeCrossesBurnArea(geometry);
+        adjacency.get(a).push({ to: b, weight, kind, geometry, crossesBurn });
+        adjacency.get(b).push({ to: a, weight, kind, geometry, crossesBurn });
     }
 
     const LAKE_MATCH_BUFFER_METERS = 25;
@@ -286,8 +330,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const coords = feature.geometry.coordinates;
         const nodeA = `portage:${p.portage_num}:a`;
         const nodeB = `portage:${p.portage_num}:b`;
-        addNode(nodeA, p.fw_id_a, coords[0]);
-        addNode(nodeB, p.fw_id_b, coords[coords.length - 1]);
+        addNode(nodeA, p.start_unid, coords[0]);
+        addNode(nodeB, p.end_unid, coords[coords.length - 1]);
         addEdge(nodeA, nodeB, p.length_rods * ROD_TO_METERS, "portage", feature.geometry);
     }
 
@@ -328,6 +372,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (u === endNode) break;
 
             for (const edge of adjacency.get(u) || []) {
+                if (avoidBurnAreas && edge.crossesBurn) continue;
                 const alt = d + edge.weight;
                 if (alt < (dist.get(edge.to) ?? Infinity)) {
                     dist.set(edge.to, alt);
@@ -411,16 +456,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     const routeControl = L.control({ position: "topleft" });
     routeControl.onAdd = function () {
         const div = L.DomUtil.create("div", "legend");
+        div.style.minWidth = "220px";
         div.innerHTML = `
             <b>Route finder</b><br>
-            <span id="route-status-text">Click a point on a lake to start a route.</span><br>
-            <button id="route-clear-btn" style="margin-top:6px;">Clear route</button>
+            <span id="route-status-text">Click a point on a lake to start a route.</span>
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb;">
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none;">
+                    <input type="checkbox" id="avoid-burn-checkbox" style="accent-color:#ea580c; width:15px; height:15px;" />
+                    <span>Avoid burn areas</span>
+                </label>
+            </div>
+            <button id="route-clear-btn" style="margin-top:8px; width:100%; padding:5px 0; border:1px solid #d1d5db; border-radius:4px; background:#f9fafb; cursor:pointer;">Clear route</button>
         `;
         L.DomEvent.disableClickPropagation(div);
         return div;
     };
     routeControl.addTo(map);
     document.getElementById("route-clear-btn").addEventListener("click", clearRoute);
+    document.getElementById("avoid-burn-checkbox").addEventListener("change", (e) => {
+        avoidBurnAreas = e.target.checked;
+        // Re-run the search on the existing endpoints if a route is already showing,
+        // so toggling the box updates the route immediately instead of waiting for a new click.
+        if (nodes.has("start") && nodes.has("end")) computeAndDrawRoute();
+    });
 
     // Attached to the map AND to the portage/campsite layers: those layers
     // have their own popups/cluster-zoom click handling and swallow the
@@ -443,7 +501,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         const role = nodes.has("start") ? "end" : "start";
-        addNode(role, lakeFeature.properties.fw_id, snappedCoord);
+        addNode(role, lakeFeature.properties.unique_guid, snappedCoord);
         const marker = L.marker([snappedCoord[1], snappedCoord[0]], {
             title: role === "start" ? "Start" : "End"
         }).addTo(map);
@@ -474,13 +532,7 @@ def build_graph():
     graph.load_campsites("Data/processed/bwca_campsites.parquet")
     graph.load_portages("Data/processed/portages_final.parquet")
     graph.load_entry_points("Data/processed/entry_points_joined.parquet")
-    burn_areas = gpd.read_parquet("Data/processed/fires2026.parquet")
     graph.connect()
-    print(f"Loaded {len(graph.portages)} portages")
-    sample = next(iter(graph.portages.values()), None)
-    if sample:
-        print("Sample geometry:", sample.geometry)
-        print("Sample lake_a/lake_b:", sample.lake_a, sample.lake_b)
 
     return graph
 
@@ -493,6 +545,7 @@ def lakes_geojson(graph):
             "name": [lake.name for lake in lakes],
             "acres": [lake.acres for lake in lakes],
             "shoreline_miles": [lake.shoreline_miles for lake in lakes],
+            "unique_guid" : [lake.unique_guid for lake in lakes],
             "num_campsites": [len(lake.campsites) for lake in lakes],
         },
         geometry=[lake.geometry for lake in lakes],
@@ -509,6 +562,7 @@ def campsites_geojson(graph):
             "lake_name": [c.lake_name for c in campsites],
             "status": [c.status for c in campsites],
             "district": [c.district for c in campsites],
+            "lake_unid": [c.lake_unid for c in campsites],
             "distance_to_lake": [c.distance_to_lake for c in campsites],
         },
         geometry=[c.geometry for c in campsites],
@@ -549,11 +603,26 @@ def portages_geojson(graph):
             ],
 
             "length_rods": [p.length_rods for p in portages],
+            "length_meters": [p.length_meters for p in portages],
+            "length_miles": [p.length_miles for p in portages],
+            "start_unid": [p.start_unid for p in portages],
+            "end_unid":[p.end_unid for p in portages],
         },
         geometry=[p.geometry for p in portages],
-        crs="EPSG:4326",
+        crs="EPSG:4326",  # portages_final.parquet is already lon/lat, unlike lakes/campsites (see CLAUDE.md)
     )
-    return json.loads(gdf.to_crs(4326).to_json())
+    return json.loads(gdf.to_json())
+
+
+def burn_areas_geojson(path="Data/processed/burn_areas.parquet", crs=None):
+    """crs: pass the CRS the parquet is actually tagged with if it differs
+    from SOURCE_CRS - check with gpd.read_parquet(path).crs before trusting this."""
+    burn = gpd.read_parquet(path)
+    if crs:
+        burn = burn.set_crs(crs, allow_override=True)
+    if burn.crs is None:
+        burn = burn.set_crs(SOURCE_CRS)
+    return json.loads(burn.to_crs(4326).to_json())
 
 
 def entry_points_geojson(graph):
@@ -564,6 +633,7 @@ def entry_points_geojson(graph):
             "name": [e.name for e in entries],
             "fw_id": [e.fw_id for e in entries],
             "lake_name": [e.lake.name if e.lake else None for e in entries],
+            "lake_unid": [e.lake_unid for e in entries],
         },
         geometry=[e.geometry for e in entries],
         crs=SOURCE_CRS,
@@ -571,13 +641,15 @@ def entry_points_geojson(graph):
     return json.loads(gdf.to_crs(4326).to_json())
 
 
-def render_map(graph, out_path="maps/bwca_graph_map.html"):
+def render_map(graph, out_path="maps/bwca_graph_map.html", burn_areas_path="Data/processed/fires2026_reduced.parquet"):
     html = (
         HTML_TEMPLATE
         .replace("__LAKES_GEOJSON__", json.dumps(lakes_geojson(graph)))
         .replace("__CAMPSITES_GEOJSON__", json.dumps(campsites_geojson(graph)))
         .replace("__PORTAGES_GEOJSON__", json.dumps(portages_geojson(graph)))
         .replace("__ENTRY_POINTS_GEOJSON__", json.dumps(entry_points_geojson(graph)))
+        .replace("__BURN_AREAS_GEOJSON__", json.dumps({"type": "FeatureCollection", "features": []}))
+        # .replace("__BURN_AREAS_GEOJSON__", json.dumps(burn_areas_geojson(burn_areas_path)))
     )
 
     out_path = Path(out_path)
