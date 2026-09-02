@@ -4,14 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="rivers -linestrings">
-      <change afterPath="$PROJECT_DIR$/Scripts/build_paddle_edges.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Templates/graph_engine.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Templates/html_template.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Templates/js_template.js" afterDir="false" />
+    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="ojdaoifdsj">
+      <change beforePath="$PROJECT_DIR$/.idea/BWCA map.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/BWCA map.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/APP.py" beforeDir="false" afterPath="$PROJECT_DIR$/APP.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Test.py" beforeDir="false" afterPath="$PROJECT_DIR$/Test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/bwca_graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/bwca_graph.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/File_creation/Hopefully_campsites.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/File_creation/final_campsites.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/processing/columns.py" beforeDir="false" afterPath="$PROJECT_DIR$/processing/columns.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,53 +51,56 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.APP.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Campsite Data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Hopefully_campsites.executor&quot;: &quot;Run&quot;,
-    &quot;Python.LakeData.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Map.executor&quot;: &quot;Run&quot;,
-    &quot;Python.River_creator.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Scraped_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.boundariesData.executor&quot;: &quot;Run&quot;,
-    &quot;Python.bwca_graph.executor&quot;: &quot;Run&quot;,
-    &quot;Python.campesite_creator.executor&quot;: &quot;Run&quot;,
-    &quot;Python.columns.executor&quot;: &quot;Run&quot;,
-    &quot;Python.entrypointData.executor&quot;: &quot;Run&quot;,
-    &quot;Python.fileCreator.executor&quot;: &quot;Run&quot;,
-    &quot;Python.fish.executor&quot;: &quot;Run&quot;,
-    &quot;Python.graph.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.missing campesites.executor&quot;: &quot;Run&quot;,
-    &quot;Python.new files.executor&quot;: &quot;Run&quot;,
-    &quot;Python.new_lake_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.portage_file_creator.executor&quot;: &quot;Run&quot;,
-    &quot;Python.portages_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.processed_datasets.executor&quot;: &quot;Run&quot;,
-    &quot;Python.rivers.executor&quot;: &quot;Run&quot;,
-    &quot;Python.rivertests.executor&quot;: &quot;Run&quot;,
-    &quot;Python.spatial_join.executor&quot;: &quot;Run&quot;,
-    &quot;Python.testingmap.executor&quot;: &quot;Run&quot;,
-    &quot;Python.waters.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/gerritsp/PycharmProjects/BWCA map&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.APP.executor": "Run",
+    "Python.Campsite Data.executor": "Run",
+    "Python.Hopefully_campsites.executor": "Run",
+    "Python.LakeData.executor": "Run",
+    "Python.Map.executor": "Run",
+    "Python.River_creator.executor": "Run",
+    "Python.Scraped_data.executor": "Run",
+    "Python.Test.executor": "Run",
+    "Python.boundariesData.executor": "Run",
+    "Python.bwca_graph.executor": "Run",
+    "Python.campesite_creator.executor": "Run",
+    "Python.columns.executor": "Run",
+    "Python.entrypointData.executor": "Run",
+    "Python.fileCreator.executor": "Run",
+    "Python.final_campsites.executor": "Run",
+    "Python.fish.executor": "Run",
+    "Python.graph.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.missing campesites.executor": "Run",
+    "Python.new files.executor": "Run",
+    "Python.new_lake_data.executor": "Run",
+    "Python.portage_file_creator.executor": "Run",
+    "Python.portages_data.executor": "Run",
+    "Python.processed_datasets.executor": "Run",
+    "Python.rivers.executor": "Run",
+    "Python.rivertests.executor": "Run",
+    "Python.spatial_join.executor": "Run",
+    "Python.testingmap.executor": "Run",
+    "Python.waters.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/Users/gerritsp/PycharmProjects/PycharmProjects/BWCA map",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.jshint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.jshint": "",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\gerritsp\PycharmProjects\BWCA map\Data" />
@@ -113,7 +116,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-b63d5a1f7c97-b61e75351b1f-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.22158.340" />
+        <option value="bundled-python-sdk-821f704e66d9-5bd6d13a2a75-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-262.9437.214" />
       </set>
     </attachedChunks>
   </component>
@@ -124,6 +127,8 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1784308887282</updated>
+      <workItem from="1788313245714" duration="2031000" />
+      <workItem from="1788365352668" duration="1157000" />
     </task>
     <task id="LOCAL-00001" summary="ujk">
       <option name="closed" value="true" />
@@ -373,7 +378,15 @@
       <option name="project" value="LOCAL" />
       <updated>1787002470892</updated>
     </task>
-    <option name="localTasksCounter" value="32" />
+    <task id="LOCAL-00032" summary="ojdaoifdsj">
+      <option name="closed" value="true" />
+      <created>1787178971851</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1787178971851</updated>
+    </task>
+    <option name="localTasksCounter" value="33" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -413,6 +426,12 @@
     <MESSAGE value="fish" />
     <MESSAGE value="rivers" />
     <MESSAGE value="rivers -linestrings" />
-    <option name="LAST_COMMIT_MESSAGE" value="rivers -linestrings" />
+    <MESSAGE value="ojdaoifdsj" />
+    <option name="LAST_COMMIT_MESSAGE" value="ojdaoifdsj" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/BWCA_map$columns.coverage" NAME="columns Coverage Results" MODIFIED="1788369655117" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/processing" />
+    <SUITE FILE_PATH="coverage/BWCA_map$final_campsites.coverage" NAME="final_campsites Coverage Results" MODIFIED="1788369646528" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/processing/File_creation" />
+    <SUITE FILE_PATH="coverage/BWCA_map$APP.coverage" NAME="APP Coverage Results" MODIFIED="1788370101504" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

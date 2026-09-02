@@ -24,13 +24,13 @@ def build_graph():
     graph = bwca_graph()
 
     graph.load_lakes("Data/processed/bwca_lakes.parquet")
-    graph.load_campsites("Data/processed/bwca_campsites.parquet")
+    graph.load_campsites("Data/processed/bwca_campsites_river.parquet")
     graph.connect_campsites()
 
-    graph.load_portages("Data/processed/bwca_portages.parquet")
+    graph.load_portages("Data/processed/portages_final.parquet")
     graph.connect_portages()
 
-    graph.load_rivers("Data/processed/bwca_rivers.parquet")
+    graph.load_rivers("Data/processed/bwca_rivers_lines.parquet")
     graph.connect_rivers()
 
     # ADDED: entry points weren't in this rewrite yet - wiring them back in
@@ -82,12 +82,12 @@ def campsites_geojson(graph):
 
 
 def portages_geojson(graph):
-    portages = graph.portages
+    portages = list(graph.portages.values())
     gdf = gpd.GeoDataFrame(
         {
-            "portage_number": [p.portage_number for p in portages],
+            "portage_number": [p.portage_num for p in portages],
             "usfs_id": [p.usfs_id for p in portages],
-            "waterbody": [p.waterbody for p in portages],
+            "name": [p.name for p in portages],
             "lake_a": [p.lake_a.name for p in portages],
             "lake_b": [p.lake_b.name for p in portages],
             # unique_guid_a/b ADDED - the real routing keys. fw_id_a/b are
@@ -98,9 +98,9 @@ def portages_geojson(graph):
             "fw_id_a": [p.lake_a.fw_id for p in portages],
             "fw_id_b": [p.lake_b.fw_id for p in portages],
             "length_rods": [p.length_rods for p in portages],
-            "dist_lake_a": [p.dist_lake_a for p in portages],
-            "dist_lake_b": [p.dist_lake_b for p in portages],
-            "lake_match_uncertain": [bool(p.lake_match_uncertain) for p in portages],
+            # "dist_lake_a": [p.dist_lake_a for p in portages],
+            # "dist_lake_b": [p.dist_lake_b for p in portages],
+            # "lake_match_uncertain": [bool(p.lake_match_uncertain) for p in portages],
         },
         geometry=[p.geometry for p in portages],
         crs=SOURCE_CRS,
@@ -109,7 +109,7 @@ def portages_geojson(graph):
 
 
 def rivers_geojson(graph):
-    rivers = graph.rivers
+    rivers = list(graph.rivers.values())
     gdf = gpd.GeoDataFrame(
         {
             "name": [r.name if isinstance(r.name, str) else None for r in rivers],

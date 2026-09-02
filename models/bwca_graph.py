@@ -17,7 +17,7 @@ class bwca_graph:
         self.campsites = {}
         self.portages = {}
         self.entry_points = {}
-        self.river_segments = {}
+        self.rivers = {}
 
     @staticmethod
     def normalize_name(name):
@@ -47,35 +47,20 @@ class bwca_graph:
                 self.lakes_by_name[normalized] = lake
                 self.lakes_by_name[normalized + " lake"] = lake
 
-
-    def load_campsites(self,filename):
+    def load_campsites(self, filename):
         camp_df = gpd.read_parquet(filename)
-        unmatched = []
         for _, row in camp_df.iterrows():
-
             campsite = Campsite(
-
                 camp_id=row["camp_id"],
-
                 site_number=row["CSITENO"],
-
                 lake_name=row["LAKE_NAME"],
-
-                fw_id=row["fw_id"],
-
+                fw_id=row["lake_fw_id"],
                 status=row["STATUS"],
-
-                district=row["District"],
-
+                district=row["District"],  # not in this dataset yet - see note below
                 distance_to_lake=row["distance_to_lake"],
-
-                lake_unid= row["lake_unid"],
-
+                lake_unid=row["lake_unique_guid"],
                 geometry=row.geometry
-
-
             )
-
             self.campsites[campsite.camp_id] = campsite
 
     def load_portages(self, filename):
@@ -135,7 +120,7 @@ class bwca_graph:
                 unid_b=row["unid_b"],
                 geometry=row.geometry
             )
-            self.river_segments[segment.river_id] = segment
+            self.rivers[segment.river_id] = segment
 
     def load_river_adjacency(self, filename):
         self._river_adjacency_df = pd.read_parquet(filename)
@@ -180,7 +165,7 @@ class bwca_graph:
                 lake.entry_points.append(entry)
 
     def connect_rivers(self):
-        for segment in self.river_segments.values():
+        for segment in self.rivers.values():
             lake_a = self.lakes.get(segment.unid_a)
             lake_b = self.lakes.get(segment.unid_b)
 
@@ -197,8 +182,8 @@ class bwca_graph:
             return
 
         for _, row in self._river_adjacency_df.iterrows():
-            seg_a = self.river_segments.get(row["segment_a"])
-            seg_b = self.river_segments.get(row["segment_b"])
+            seg_a = self.rivers.get(row["segment_a"])
+            seg_b = self.rivers.get(row["segment_b"])
 
             if seg_a is None or seg_b is None:
                 continue

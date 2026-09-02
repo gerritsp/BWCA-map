@@ -228,7 +228,7 @@ campsites = campsites[
         "CSITENO",
         "STATUS",
         "LAKE_NAME",
-
+        "District",
         "lake_unique_guid",
         "lake_fw_id",
         "distance_to_lake",
