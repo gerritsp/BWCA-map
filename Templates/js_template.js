@@ -33,22 +33,15 @@
             feature.properties.lake_match_uncertain ? UNCERTAIN_PORTAGE_STYLE : CONFIDENT_PORTAGE_STYLE,
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
-            const waterbody = p.waterbody || "(unnamed in source data)";
+            const label = p.name || "(unnamed)";
             const confidence = p.lake_match_uncertain
                 ? '<span style="color:#dc2626;">Uncertain match</span>'
                 : '<span style="color:#0f5c2e;">Confident match</span>';
-            // fw_id_a/fw_id_b kept here as a human-readable DEBUG LABEL ONLY -
-            // they are NOT used for graph identity anywhere (see
-            // graph_engine.js's IDENTITY NOTE). unique_guid_a/unique_guid_b
-            // are the real keys and are shown alongside for verification.
             layer.bindPopup(
                 `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
-                `${waterbody} &mdash; ${p.length_rods.toFixed(1)} rods<br>` +
+                `${label} &mdash; ${p.length_rods.toFixed(1)} rods<br>` +
                 `${p.lake_a} &rarr; ${p.lake_b}<br>` +
-                `${confidence}<br>` +
                 `<span style="font-size:11px; color:#555;">` +
-                `fw_id_a=${p.fw_id_a} (${p.dist_lake_a.toFixed(1)}m) &middot; ` +
-                `fw_id_b=${p.fw_id_b} (${p.dist_lake_b.toFixed(1)}m)<br>` +
                 `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
                 `unique_guid_b=${p.unique_guid_b ?? "N/A"}</span>`
             );
