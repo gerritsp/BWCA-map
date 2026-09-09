@@ -216,7 +216,7 @@ for portage_num, group in portages.groupby("portage_num"):
 portages_clean = gpd.GeoDataFrame(
     records,
     geometry="geometry",
-    crs="EPSG:4326"
+    crs="EPSG:26915"
 )
 
 output_path = "Data/Processed/processed_portages_interim.parquet"

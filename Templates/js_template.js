@@ -1,10 +1,11 @@
-    const LAKES_URL = "__LAKES_URL__";
+const LAKES_URL = "__LAKES_URL__";
     const CAMPSITES_URL = "__CAMPSITES_URL__";
     const PORTAGES_URL = "__PORTAGES_URL__";
     const RIVERS_URL = "__RIVERS_URL__";
+    const ENTRY_POINTS_URL = "__ENTRY_POINTS_URL__";
     const PADDLE_EDGES_URL = "__PADDLE_EDGES_URL__";
 
-    function init(lakes, campsites, portages, rivers, paddleEdges) {
+    function init(lakes, campsites, portages, rivers, entryPoints, paddleEdges) {
     const map = L.map("map");
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap contributors"
@@ -25,21 +26,17 @@
         }
     }).addTo(map);
 
-    const CONFIDENT_PORTAGE_STYLE = { color: "#0f5c2e", weight: 3, opacity: 0.9 };
-    const UNCERTAIN_PORTAGE_STYLE = { color: "#dc2626", weight: 3, opacity: 0.9, dashArray: "8 6" };
+    const PORTAGE_STYLE = { color: "#0f5c2e", weight: 3, opacity: 0.9 };
 
     const portagesLayer = L.geoJSON(portages, {
-        style: (feature) =>
-            feature.properties.lake_match_uncertain ? UNCERTAIN_PORTAGE_STYLE : CONFIDENT_PORTAGE_STYLE,
+        style: PORTAGE_STYLE,
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
             const label = p.name || "(unnamed)";
-            const confidence = p.lake_match_uncertain
-                ? '<span style="color:#dc2626;">Uncertain match</span>'
-                : '<span style="color:#0f5c2e;">Confident match</span>';
+            const rods = p.length_rods == null ? "N/A" : `${p.length_rods.toFixed(1)} rods`;
             layer.bindPopup(
                 `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
-                `${label} &mdash; ${p.length_rods.toFixed(1)} rods<br>` +
+                `${label} &mdash; ${rods}<br>` +
                 `${p.lake_a} &rarr; ${p.lake_b}<br>` +
                 `<span style="font-size:11px; color:#555;">` +
                 `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
@@ -52,12 +49,12 @@
     legend.onAdd = function () {
         const div = L.DomUtil.create("div", "legend");
         div.innerHTML = `
-            <b>Portage match confidence</b><br>
-            <span style="display:inline-block;width:20px;border-top:3px solid #0f5c2e;margin-right:4px;"></span>Confident<br>
-            <span style="display:inline-block;width:20px;border-top:3px dashed #dc2626;margin-right:4px;"></span>Uncertain (&gt;25m from lake)<br>
+            <b>Portages</b><br>
+            <span style="display:inline-block;width:20px;border-top:3px solid #0f5c2e;margin-right:4px;"></span>Portage<br>
             <b>Rivers &amp; streams</b><br>
             <span style="display:inline-block;width:20px;border-top:2px solid #0891b2;margin-right:4px;"></span>Routable (river/connector)<br>
-            <span style="display:inline-block;width:20px;border-top:2px dotted #0891b2;margin-right:4px;"></span>Display only (small stream)
+            <span style="display:inline-block;width:20px;border-top:2px dotted #0891b2;margin-right:4px;"></span>Display only (small stream)<br>
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f59e0b;border:2px solid white;box-shadow:0 0 2px rgba(0,0,0,0.5);margin-right:4px;vertical-align:middle;"></span>Entry point
         `;
         return div;
     };
@@ -88,27 +85,43 @@
         },
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
+            const dist = p.distance_to_lake == null ? "N/A" : `${p.distance_to_lake.toFixed(1)} m`;
             layer.bindPopup(
                 `<b>Campsite:</b> ${p.camp_id}<br>` +
                 `<b>Lake:</b> ${p.lake_name}<br>` +
                 `<b>Status:</b> ${p.status}<br>` +
                 `<b>District:</b> ${p.district}<br>` +
-                `<b>Distance to matched lake:</b> ${p.distance_to_lake.toFixed(1)} m`
+                `<b>Distance to matched lake:</b> ${dist}`
             );
         }
     }).addTo(campsitesLayer);
     campsitesLayer.addTo(map);
 
+    const entryPointsLayer = L.geoJSON(entryPoints, {
+        pointToLayer: function (feature, latlng) {
+            return L.marker(latlng, {
+                icon: L.divIcon({
+                    className: "entry-point-icon",
+                    html: '<div style="background:#f59e0b;border:2px solid white;' +
+                          'border-radius:50%;width:14px;height:14px;' +
+                          'box-shadow:0 0 3px rgba(0,0,0,0.5);"></div>',
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
+                })
+            });
+        },
+        onEachFeature: function (feature, layer) {
+            const p = feature.properties;
+            layer.bindPopup(
+                `<b>Entry Point ${p.code ?? ""}</b><br>` +
+                `${p.name || "(unnamed)"}<br>` +
+                `<span style="font-size:11px; color:#555;">Lake: ${p.lake_name || "unmatched"}</span>`
+            );
+        }
+    }).addTo(map);
+
     map.fitBounds(lakesLayer.getBounds());
 
-    // Full graph-construction logic (addNode/wirePaddleEdges/
-    // buildLakeVertexGraph/lineStaysInLake) lives in graph_engine.js, keyed
-    // by each lake's unique_guid (NOT fw_id - see graph_engine.js's
-    // IDENTITY NOTE for why fw_id is unsafe to use as a lake key). Shared
-    // with scripts/build_paddle_edges.js, which runs this exact code once at
-    // build time over every portage endpoint, routable river endpoint, and
-    // lake boundary vertex. Loading that precomputed result (below) replaces
-    // what used to be a live portage/river ingestion loop here.
     const engine = GraphEngine.createGraphEngine(turf, lakes, rivers);
     const { nodes, adjacency, addNode, removeNode, addEdge, wireRiverSnapEdges, clearRiverSnapEdges } = engine;
     GraphEngine.loadPrecomputed(engine, paddleEdges);
@@ -136,7 +149,7 @@
         return { feature: best, coord: bestCoord, distance: bestDist };
     }
 
-    const PADDLE_PREFERENCE_PENALTY = 1.3; // tunable: 1.0 = no preference, higher = stronger pull toward rivers/portages
+    const PADDLE_PREFERENCE_PENALTY = 1.3;
 
     function dijkstra(startNode, endNode) {
         const cost = new Map([[startNode, 0]]);
@@ -274,10 +287,6 @@
         }
 
         const role = nodes.has("start") ? "end" : "start";
-        // CHANGED: was lakeFeature.properties.fw_id - fw_id is not a safe
-        // lake key (see graph_engine.js's IDENTITY NOTE). lakes_geojson()
-        // must include "unique_guid" as a feature property for this to work -
-        // see the Python-side changes.
         addNode(role, lakeFeature.properties.unique_guid, snappedCoord);
         wireRiverSnapEdges(role, lakeFeature.properties.unique_guid, snappedCoord);
         const marker = L.marker([snappedCoord[1], snappedCoord[0]], {
@@ -293,10 +302,39 @@
         }
     }
 
+    // Entry points get their own click handler: an entry point already knows
+    // which lake it's matched to (unique_guid, resolved in the Python
+    // pipeline), so it doesn't need findLakeAtPoint/nearestLake's geometric
+    // guessing at all - that guessing is what was rejecting entry points
+    // that sit slightly outside a lake polygon or right next to a stream.
+    function handleEntryPointClick(feature, latlng) {
+        const lakeGuid = feature.properties.unique_guid;
+        if (!lakeGuid) {
+            setStatus("This entry point isn't matched to a lake yet.");
+            return;
+        }
+        if (nodes.has("start") && nodes.has("end")) clearRoute();
+
+        const coord = [latlng.lng, latlng.lat];
+        const role = nodes.has("start") ? "end" : "start";
+        addNode(role, lakeGuid, coord);
+        wireRiverSnapEdges(role, lakeGuid, coord);
+        const marker = L.marker(latlng, { title: role === "start" ? "Start" : "End" }).addTo(map);
+
+        if (role === "start") {
+            markerStart = marker;
+            setStatus("Click a second point to find a route.");
+        } else {
+            markerEnd = marker;
+            computeAndDrawRoute();
+        }
+    }
+
     map.on("click", (e) => handleRouteClick(e.latlng));
     portagesLayer.on("click", (e) => handleRouteClick(e.latlng));
     campsitesLayer.on("click", (e) => handleRouteClick(e.latlng));
     riversLayer.on("click", (e) => handleRouteClick(e.latlng));
+    entryPointsLayer.on("click", (e) => handleEntryPointClick(e.layer.feature, e.latlng));
     }
 
     Promise.all([
@@ -304,9 +342,11 @@
         fetch(CAMPSITES_URL).then((r) => r.json()),
         fetch(PORTAGES_URL).then((r) => r.json()),
         fetch(RIVERS_URL).then((r) => r.json()),
+        fetch(ENTRY_POINTS_URL).then((r) => r.json()),
         fetch(PADDLE_EDGES_URL).then((r) => r.json()),
     ])
-        .then(([lakes, campsites, portages, rivers, paddleEdges]) => init(lakes, campsites, portages, rivers, paddleEdges))
+        .then(([lakes, campsites, portages, rivers, entryPoints, paddleEdges]) =>
+            init(lakes, campsites, portages, rivers, entryPoints, paddleEdges))
         .catch((err) => {
             console.error("Failed to load map data:", err);
             document.getElementById("map").textContent = "Failed to load map data - see console for details.";

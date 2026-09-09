@@ -24,7 +24,8 @@ rivers["river_id"] = rivers.index
 
 rivers["name"] = rivers["KITTLE_NAME"].str.strip().replace("", None)
 rivers["strm_type"] = rivers["Strm_type_desc"]
-rivers["routable"] = rivers["strm_type"].isin(ROUTABLE_TYPES)
+# rivers["routable"] = rivers["strm_type"].isin(ROUTABLE_TYPES)
+rivers["routable"] = True
 
 # Snap endpoints to a shared node key so segments meeting at a junction
 # (confluence, or a lake connector meeting a stream) resolve to the same
