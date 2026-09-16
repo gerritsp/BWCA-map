@@ -1,28 +1,18 @@
-// Shared routing-graph construction logic, used two ways:
-//   - in the browser (templates/js_template.js), loaded via a <script> tag,
-//     for click-time start/end node wiring
-//   - in Node (scripts/build_paddle_edges.js), via require(), to precompute
-//     the fixed portage/river/lake-vertex paddle-edge graph at build time
-//     instead of paying for it in every visitor's browser on every page load
+// Shared routing-graph construction logic - see graph_map_design.md for the
+// full build-time/runtime split. This version adds burn-area awareness:
+// every edge (portage, paddle, river) gets a `crossesBurn` boolean computed
+// via turf.booleanIntersects against the fires FeatureCollection. Like the
+// rest of this file's expensive geometry work, crossesBurn is computed ONCE
+// per edge and reused - for precomputed edges (portages/rivers/lake-vertex
+// mesh) that means computed once at build time and shipped as a flag in the
+// dump, not recomputed by every visitor's browser. Only click-time edges
+// (start/end wiring, river-snap edges) compute it live, since those are new
+// edges the precompute step couldn't have known about in advance - and that
+// live cost is tiny (a handful of edges per click, not the whole graph).
 //
-// This file must stay the single source of truth for this logic. The two
-// call sites need to compute byte-identical results (same Turf version, same
-// code) or routes that exist under one and not the other reappear - see the
-// reverted-optimization history in docs/graph_map_design.md for why that's
-// not a hypothetical risk here.
-//
-// IDENTITY NOTE: lakes are keyed by `unique_guid`, not `fw_id`. fw_id is a
-// DNR field that is NOT unique per lake row - confirmed against the real
-// dataset: 4,515 lake rows collapse to only 1,304 unique fw_id values, a
-// placeholder value (88888) is shared by 6 unrelated lakes (Saganaga, East
-// Vermilion, Bearskin, Jenny x2, Gull), and most of the rest are null. Keying
-// this graph's lakesById map by fw_id meant it silently kept only the
-// last-loaded lake for any collided/null id, which measurably broke routing:
-// 186/868 portages (21%) failed to resolve at least one endpoint, and 174
-// (20%) resolved both endpoints to the same wrong lake. unique_guid is a
-// true 1:1 key generated for every lake row and carried through every join
-// (campsites, portages, rivers) - see CLAUDE.md and the ETL scripts for how
-// it's produced and propagated.
+// IDENTITY NOTE: lakes are keyed by `unique_guid`, not `fw_id` - see the
+// rest of this file's history. fw_id collides across real lakes and is
+// unsafe as a lookup key.
 (function (root, factory) {
     if (typeof module === "object" && module.exports) {
         module.exports = factory();
@@ -32,28 +22,15 @@
 })(typeof self !== "undefined" ? self : this, function () {
 
     const ROD_TO_METERS = 5.0292;
-
-    // Portage endpoints are only guaranteed to be within ~25m of their matched
-    // lake (portageCreator.py's own "confident match" threshold), not strictly
-    // inside its polygon - buffer by that same tolerance before doing
-    // containment/line-of-sight checks, or every off-polygon endpoint would be
-    // stranded with zero paddle edges. Simplify first so the buffer (which
-    // adds rounding vertices at every corner) stays cheap on large/complex
-    // lake polygons, and cache both the buffered polygon AND its boundary-as-
-    // a-line - line-of-sight gets called many times per lake once vertex
-    // waypoints are involved, and re-deriving the boundary from scratch each
-    // call (instead of caching it) is what made the first version of this
-    // freeze the page on anything but the smallest lakes.
     const LAKE_MATCH_BUFFER_METERS = 25;
     const MAX_LAKE_VERTICES = 24;
-    const SIMPLIFY_TOLERANCE_DEG = 0.00015; // ~15m at BWCA's latitude
+    const SIMPLIFY_TOLERANCE_DEG = 0.00015;
 
-    function createGraphEngine(turf, lakes, rivers) {
-        // KEYED BY unique_guid - see the IDENTITY NOTE at the top of this file.
+    function createGraphEngine(turf, lakes, rivers, fires) {
         const lakesById = new Map(lakes.features.map((f) => [f.properties.unique_guid, f]));
-        const nodes = new Map(); // nodeId -> { lakeId, coord: [lon, lat] }  (lakeId is a unique_guid)
-        const adjacency = new Map(); // nodeId -> [{ to, weight, kind, geometry }]
-        const accessPointsByLake = new Map(); // lakeId (unique_guid) -> [nodeId, ...]
+        const nodes = new Map();
+        const adjacency = new Map();
+        const accessPointsByLake = new Map();
 
         const simplifiedLakeCache = new Map();
         function simplifiedLake(lakeId) {
@@ -72,20 +49,7 @@
             return simplifiedLakeCache.get(lakeId);
         }
 
-        // NOTE: the buffered `polygon` below is deliberately only used for the
-        // containment checks (is this endpoint close enough to count as "on"
-        // this lake), not for the obstruction check. Buffering the whole
-        // polygon-with-holes by 25m grows the water area on *every* boundary -
-        // exterior shoreline AND interior island rings alike - which erodes
-        // any land feature narrower than ~2x the buffer (peninsulas, necks
-        // between lobes, small islands) right out of the geometry. Confirmed
-        // against real data (Newfound Lake, now identified by its
-        // unique_guid rather than its collision-prone fw_id of 335): a chord
-        // that crosses the true shoreline 7 times crossed the buffered
-        // boundary 0 times, because the buffer had erased the narrow neck it
-        // was cutting across. `rawBoundary` (unbuffered, simplified) is kept
-        // separately for that check instead - see lineStaysInLake.
-        const preparedLakeCache = new Map(); // lakeId -> { polygon, rawBoundary } | null
+        const preparedLakeCache = new Map();
         function preparedLake(lakeId) {
             if (!preparedLakeCache.has(lakeId)) {
                 const simplified = simplifiedLake(lakeId);
@@ -99,16 +63,6 @@
             return preparedLakeCache.get(lakeId);
         }
 
-        // A chord's endpoints are only guaranteed to be within
-        // LAKE_MATCH_BUFFER_METERS of the true shoreline (that's the whole
-        // reason `polygon` above is buffered for containment), so testing
-        // against the *true* boundary would spuriously flag a crossing right
-        // next to a near-shore endpoint that isn't actually on the polygon.
-        // Test against the true boundary, but disregard any crossing that
-        // falls within that same tolerance of either endpoint - that's
-        // expected endpoint noise, not a real obstruction. A crossing
-        // farther from both endpoints than the tolerance is real land in the
-        // middle of the chord and blocks it.
         function lineStaysInLake(coordA, coordB, lakeId) {
             const prepared = preparedLake(lakeId);
             if (!prepared) return false;
@@ -124,14 +78,6 @@
             });
         }
 
-        // A straight chord between two shore points only works for convex lakes -
-        // any point/peninsula between them blocks it even with open water all
-        // around. This is a real visibility graph, not just the chord shortcut:
-        // once a lake has 2+ access points, add its own (simplified) boundary
-        // vertices as extra waypoint nodes, wired in the same line-of-sight way,
-        // so Dijkstra can hop shore-to-shore around a peninsula instead of
-        // requiring one unobstructed line. Built lazily per lake (only lakes that
-        // end up with 2+ access points need it) and cached.
         const vertexGraphBuilt = new Set();
 
         function lakeBoundaryPoints(lakeId) {
@@ -140,7 +86,6 @@
             const rings = simplified.geometry.type === "Polygon"
                 ? simplified.geometry.coordinates
                 : simplified.geometry.coordinates.flat();
-
             let points = rings.flatMap((ring) => ring.slice(0, -1));
             if (points.length > MAX_LAKE_VERTICES) {
                 const step = Math.ceil(points.length / MAX_LAKE_VERTICES);
@@ -198,18 +143,43 @@
             }
         }
 
-        function addEdge(a, b, weight, kind, geometry) {
-            adjacency.get(a).push({ to: b, weight, kind, geometry });
-            adjacency.get(b).push({ to: a, weight, kind, geometry });
+        // ---- Burn-area awareness ----
+        const burnFeatures = fires && fires.features ? fires.features : [];
+
+        function edgeCrossesBurn(geometry) {
+            if (burnFeatures.length === 0) return false;
+            let line;
+            try {
+                line = turf.feature(geometry);
+            } catch {
+                return false;
+            }
+            return burnFeatures.some((burn) => {
+                try {
+                    return turf.booleanIntersects(line, burn);
+                } catch {
+                    return false;
+                }
+            });
         }
 
-        // River-snap routing (click-time only): lets a click-time "start"/
-        // "end" node join a routable river/connector polyline at its nearest
-        // point, not just wherever the polyline's own two endpoints happen to
-        // land. Purely additive to the graph - new nodes/edges only.
+        // precomputedCrossesBurn: pass the already-known value (from a
+        // dumped/loaded precomputed graph) to skip recomputing it here -
+        // that's the whole point of precomputing. Leave undefined/null for
+        // a brand-new edge (click-time wiring, or the build-time script's
+        // first-ever pass over the data) and it'll be computed fresh.
+        function addEdge(a, b, weight, kind, geometry, precomputedCrossesBurn) {
+            const crossesBurn = (precomputedCrossesBurn === undefined || precomputedCrossesBurn === null)
+                ? edgeCrossesBurn(geometry)
+                : precomputedCrossesBurn;
+            adjacency.get(a).push({ to: b, weight, kind, geometry, crossesBurn });
+            adjacency.get(b).push({ to: a, weight, kind, geometry, crossesBurn });
+        }
+
+        // ---- River-snap routing (click-time only) ----
         const riverSnapNodes = new Set();
-        const riverSnapBySegment = new Map(); // riverIdx -> [{snapNodeId, location, coord}], sorted by location
-        const lakeBboxCache = new Map(); // lakeId -> [minX, minY, maxX, maxY] | null
+        const riverSnapBySegment = new Map();
+        const lakeBboxCache = new Map();
 
         const routableRivers = rivers ? rivers.features.filter((f) => f.properties.routable) : [];
         const riverBBoxes = routableRivers.map((f) => turf.bbox(f));
@@ -250,15 +220,6 @@
                 const reachDist = turf.distance(coord, snapCoord, { units: "meters" });
                 addEdge(nodeId, snapNodeId, reachDist, "paddle", turf.lineString([coord, snapCoord]).geometry);
 
-                // Seed the segment's own node_a/node_b as permanent anchor
-                // points (location 0 and full length) the first time any
-                // click touches this segment. node_a/node_b are the
-                // pre-snapped junction node IDs computed in riverCreator.py -
-                // NOT lake IDs, so they don't need a unique_guid swap; they're
-                // already collision-free by construction (coordinate-snapped
-                // strings). Only the LAKE a segment endpoint might resolve to
-                // (unid_a/unid_b in the source data, wired in at build time -
-                // see scripts/build_paddle_edges.js) needed the guid fix.
                 if (!riverSnapBySegment.has(riverIdx)) {
                     const anchors = [];
                     const nodeAId = feature.properties.node_a;
@@ -295,37 +256,26 @@
         }
 
         return {
-            lakesById,
-            nodes,
-            adjacency,
-            accessPointsByLake,
-            vertexGraphBuilt,
-            simplifiedLake,
-            preparedLake,
-            lineStaysInLake,
-            lakeBoundaryPoints,
-            buildLakeVertexGraph,
-            wirePaddleEdges,
-            addNode,
-            removeNode,
-            addEdge,
-            wireRiverSnapEdges,
-            clearRiverSnapEdges,
+            lakesById, nodes, adjacency, accessPointsByLake, vertexGraphBuilt,
+            simplifiedLake, preparedLake, lineStaysInLake, lakeBoundaryPoints,
+            buildLakeVertexGraph, wirePaddleEdges, addNode, removeNode, addEdge,
+            wireRiverSnapEdges, clearRiverSnapEdges, edgeCrossesBurn,
         };
     }
 
+    // crossesBurn now travels with every dumped edge, so a fresh page load
+    // never has to recompute a single turf.booleanIntersects call for the
+    // fixed graph - only click-time edges do that live.
     function dumpPrecomputed(engine) {
         const nodes = [...engine.nodes.entries()].map(([id, n]) => [id, n.lakeId, n.coord]);
-
         const edges = [];
         for (const [a, edgeList] of engine.adjacency.entries()) {
             for (const edge of edgeList) {
                 if (a < edge.to) {
-                    edges.push([a, edge.to, edge.weight, edge.kind, edge.geometry]);
+                    edges.push([a, edge.to, edge.weight, edge.kind, edge.geometry, edge.crossesBurn]);
                 }
             }
         }
-
         return { nodes, edges, vertexGraphLakes: [...engine.vertexGraphBuilt] };
     }
 
@@ -336,8 +286,10 @@
             if (!engine.accessPointsByLake.has(lakeId)) engine.accessPointsByLake.set(lakeId, []);
             engine.accessPointsByLake.get(lakeId).push(id);
         }
-        for (const [a, b, weight, kind, geometry] of data.edges) {
-            engine.addEdge(a, b, weight, kind, geometry);
+        for (const [a, b, weight, kind, geometry, crossesBurn] of data.edges) {
+            // pass the stored crossesBurn through - addEdge skips recomputing
+            // it when a value is already provided (see addEdge above).
+            engine.addEdge(a, b, weight, kind, geometry, crossesBurn);
         }
         for (const lakeId of data.vertexGraphLakes) {
             engine.vertexGraphBuilt.add(lakeId);

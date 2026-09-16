@@ -1,6 +1,7 @@
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import folium
+import csv
 
 
 
@@ -78,19 +79,29 @@ portages = portages.to_crs(epsg=4326)
 #
 # print(p553[["lake1", "lake2", "geometry"]])
 # print.ln('Filter functions')
-print(lakes.info())
+# print(lakes.info())
 # print(lakes[lakes["Lake"] == 16034800])
 # print(lakes.head(1).columns.tolist())
 # print(lakes.head(1).values.tolist())
 # #add search functions to show the routes
 # print(lakes["fw_id"].eq(99999).sum())
 # print(lakes["unique_id"].eq(99999).sum())
-
-print("lakes unid nulls:", lakes["unique_guid"].isna().sum(), "/ unique:", lakes["unique_guid"].nunique(), "/", len(lakes))
-print("campsites columns:", [c for c in campsites.columns if "unique_guid" in c.lower() or "fw_id" in c.lower()])
-print("portages columns:", [c for c in portages.columns if "unique_guid" in c.lower() or "fw_id" in c.lower()])
-print(portages.info())
-print(lakes.info())
+#
+# print("lakes unid nulls:", lakes["unique_guid"].isna().sum(), "/ unique:", lakes["unique_guid"].nunique(), "/", len(lakes))
+# print("campsites columns:", [c for c in campsites.columns if "unique_guid" in c.lower() or "fw_id" in c.lower()])
+# print("portages columns:", [c for c in portages.columns if "unique_guid" in c.lower() or "fw_id" in c.lower()])
+# print(portages.info())
+# print(lakes.info())
 match = lakes[lakes["map_label"]=="Knife"]
-print(match.info())
+# print(match.columns)
 print(match.values)
+
+# print(lakes.info())
+print(lakes.columns.tolist())
+# print(lakes.shape)
+# print(lakes.dtypes)
+#
+# lakes["geometry"] = lakes["geometry"].to_wkt()
+#
+# # Save to CSV normally
+# lakes.to_csv("../../Data/Lakes/LakeCSV.csv", index=False)
