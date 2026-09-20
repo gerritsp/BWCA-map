@@ -27,14 +27,12 @@ def build_graph():
     graph.load_campsites("Data/processed/bwca_campsites_river.parquet")
     graph.connect_campsites()
 
-    graph.load_portages("Data/processed/portages_final.parquet")
+    graph.load_portages("Data/processed/portages_final_snapped.parquet")
     graph.connect_portages()
 
     graph.load_rivers("Data/processed/bwca_rivers_lines.parquet")
     graph.connect_rivers()
 
-    # ADDED: entry points weren't in this rewrite yet - wiring them back in
-    # using the same unique_guid-keyed pattern as everything else.
     graph.load_entry_points("Data/processed/entry_points_joined.parquet")
     graph.connect_entry_points()
 
@@ -45,13 +43,6 @@ def lakes_geojson(graph):
     lakes = list(graph.lakes.values())
     gdf = gpd.GeoDataFrame(
         {
-            # unique_guid ADDED - this is the real identity key the routing
-            # graph (graph_engine.js) now looks up lakes by. fw_id is kept
-            # only because other code/popups may still reference it for
-            # display; it is NOT safe to use for lake identity (fw_id=88888
-            # alone collides 6 unrelated lakes - Saganaga, East Vermilion,
-            # Bearskin, Jenny x2, Gull - and most other rows have a null
-            # fw_id). See graph_engine.js's IDENTITY NOTE.
             "unique_guid": [lake.unique_guid for lake in lakes],
             "fw_id": [lake.fw_id for lake in lakes],
             "name": [lake.name for lake in lakes],
@@ -90,17 +81,11 @@ def portages_geojson(graph):
             "name": [p.name for p in portages],
             "lake_a": [p.lake_a.name for p in portages],
             "lake_b": [p.lake_b.name for p in portages],
-            # unique_guid_a/b ADDED - the real routing keys. fw_id_a/b are
-            # kept for the debug popup display only (see js_template.js) -
-            # they must never be used to look anything up in the graph.
             "unique_guid_a": [p.lake_a.unique_guid for p in portages],
             "unique_guid_b": [p.lake_b.unique_guid for p in portages],
             "fw_id_a": [p.lake_a.fw_id for p in portages],
             "fw_id_b": [p.lake_b.fw_id for p in portages],
             "length_rods": [p.length_rods for p in portages],
-            # "dist_lake_a": [p.dist_lake_a for p in portages],
-            # "dist_lake_b": [p.dist_lake_b for p in portages],
-            # "lake_match_uncertain": [bool(p.lake_match_uncertain) for p in portages],
         },
         geometry=[p.geometry for p in portages],
         crs=SOURCE_CRS,
@@ -117,7 +102,6 @@ def rivers_geojson(graph):
             "routable": [bool(r.routable) for r in rivers],
             "node_a": [r.node_a for r in rivers],
             "node_b": [r.node_b for r in rivers],
-            # unique_guid_a/b ADDED - same reasoning as portages_geojson above.
             "unique_guid_a": [r.lake_a.unique_guid if r.lake_a else None for r in rivers],
             "unique_guid_b": [r.lake_b.unique_guid if r.lake_b else None for r in rivers],
             "fw_id_a": [r.lake_a.fw_id if r.lake_a else None for r in rivers],
@@ -131,9 +115,6 @@ def rivers_geojson(graph):
 
 
 def entry_points_geojson(graph):
-    """ADDED - entry points weren't part of this rewrite yet. Follows the
-    same unique_guid-keyed pattern as everything else; connect_entry_points()
-    (already in your bwca_graph.py, keyed by lake_unid) fills in e.lake."""
     entries = list(graph.entry_points.values())
     gdf = gpd.GeoDataFrame(
         {
@@ -149,13 +130,31 @@ def entry_points_geojson(graph):
     return json.loads(gdf.to_crs(4326).to_json())
 
 
+def fires_geojson(path="Data/processed/fires2026.parquet", simplify_tolerance=0.0003):
+    """ADDED - burn-area polygons for the "avoid burn areas" routing toggle.
+    You mentioned your fires data is already simplified/loading quickly, so
+    pass simplify_tolerance=None here if re-simplifying is unnecessary or
+    unwanted - left the parameter in in case a future, un-simplified fire
+    file gets swapped in."""
+    fires = gpd.read_parquet(path)
+    if fires.crs is None:
+        fires = fires.set_crs(SOURCE_CRS)
+    fires = fires.to_crs(4326)
+    if simplify_tolerance:
+        fires["geometry"] = fires.geometry.simplify(simplify_tolerance, preserve_topology=True)
+    return json.loads(fires.to_json())
+
+
 def build_paddle_edges(stem_path):
     """Runs scripts/build_paddle_edges.js to precompute the fixed portage/
     river/lake-vertex paddle-edge mesh, replaying graph_engine.js's exact
     client-side wiring logic once at build time instead of once per page
     load - see docs/graph_map_design.md's "Paddle-edge precomputation"
     section. Requires `npm install` to have been run (package.json pins
-    @turf/turf to the same major version the browser loads from CDN)."""
+    @turf/turf to the same major version the browser loads from CDN).
+    Also reads <stem>_fires.json (written by render_map() before this is
+    called) so every precomputed edge gets a crossesBurn flag - see
+    graph_engine.js's burn-area awareness note."""
     result = subprocess.run(
         ["node", "scripts/build_paddle_edges.js", str(stem_path)],
         cwd=REPO_ROOT,
@@ -181,7 +180,8 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
     campsites_filename = out_path.stem + "_campsites.json"
     portages_filename = out_path.stem + "_portages.json"
     rivers_filename = out_path.stem + "_rivers.json"
-    entry_points_filename = out_path.stem + "_entry_points.json"  # ADDED
+    entry_points_filename = out_path.stem + "_entry_points.json"
+    fires_filename = out_path.stem + "_fires.json"  # ADDED
     paddle_edges_filename = out_path.stem + "_paddle_edges.json"
 
     html = (
@@ -195,7 +195,8 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
         .replace("__CAMPSITES_URL__", campsites_filename)
         .replace("__PORTAGES_URL__", portages_filename)
         .replace("__RIVERS_URL__", rivers_filename)
-        .replace("__ENTRY_POINTS_URL__", entry_points_filename)  # ADDED
+        .replace("__ENTRY_POINTS_URL__", entry_points_filename)
+        .replace("__FIRES_URL__", fires_filename)  # ADDED
         .replace("__PADDLE_EDGES_URL__", paddle_edges_filename)
     )
 
@@ -209,12 +210,15 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
         (campsites_filename, campsites_geojson(graph)),
         (portages_filename, portages_geojson(graph)),
         (rivers_filename, rivers_geojson(graph)),
-        (entry_points_filename, entry_points_geojson(graph)),  # ADDED
+        (entry_points_filename, entry_points_geojson(graph)),
+        (fires_filename, fires_geojson()),  # ADDED
     ):
         data_path = out_path.parent / filename
         data_path.write_text(json.dumps(data))
         written.append(data_path)
 
+    # build_paddle_edges.js reads <stem>_fires.json too now - it must exist
+    # by this point, which it does since the loop above already wrote it.
     build_paddle_edges(out_path.parent / out_path.stem)
     written.append(out_path.parent / paddle_edges_filename)
 
