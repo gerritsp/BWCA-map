@@ -86,6 +86,8 @@ def portages_geojson(graph):
             "fw_id_a": [p.lake_a.fw_id for p in portages],
             "fw_id_b": [p.lake_b.fw_id for p in portages],
             "length_rods": [p.length_rods for p in portages],
+            "start_snapped": [bool(p.start_snapped) for p in portages],
+            "end_snapped": [bool(p.end_snapped) for p in portages],
         },
         geometry=[p.geometry for p in portages],
         crs=SOURCE_CRS,

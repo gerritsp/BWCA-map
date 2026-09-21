@@ -29,21 +29,45 @@ const LAKES_URL = "__LAKES_URL__";
     const PORTAGE_STYLE = { color: "#0f5c2e", weight: 3, opacity: 0.9 };
 
     const portagesLayer = L.geoJSON(portages, {
-        style: PORTAGE_STYLE,
-        onEachFeature: function (feature, layer) {
-            const p = feature.properties;
-            const label = p.name || "(unnamed)";
-            const rods = p.length_rods == null ? "N/A" : `${p.length_rods.toFixed(1)} rods`;
-            layer.bindPopup(
-                `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
-                `${label} &mdash; ${rods}<br>` +
-                `${p.lake_a} &rarr; ${p.lake_b}<br>` +
-                `<span style="font-size:11px; color:#555;">` +
-                `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
-                `unique_guid_b=${p.unique_guid_b ?? "N/A"}</span>`
-            );
-        }
-    }).addTo(map);
+    style: (feature) =>
+        (feature.properties.start_snapped || feature.properties.end_snapped)
+            ? { color: "#7c3aed", weight: 3, opacity: 0.9, dashArray: "4 2" }
+            : PORTAGE_STYLE,
+    onEachFeature: function (feature, layer) {
+        const p = feature.properties;
+        const label = p.name || "(unnamed)";
+        const rods = p.length_rods == null ? "N/A" : `${p.length_rods.toFixed(1)} rods`;
+        const snappedNote = (p.start_snapped || p.end_snapped)
+            ? '<span style="color:#7c3aed;font-size:11px;">Endpoint adjusted &mdash; not surveyed</span><br>'
+            : "";
+        layer.bindPopup(
+            `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
+            `${label} &mdash; ${rods}<br>` +
+            `${p.lake_a} &rarr; ${p.lake_b}<br>` +
+            snappedNote +
+            `<span style="font-size:11px; color:#555;">` +
+            `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
+            `unique_guid_b=${p.unique_guid_b ?? "N/A"}</span>`
+        );
+    }
+}).addTo(map);
+
+    // const portagesLayer = L.geoJSON(portages, {
+    //     style: PORTAGE_STYLE,
+    //     onEachFeature: function (feature, layer) {
+    //         const p = feature.properties;
+    //         const label = p.name || "(unnamed)";
+    //         const rods = p.length_rods == null ? "N/A" : `${p.length_rods.toFixed(1)} rods`;
+    //         layer.bindPopup(
+    //             `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
+    //             `${label} &mdash; ${rods}<br>` +
+    //             `${p.lake_a} &rarr; ${p.lake_b}<br>` +
+    //             `<span style="font-size:11px; color:#555;">` +
+    //             `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
+    //             `unique_guid_b=${p.unique_guid_b ?? "N/A"}</span>`
+    //         );
+    //     }
+    // }).addTo(map);
 
     const legend = L.control({ position: "bottomright" });
     legend.onAdd = function () {

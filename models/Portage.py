@@ -17,10 +17,14 @@ class Portage:
         end_fw_id: int | None,
         start_unid: str,
         end_unid: str,
-        geometry
+        geometry,
+        start_snapped: bool = False,
+        end_snapped: bool = False
     ):
 
         # IDs
+        self.end_snapped = end_snapped
+        self.start_snapped = start_snapped
         self.portage_num = portage_num
         self.usfs_id = usfs_id
 

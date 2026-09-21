@@ -85,6 +85,8 @@ class bwca_graph:
                 end_fw_id=row["end_fw_id"],
                 start_unid=row["start_unid"],
                 end_unid=row["end_unid"],
+                start_snapped=row.get("start_snapped", False),
+                end_snapped=row.get("end_snapped", False),
                 geometry=row.geometry
             )
             self.portages[portage.usfs_id] = portage
