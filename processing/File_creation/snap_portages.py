@@ -16,11 +16,11 @@ import geopandas as gpd
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
 
-SNAP_THRESHOLD_M = 100
+SNAP_THRESHOLD_M = 75
 
-PORTAGES_IN = "Data/processed/portages_final.parquet"
-LAKES_IN = "Data/processed/bwca_lakes.parquet"
-PORTAGES_OUT = "Data/processed/portages_final_snapped.parquet"
+PORTAGES_IN = "../../Data/processed/portages_final.parquet"
+LAKES_IN = "../../Data/processed/bwca_lakes.parquet"
+PORTAGES_OUT = "../../Data/processed/portages_final_snapped.parquet"
 
 
 def snap_portages():

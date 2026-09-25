@@ -3,9 +3,10 @@ const LAKES_URL = "__LAKES_URL__";
     const PORTAGES_URL = "__PORTAGES_URL__";
     const RIVERS_URL = "__RIVERS_URL__";
     const ENTRY_POINTS_URL = "__ENTRY_POINTS_URL__";
+    const FIRES_URL = "__FIRES_URL__";
     const PADDLE_EDGES_URL = "__PADDLE_EDGES_URL__";
 
-    function init(lakes, campsites, portages, rivers, entryPoints, paddleEdges) {
+    function init(lakes, campsites, portages, rivers, entryPoints, fires, paddleEdges) {
     const map = L.map("map");
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap contributors"
@@ -29,56 +30,53 @@ const LAKES_URL = "__LAKES_URL__";
     const PORTAGE_STYLE = { color: "#0f5c2e", weight: 3, opacity: 0.9 };
 
     const portagesLayer = L.geoJSON(portages, {
-    style: (feature) =>
-        (feature.properties.start_snapped || feature.properties.end_snapped)
-            ? { color: "#7c3aed", weight: 3, opacity: 0.9, dashArray: "4 2" }
-            : PORTAGE_STYLE,
-    onEachFeature: function (feature, layer) {
-        const p = feature.properties;
-        const label = p.name || "(unnamed)";
-        const rods = p.length_rods == null ? "N/A" : `${p.length_rods.toFixed(1)} rods`;
-        const snappedNote = (p.start_snapped || p.end_snapped)
-            ? '<span style="color:#7c3aed;font-size:11px;">Endpoint adjusted &mdash; not surveyed</span><br>'
-            : "";
-        layer.bindPopup(
-            `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
-            `${label} &mdash; ${rods}<br>` +
-            `${p.lake_a} &rarr; ${p.lake_b}<br>` +
-            snappedNote +
-            `<span style="font-size:11px; color:#555;">` +
-            `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
-            `unique_guid_b=${p.unique_guid_b ?? "N/A"}</span>`
-        );
-    }
-}).addTo(map);
+        style: (feature) =>
+            (feature.properties.start_snapped || feature.properties.end_snapped)
+                ? { color: "#7c3aed", weight: 3, opacity: 0.9, dashArray: "4 2" }
+                : PORTAGE_STYLE,
+        onEachFeature: function (feature, layer) {
+            const p = feature.properties;
+            const label = p.name || "(unnamed)";
+            const rods = p.length_rods == null ? "N/A" : `${p.length_rods.toFixed(1)} rods`;
+            const snappedNote = (p.start_snapped || p.end_snapped)
+                ? '<span style="color:#7c3aed;font-size:11px;">Endpoint adjusted &mdash; not surveyed</span><br>'
+                : "";
+            layer.bindPopup(
+                `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
+                `${label} &mdash; ${rods}<br>` +
+                `${p.lake_a} &rarr; ${p.lake_b}<br>` +
+                snappedNote +
+                `<span style="font-size:11px; color:#555;">` +
+                `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
+                `unique_guid_b=${p.unique_guid_b ?? "N/A"}</span>`
+            );
+        }
+    }).addTo(map);
 
-    // const portagesLayer = L.geoJSON(portages, {
-    //     style: PORTAGE_STYLE,
-    //     onEachFeature: function (feature, layer) {
-    //         const p = feature.properties;
-    //         const label = p.name || "(unnamed)";
-    //         const rods = p.length_rods == null ? "N/A" : `${p.length_rods.toFixed(1)} rods`;
-    //         layer.bindPopup(
-    //             `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
-    //             `${label} &mdash; ${rods}<br>` +
-    //             `${p.lake_a} &rarr; ${p.lake_b}<br>` +
-    //             `<span style="font-size:11px; color:#555;">` +
-    //             `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
-    //             `unique_guid_b=${p.unique_guid_b ?? "N/A"}</span>`
-    //         );
-    //     }
-    // }).addTo(map);
+    // ADDED: burn area rendering
+    const FIRE_STYLE = { color: "#9a3412", weight: 1.5, fillColor: "#ea580c", fillOpacity: 0.35, dashArray: "4 3" };
+    const firesLayer = L.geoJSON(fires, {
+        style: FIRE_STYLE,
+        onEachFeature: function (feature, layer) {
+            const p = feature.properties || {};
+            const label = p.incident_name || p.name || "Burn area";
+            const year = p.last_updated ? new Date(p.last_updated).getFullYear() : null;
+            layer.bindTooltip(year ? `${label} (${year})` : label);
+        }
+    }).addTo(map);
 
     const legend = L.control({ position: "bottomright" });
     legend.onAdd = function () {
         const div = L.DomUtil.create("div", "legend");
         div.innerHTML = `
             <b>Portages</b><br>
-            <span style="display:inline-block;width:20px;border-top:3px solid #0f5c2e;margin-right:4px;"></span>Portage<br>
+            <span style="display:inline-block;width:20px;border-top:3px solid #0f5c2e;margin-right:4px;"></span>Portage (surveyed)<br>
+            <span style="display:inline-block;width:20px;border-top:3px dashed #7c3aed;margin-right:4px;"></span>Portage (endpoint adjusted)<br>
             <b>Rivers &amp; streams</b><br>
             <span style="display:inline-block;width:20px;border-top:2px solid #0891b2;margin-right:4px;"></span>Routable (river/connector)<br>
             <span style="display:inline-block;width:20px;border-top:2px dotted #0891b2;margin-right:4px;"></span>Display only (small stream)<br>
-            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f59e0b;border:2px solid white;box-shadow:0 0 2px rgba(0,0,0,0.5);margin-right:4px;vertical-align:middle;"></span>Entry point
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f59e0b;border:2px solid white;box-shadow:0 0 2px rgba(0,0,0,0.5);margin-right:4px;vertical-align:middle;"></span>Entry point<br>
+            <span style="display:inline-block;width:14px;height:10px;background:#ea580c;opacity:0.5;border:1px dashed #9a3412;margin-right:4px;vertical-align:middle;"></span>Burn area
         `;
         return div;
     };
@@ -146,7 +144,9 @@ const LAKES_URL = "__LAKES_URL__";
 
     map.fitBounds(lakesLayer.getBounds());
 
-    const engine = GraphEngine.createGraphEngine(turf, lakes, rivers);
+    // ADDED: fires passed as the 4th arg so every edge in the precomputed
+    // dump (and any live click-time edge) carries a real crossesBurn flag.
+    const engine = GraphEngine.createGraphEngine(turf, lakes, rivers, fires);
     const { nodes, adjacency, addNode, removeNode, addEdge, wireRiverSnapEdges, clearRiverSnapEdges } = engine;
     GraphEngine.loadPrecomputed(engine, paddleEdges);
 
@@ -175,6 +175,9 @@ const LAKES_URL = "__LAKES_URL__";
 
     const PADDLE_PREFERENCE_PENALTY = 1.3;
 
+    // ADDED: burn-area avoidance state - the checkbox below sets this
+    let avoidBurnAreas = false;
+
     function dijkstra(startNode, endNode) {
         const cost = new Map([[startNode, 0]]);
         const trueDist = new Map([[startNode, 0]]);
@@ -190,6 +193,7 @@ const LAKES_URL = "__LAKES_URL__";
             if (u === endNode) break;
 
             for (const edge of adjacency.get(u) || []) {
+                if (avoidBurnAreas && edge.crossesBurn) continue; // ADDED - this is the line that makes the checkbox do anything
                 const edgeCost = edge.kind === "paddle" ? edge.weight * PADDLE_PREFERENCE_PENALTY : edge.weight;
                 const alt = c + edgeCost;
                 if (alt < (cost.get(edge.to) ?? Infinity)) {
@@ -282,16 +286,28 @@ const LAKES_URL = "__LAKES_URL__";
     const routeControl = L.control({ position: "topleft" });
     routeControl.onAdd = function () {
         const div = L.DomUtil.create("div", "legend");
+        div.style.minWidth = "220px";
         div.innerHTML = `
             <b>Route finder</b><br>
-            <span id="route-status-text">Click a point on a lake to start a route.</span><br>
-            <button id="route-clear-btn" style="margin-top:6px;">Clear route</button>
+            <span id="route-status-text">Click a point on a lake to start a route.</span>
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb;">
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none;">
+                    <input type="checkbox" id="avoid-burn-checkbox" style="accent-color:#ea580c; width:15px; height:15px;" />
+                    <span>Avoid burn areas</span>
+                </label>
+            </div>
+            <button id="route-clear-btn" style="margin-top:8px; width:100%; padding:5px 0; border:1px solid #d1d5db; border-radius:4px; background:#f9fafb; cursor:pointer;">Clear route</button>
         `;
         L.DomEvent.disableClickPropagation(div);
         return div;
     };
     routeControl.addTo(map);
     document.getElementById("route-clear-btn").addEventListener("click", clearRoute);
+    // ADDED: toggling the checkbox re-runs the search immediately if a route is already showing
+    document.getElementById("avoid-burn-checkbox").addEventListener("change", (e) => {
+        avoidBurnAreas = e.target.checked;
+        if (nodes.has("start") && nodes.has("end")) computeAndDrawRoute();
+    });
 
     function handleRouteClick(latlng) {
         if (nodes.has("start") && nodes.has("end")) clearRoute();
@@ -326,11 +342,6 @@ const LAKES_URL = "__LAKES_URL__";
         }
     }
 
-    // Entry points get their own click handler: an entry point already knows
-    // which lake it's matched to (unique_guid, resolved in the Python
-    // pipeline), so it doesn't need findLakeAtPoint/nearestLake's geometric
-    // guessing at all - that guessing is what was rejecting entry points
-    // that sit slightly outside a lake polygon or right next to a stream.
     function handleEntryPointClick(feature, latlng) {
         const lakeGuid = feature.properties.unique_guid;
         if (!lakeGuid) {
@@ -367,10 +378,11 @@ const LAKES_URL = "__LAKES_URL__";
         fetch(PORTAGES_URL).then((r) => r.json()),
         fetch(RIVERS_URL).then((r) => r.json()),
         fetch(ENTRY_POINTS_URL).then((r) => r.json()),
+        fetch(FIRES_URL).then((r) => r.json()),
         fetch(PADDLE_EDGES_URL).then((r) => r.json()),
     ])
-        .then(([lakes, campsites, portages, rivers, entryPoints, paddleEdges]) =>
-            init(lakes, campsites, portages, rivers, entryPoints, paddleEdges))
+        .then(([lakes, campsites, portages, rivers, entryPoints, fires, paddleEdges]) =>
+            init(lakes, campsites, portages, rivers, entryPoints, fires, paddleEdges))
         .catch((err) => {
             console.error("Failed to load map data:", err);
             document.getElementById("map").textContent = "Failed to load map data - see console for details.";
