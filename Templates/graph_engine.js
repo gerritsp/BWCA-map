@@ -23,6 +23,8 @@
 
     const ROD_TO_METERS = 5.0292;
     const LAKE_MATCH_BUFFER_METERS = 25;
+    const SHORE_TOLERANCE_METERS = 3;
+    const MIN_STRETCH_METERS = 0.5;
     const MAX_LAKE_VERTICES = 24;
     const SIMPLIFY_TOLERANCE_DEG = 0.00015;
 
@@ -57,7 +59,8 @@
                     preparedLakeCache.set(lakeId, null);
                 } else {
                     const polygon = turf.buffer(simplified, LAKE_MATCH_BUFFER_METERS / 1000, { units: "kilometers" });
-                    preparedLakeCache.set(lakeId, { polygon, rawBoundary: turf.polygonToLine(simplified) });
+                    const inside = turf.buffer(simplified, SHORE_TOLERANCE_METERS / 1000, { units: "kilometers" });
+                    preparedLakeCache.set(lakeId, { polygon, inside, rawBoundary: turf.polygonToLine(simplified) });
                 }
             }
             return preparedLakeCache.get(lakeId);
@@ -70,12 +73,35 @@
             if (!turf.booleanPointInPolygon(coordB, prepared.polygon)) return false;
             const line = turf.lineString([coordA, coordB]);
             const crossings = turf.lineIntersect(line, prepared.rawBoundary).features;
-            return crossings.every((crossing) => {
+            const crossingsNearEnds = crossings.every((crossing) => {
                 const pt = crossing.geometry.coordinates;
                 const distA = turf.distance(pt, coordA, { units: "meters" });
                 const distB = turf.distance(pt, coordB, { units: "meters" });
                 return distA <= LAKE_MATCH_BUFFER_METERS || distB <= LAKE_MATCH_BUFFER_METERS;
             });
+            if (!crossingsNearEnds) return false;
+
+            // Shore-to-shore chords across a peninsula or island cross the outline
+            // only at their own endpoints, so the check above passes them. Require
+            // the middle of every stretch away from the endpoints to be in the lake.
+            const total = turf.distance(coordA, coordB, { units: "meters" });
+            const breaks = [
+                0,
+                ...crossings
+                    .map((c) => turf.distance(coordA, c.geometry.coordinates, { units: "meters" }))
+                    .sort((a, b) => a - b),
+                total,
+            ];
+            for (let i = 0; i < breaks.length - 1; i++) {
+                const start = breaks[i];
+                const end = breaks[i + 1];
+                if (end - start < MIN_STRETCH_METERS) continue;
+                if (end <= LAKE_MATCH_BUFFER_METERS) continue;
+                if (start >= total - LAKE_MATCH_BUFFER_METERS) continue;
+                const mid = turf.along(line, (start + end) / 2, { units: "meters" });
+                if (!turf.booleanPointInPolygon(mid, prepared.inside)) return false;
+            }
+            return true;
         }
 
         const vertexGraphBuilt = new Set();
