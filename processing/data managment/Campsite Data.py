@@ -1,14 +1,8 @@
 import geopandas as gpd
 import pyogrio
 
-layers = pyogrio.list_layers(
-    r"../../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb"
-)
-gdf = gpd.read_file(
-    r"../../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
-    layer="Campsites"
-)
-print(layers)
+gdf = gpd.read_parquet("../../Data/processed/bwca_campsites_river.parquet")
+
 
 
 def get_open_campsites():
@@ -45,11 +39,11 @@ def get_geometry(gdf):
 # print(gdf.columns)
 # print()
 # print(gdf.info())
-print(gdf["LAKE_NAME"].nunique())
+# print(gdf["Clearwater Lake"].nunique())
 # print(sorted(gdf["LAKE_NAME"].unique()))
 # print(gdf[gdf["LAKE_NAME"].str.contains("Insula")])
 #
-print(gdf["STATUS"].value_counts())
+# print(gdf["STATUS"].value_counts())
 # print(get_open_campsites())
 # Lake = "Amber Lake"
 # print("campsites on " + Lake)
@@ -60,8 +54,12 @@ print(gdf["STATUS"].value_counts())
 # print(highest["LatWGS84_DDM"])
 # print(highest["LongWGS84_DDM"])
 # print(get_num_campsites(1))
-# counts = gdf["LAKE_NAME"].value_counts()
+# counts = gdf["Clearwater Lake"].value_counts()
 #
 # print(counts[counts == 1])
 # print(counts.head(10))
+lake = "Caribou Lake"
 
+campsites = get_campsites_on_lake(lake)
+
+print(f"{lake} has {len(campsites)} open campsites")

@@ -27,6 +27,7 @@ const LAKES_URL = "__LAKES_URL__";
         }
     }).addTo(map);
 
+
     const PORTAGE_STYLE = { color: "#0f5c2e", weight: 3, opacity: 0.9 };
 
     const portagesLayer = L.geoJSON(portages, {
@@ -143,6 +144,18 @@ const LAKES_URL = "__LAKES_URL__";
     }).addTo(map);
 
     map.fitBounds(lakesLayer.getBounds());
+    function zoomToLakeFromHash() {
+  try {
+        const guid = new URLSearchParams(location.hash.slice(1)).get("lake");
+        if (!guid) return;
+        const feature = lakes.features.find(f => f.properties.unique_guid === guid);
+        if (!feature) return;
+        const [w, s, e, n] = turf.bbox(feature);
+        map.fitBounds([[s, w], [n, e]], { maxZoom: 14 });
+      } catch (err) { console.error("lake hash zoom failed", err); }
+    }
+    zoomToLakeFromHash();
+    window.addEventListener("hashchange", zoomToLakeFromHash);
 
     // ADDED: fires passed as the 4th arg so every edge in the precomputed
     // dump (and any live click-time edge) carries a real crossesBurn flag.

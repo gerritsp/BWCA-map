@@ -6,6 +6,11 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <!-- in <head> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- right after <div id="map"></div> -->
+    <a href="lake_search.html" style="position:absolute;left:10px;bottom:24px;z-index:1000;background:#fff;padding:8px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.3);font:14px system-ui,sans-serif;text-decoration:none;color:#1f6f4a">Search lakes</a>
     <style>
         html, body, #map { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
         .legend {

@@ -6,9 +6,10 @@ lakes = pd.read_parquet("../Data/processed/bwca_lakes.parquet",
                         columns=["unique_guid", "dowlknum", "pw_basin_name"])
 
 # pick a lake by name and load its bundle
-guid = lakes.loc[lakes["pw_basin_name"] == "Saganaga", "unique_guid"].iloc[0]
+guid = lakes.loc[lakes["pw_basin_name"] == "Caribou", "unique_guid"].iloc[0]
 bundle = json.load(open(f"../maps/fisheries/{guid}.json"))
 
+print(lakes[lakes["pw_basin_name"] == "Caribou"].values.tolist())
 print(bundle.keys())
 print(bundle["lake_info"])
 print(len(bundle["fish_catches"]), "catch rows,",

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BWCA Lake Search</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#666;--line:#ddd;--card:#f6f7f6;--acc:#1f6f4a}
+@media(prefers-color-scheme:dark){:root{--bg:#161a17;--fg:#e8ece9;--mut:#9aa39d;--line:#2d352f;--card:#1e2420;--acc:#5fc79a}}
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+main{max-width:980px;margin:0 auto;padding:16px}h1{font-size:20px;margin:4px 0 12px}
+a{color:var(--acc)}.bar{display:flex;gap:12px;flex-wrap:wrap;background:var(--card);padding:12px;border-radius:8px}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+input,select{font:inherit;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:130px}
+#count{margin:12px 0 6px;color:var(--mut)}.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{cursor:pointer;font-size:12px;color:var(--mut)}td.n{font-weight:600}
+</style>
+</head>
+<body><main>
+<h1>Find a lake</h1>
+<div class="bar">
+ <label>Name<input id="q" placeholder="e.g. Saganaga"></label>
+ <label>Fish species<select id="sp"><option value="">Any</option></select></label>
+ <label>Largest fish ≥ (in)<input id="minlen" type="number" min="0" placeholder="needs species"></label>
+ <label>Lake acres ≥<input id="minac" type="number" min="0"></label>
+ <label>Lake acres ≤<input id="maxac" type="number" min="0"></label>
+ <label>Max depth ≥ (ft)<input id="mindp" type="number" min="0"></label>
+ <label>Clarity ≥ (ft)<input id="mincl" type="number" min="0"></label>
+ <label>Campsites ≥<input id="mincs" type="number" min="0"></label>
+</div>
+<div id="count">Loading…</div>
+<div class="wrap"><table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
+<p style="color:var(--mut);font-size:12px">Fish data: Minnesota DNR LakeFinder surveys. Largest fish is the biggest sampled, not a guarantee. Planning aid only.</p>
+</main>
+<script>
+const MAP_PAGE="bwca_graph_map.html";
+const NAMES={WAE:"Walleye",NOP:"Northern Pike",YEP:"Yellow Perch",SMB:"Smallmouth Bass",LMB:"Largemouth Bass",LKT:"Lake Trout",WTS:"White Sucker",RKB:"Rock Bass",BLC:"Black Crappie",BLG:"Bluegill",CIS:"Cisco",BUB:"Burbot",LKW:"Lake Whitefish",PMK:"Pumpkinseed",BLB:"Black Bullhead",SHR:"Shorthead Redhorse"};
+const nm=c=>NAMES[c]||c;
+const COLS=[["n","Lake"],["ac","Acres"],["md","Max depth"],["cl","Clarity"],["cs","Campsites"],["fish","Fish (largest, in)"]];
+let data=[],sortKey="n",sortDir=1;
+const $=id=>document.getElementById(id);
+const num=id=>{const v=parseFloat($(id).value);return isNaN(v)?null:v};
+const fmt=v=>v==null?"–":v.toLocaleString();
+
+function filtered(){
+  const q=$("q").value.trim().toLowerCase(),sp=$("sp").value,
+    minlen=num("minlen"),minac=num("minac"),maxac=num("maxac"),mindp=num("mindp"),mincl=num("mincl"),mincs=num("mincs");
+  return data.filter(r=>{
+    if(q&&!r.n.toLowerCase().includes(q))return false;
+    if(sp){const s=r.sp&&r.sp[sp];if(!s)return false;if(minlen!=null&&s[0]<minlen)return false;}
+    if(minac!=null&&!(r.ac!=null&&r.ac>=minac))return false;
+    if(maxac!=null&&!(r.ac!=null&&r.ac<=maxac))return false;
+    if(mindp!=null&&!(r.md!=null&&r.md>=mindp))return false;
+    if(mincl!=null&&!(r.cl!=null&&r.cl>=mincl))return false;
+    if(mincs!=null&&r.cs<mincs)return false;
+    return true;});
+}
+function fishText(r){
+  const sp=$("sp").value;
+  if(sp&&r.sp&&r.sp[sp])return nm(sp)+" "+r.sp[sp][0]+"\"";
+  const top=Object.entries(r.sp||{}).sort((a,b)=>b[1][1]-a[1][1]).slice(0,3);
+  return top.map(([c,v])=>nm(c)+" "+v[0]+"\"").join(", ")||"–";
+}
+function sortVal(r,k){return k==="fish"?Object.keys(r.sp||{}).length:r[k]}
+function render(){
+  const rows=filtered().sort((a,b)=>{const x=sortVal(a,sortKey),y=sortVal(b,sortKey);
+    if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*sortDir;});
+  $("count").textContent=rows.length+" of "+data.length+" lakes match";
+  $("body").innerHTML=rows.slice(0,300).map(r=>`<tr><td class="n"><a href="${MAP_PAGE}#lake=${encodeURIComponent(r.g)}">${r.n.replace(/</g,"&lt;")}</a></td><td>${fmt(r.ac)}</td><td>${fmt(r.md)}</td><td>${fmt(r.cl)}</td><td>${r.cs}</td><td>${fishText(r)}</td></tr>`).join("");
+}
+$("head").innerHTML=COLS.map(([k,l])=>`<th data-k="${k}">${l}</th>`).join("");
+$("head").onclick=e=>{const k=e.target.dataset.k;if(!k)return;sortDir=sortKey===k?-sortDir:1;sortKey=k;render();};
+document.querySelectorAll("input,select").forEach(el=>el.addEventListener("input",render));
+fetch("lake_search_index.json").then(r=>r.json()).then(d=>{
+  data=d;const codes=new Set();d.forEach(r=>Object.keys(r.sp||{}).forEach(c=>codes.add(c)));
+  [...codes].sort((a,b)=>nm(a).localeCompare(nm(b))).forEach(c=>$("sp").add(new Option(nm(c),c)));
+  render();
+}).catch(()=>{$("count").textContent="Couldn't load lake_search_index.json (serve over http, not file://)."});
+</script>
+</body>
+</html>

@@ -97,7 +97,7 @@ match = lakes[lakes["map_label"]=="Knife"]
 print(match.values)
 
 # print(lakes.info())
-print(lakes.columns.tolist())
+# print(lakes.columns.tolist())
 # print(lakes.shape)
 # print(lakes.dtypes)
 #
@@ -105,3 +105,5 @@ print(lakes.columns.tolist())
 #
 # # Save to CSV normally
 # lakes.to_csv("../../Data/Lakes/LakeCSV.csv", index=False)
+clear = lakes[lakes["map_label"]== "Clearwater"]
+print(len(clear.campsites))

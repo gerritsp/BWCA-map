@@ -25,6 +25,9 @@ for p in same_lake[:5]:
 # print(f"Campsites:   {len(graph.campsites)}")
 # print(f"Portages:    {len(graph.portages)}")
 # print(f"EntryPoints: {len(graph.entry_points)}")
+davis = graph.find_lake_by_name("Clearwater Lake")
+
+print(len(davis.campsites))
 
 
 

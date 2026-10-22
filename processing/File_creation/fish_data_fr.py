@@ -148,6 +148,5 @@ def build_fisheries_bundles():
     print("to each lake's properties dict, so the map can show a badge/icon")
     print("without fetching a fisheries bundle for every lake up front.")
 
-
 if __name__ == "__main__":
     build_fisheries_bundles()
