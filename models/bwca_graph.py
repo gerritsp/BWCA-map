@@ -1,4 +1,5 @@
 # models/graph.py
+from models.lake_ids import normalize_dow
 import geopandas as gpd
 from models.Campsite import Campsite
 from models.Lake import Lake
@@ -37,9 +38,10 @@ class bwca_graph:
                 geometry=row.geometry,
                 acres=row["acres"],
                 shoreline_miles=row["shore_mi"],
-                unique_guid=row["unique_guid"]
+                unique_guid=str(row["unique_guid"])
             )
 
+            lake.dowlknum = normalize_dow(row.get("dowlknum"))
             self.lakes[lake.unique_guid] = lake
             normalized = self.normalize_name(lake.name)
 

@@ -8,7 +8,7 @@
 // Writes  <stem>_paddle_edges.json
 const fs = require("fs");
 const turf = require("@turf/turf");
-const GraphEngine = require("../templates/graph_engine.js");
+const GraphEngine = require("../Templates/graph_engine.js");
 
 function readJSON(path) {
     return JSON.parse(fs.readFileSync(path, "utf8"));
