@@ -14,7 +14,7 @@ from models.bwca_graph import bwca_graph
 SOURCE_CRS = "EPSG:26915"
 
 REPO_ROOT = Path(__file__).resolve().parent
-TEMPLATES_DIR = REPO_ROOT / "templates"
+TEMPLATES_DIR = REPO_ROOT / "Templates"
 HTML_TEMPLATE = (TEMPLATES_DIR / "html_template.html").read_text()
 JS_TEMPLATE = (TEMPLATES_DIR / "js_template.js").read_text()
 ENGINE_TEMPLATE = (TEMPLATES_DIR / "graph_engine.js").read_text()
@@ -23,18 +23,19 @@ ENGINE_TEMPLATE = (TEMPLATES_DIR / "graph_engine.js").read_text()
 def build_graph():
     graph = bwca_graph()
 
-    graph.load_lakes("Data/processed/bwca_lakes.parquet")
-    graph.load_campsites("Data/processed/bwca_campsites_river.parquet")
-    graph.connect_campsites()
-
-    graph.load_portages("Data/processed/portages_final_snapped.parquet")
-    graph.connect_portages()
-
-    graph.load_rivers("Data/processed/bwca_rivers_lines.parquet")
-    graph.connect_rivers()
-
-    graph.load_entry_points("Data/processed/entry_points_joined.parquet")
-    graph.connect_entry_points()
+    graph.load_lakes(REPO_ROOT / "Data/processed/bwca_lakes.parquet")
+    for dataset, load, connect in (
+        ("bwca_campsites_river", graph.load_campsites, graph.connect_campsites),
+        ("portages_final_snapped", graph.load_portages, graph.connect_portages),
+        ("bwca_rivers_lines", graph.load_rivers, graph.connect_rivers),
+        ("entry_points_joined", graph.load_entry_points, graph.connect_entry_points),
+    ):
+        path = REPO_ROOT / "Data/processed" / (dataset + ".parquet")
+        if path.exists():
+            load(path)
+            connect()
+        else:
+            print(f"Optional layer unavailable: {dataset}")
 
     return graph
 
@@ -138,6 +139,9 @@ def fires_geojson(path="Data/processed/fires2026.parquet", simplify_tolerance=0.
     pass simplify_tolerance=None here if re-simplifying is unnecessary or
     unwanted - left the parameter in in case a future, un-simplified fire
     file gets swapped in."""
+    path = REPO_ROOT / path
+    if not path.exists():
+        return {"type": "FeatureCollection", "features": []}
     fires = gpd.read_parquet(path)
     if fires.crs is None:
         fires = fires.set_crs(SOURCE_CRS)
@@ -158,7 +162,7 @@ def build_paddle_edges(stem_path):
     called) so every precomputed edge gets a crossesBurn flag - see
     graph_engine.js's burn-area awareness note."""
     result = subprocess.run(
-        ["node", "scripts/build_paddle_edges.js", str(stem_path)],
+        ["node", "Scripts/build_paddle_edges.js", str(stem_path)],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -173,7 +177,7 @@ def build_paddle_edges(stem_path):
 
 
 def render_map(graph, out_path="maps/bwca_graph_map.html"):
-    out_path = Path(out_path)
+    out_path = REPO_ROOT / out_path
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     js_filename = out_path.stem + ".js"
@@ -194,6 +198,7 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
     js = (
         JS_TEMPLATE
         .replace("__LAKES_URL__", lakes_filename)
+        .replace("__LAKE_BUNDLES_URL__", "fisheries/")
         .replace("__CAMPSITES_URL__", campsites_filename)
         .replace("__PORTAGES_URL__", portages_filename)
         .replace("__RIVERS_URL__", rivers_filename)

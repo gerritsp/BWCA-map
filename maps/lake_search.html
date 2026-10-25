@@ -34,6 +34,14 @@ th{cursor:pointer;font-size:12px;color:var(--mut)}td.n{font-weight:600}
 <p style="color:var(--mut);font-size:12px">Fish data: Minnesota DNR LakeFinder surveys. Largest fish is the biggest sampled, not a guarantee. Planning aid only.</p>
 </main>
 <script>
+async function loadBundle(requestedGuid) {
+  const response = await fetch(`fisheries/${encodeURIComponent(requestedGuid)}.json`);
+  if (!response.ok) throw new Error("Lake data unavailable");
+  const bundle = await response.json();
+  if (bundle.unique_guid !== requestedGuid) throw new Error("Lake bundle GUID mismatch");
+  return bundle;
+}
+const esc=value=>String(value??"–").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const MAP_PAGE="bwca_graph_map.html";
 const NAMES={WAE:"Walleye",NOP:"Northern Pike",YEP:"Yellow Perch",SMB:"Smallmouth Bass",LMB:"Largemouth Bass",LKT:"Lake Trout",WTS:"White Sucker",RKB:"Rock Bass",BLC:"Black Crappie",BLG:"Bluegill",CIS:"Cisco",BUB:"Burbot",LKW:"Lake Whitefish",PMK:"Pumpkinseed",BLB:"Black Bullhead",SHR:"Shorthead Redhorse"};
 const nm=c=>NAMES[c]||c;
@@ -48,7 +56,7 @@ function filtered(){
     minlen=num("minlen"),minac=num("minac"),maxac=num("maxac"),mindp=num("mindp"),mincl=num("mincl"),mincs=num("mincs");
   return data.filter(r=>{
     if(q&&!r.n.toLowerCase().includes(q))return false;
-    if(sp){const s=r.sp&&r.sp[sp];if(!s)return false;if(minlen!=null&&s[0]<minlen)return false;}
+    if(sp){const s=r.sp&&r.sp[sp];if(!s)return false;if(minlen!=null&&(s[0]==null||s[0]<minlen))return false;}
     if(minac!=null&&!(r.ac!=null&&r.ac>=minac))return false;
     if(maxac!=null&&!(r.ac!=null&&r.ac<=maxac))return false;
     if(mindp!=null&&!(r.md!=null&&r.md>=mindp))return false;
@@ -67,8 +75,15 @@ function render(){
   const rows=filtered().sort((a,b)=>{const x=sortVal(a,sortKey),y=sortVal(b,sortKey);
     if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*sortDir;});
   $("count").textContent=rows.length+" of "+data.length+" lakes match";
-  $("body").innerHTML=rows.slice(0,300).map(r=>`<tr><td class="n"><a href="${MAP_PAGE}#lake=${encodeURIComponent(r.g)}">${r.n.replace(/</g,"&lt;")}</a></td><td>${fmt(r.ac)}</td><td>${fmt(r.md)}</td><td>${fmt(r.cl)}</td><td>${r.cs}</td><td>${fishText(r)}</td></tr>`).join("");
+  $("body").innerHTML=rows.slice(0,300).map(r=>`<tr><td class="n"><a href="${MAP_PAGE}#lake=${encodeURIComponent(r.g)}">${esc(r.n)}</a></td><td>${fmt(r.ac)}</td><td>${fmt(r.md)}</td><td>${fmt(r.cl)}</td><td>${r.cs}</td><td>${esc(fishText(r))}</td></tr>`).join("");
 }
+$("body").addEventListener("click", async event=>{
+  const link=event.target.closest("a"); if(!link)return;
+  event.preventDefault();
+  const requestedGuid=new URL(link.href).hash.slice(6);
+  try { await loadBundle(decodeURIComponent(requestedGuid)); location.href=link.href; }
+  catch(error) { $("count").textContent="Could not load this lake's data. Please try again."; }
+});
 $("head").innerHTML=COLS.map(([k,l])=>`<th data-k="${k}">${l}</th>`).join("");
 $("head").onclick=e=>{const k=e.target.dataset.k;if(!k)return;sortDir=sortKey===k?-sortDir:1;sortKey=k;render();};
 document.querySelectorAll("input,select").forEach(el=>el.addEventListener("input",render));

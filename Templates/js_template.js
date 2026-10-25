@@ -1,3 +1,44 @@
+const LAKE_BUNDLES_URL = "__LAKE_BUNDLES_URL__";
+const lakeBundlePromises = new Map();
+function escapeHTML(value) {
+    return String(value ?? "N/A").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function fetchLakeBundle(unique_guid) {
+    if (!lakeBundlePromises.has(unique_guid)) {
+        const promise = fetch(`${LAKE_BUNDLES_URL}${encodeURIComponent(unique_guid)}.json`)
+            .then(response => {
+                if (response.status === 404) { lakeBundlePromises.delete(unique_guid); return null; }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            }).then(bundle => {
+                if (bundle && bundle.unique_guid !== unique_guid) throw new Error("Lake bundle GUID mismatch");
+                return bundle;
+            }).catch(error => { lakeBundlePromises.delete(unique_guid); throw error; });
+        lakeBundlePromises.set(unique_guid, promise);
+    }
+    return lakeBundlePromises.get(unique_guid);
+}
+function lakeBundleHTML(bundle) {
+    if (!bundle) return "No lake data is available for this polygon.";
+    const info = bundle.lake_info;
+    const lengths = bundle.fish_lengths;
+    const catches = bundle.fish_catches;
+    const species = [...new Set([...lengths, ...catches].map(row => row.species))].sort();
+    const clarity = [...bundle.clarity].sort((a,b) => String(b.date ?? "").localeCompare(String(a.date ?? "")))[0];
+    const fish = species.map(code => {
+        const sampled = lengths.filter(row => row.species === code).map(row => row.length_inches);
+        const cpue = catches.filter(row => row.species === code && typeof row.cpue === "number");
+        return `<li>${escapeHTML(code)}: max sampled ${escapeHTML(sampled.length ? Math.max(...sampled) : null)} in; CPUE ${cpue.map(row => `${escapeHTML(row.cpue)} (${escapeHTML(row.gear)}, ${escapeHTML(row.date)})`).join("; ") || "N/A"}</li>`;
+    }).join("");
+    const latestClarity = clarity ? Object.entries(clarity).map(([k,v]) => `${escapeHTML(k)}: ${escapeHTML(v)}`).join(", ") : "N/A";
+    return `<div style="max-height:350px;overflow:auto"><b>${escapeHTML(bundle.name)}</b><br>
+      DOW: ${escapeHTML(bundle.dowlknum)}<br>Area: ${escapeHTML(info.areaAcres ?? bundle.project.area_acres)} acres<br>
+      Maximum depth: ${escapeHTML(info.maxDepthFeet)} ft<br>Latest clarity: ${latestClarity}<br>
+      Detailed surveys: ${escapeHTML(bundle.surveys.length)}; inventory surveys: ${escapeHTML(bundle.survey_inventory.length)}<br>
+      MPCA assessments: ${escapeHTML(bundle.assessments.length)}${bundle.incomplete ? " (source collection incomplete)" : ""}<br>
+      Fish species / maximum sampled length / CPUE:<ul>${fish || "<li>No fish observations available.</li>"}</ul>
+      <a href="${escapeHTML(LAKE_BUNDLES_URL + encodeURIComponent(bundle.unique_guid) + ".json")}" target="_blank" rel="noopener">Complete normalized JSON bundle</a></div>`;
+}
 const LAKES_URL = "__LAKES_URL__";
     const CAMPSITES_URL = "__CAMPSITES_URL__";
     const PORTAGES_URL = "__PORTAGES_URL__";
@@ -12,6 +53,17 @@ const LAKES_URL = "__LAKES_URL__";
         attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
 
+    const lakeLayersByGuid = new Map();
+    async function openLakeData(layer, guid) {
+        if (!layer.getPopup()) layer.bindPopup("Loading lake data…", {maxWidth: 420});
+        layer.setPopupContent("Loading lake data…").openPopup();
+        try {
+            const bundle = await fetchLakeBundle(guid);
+            layer.setPopupContent(lakeBundleHTML(bundle));
+        } catch (error) {
+            layer.setPopupContent("Could not load lake data. Click the lake to retry.");
+        }
+    }
     const lakesLayer = L.geoJSON(lakes, {
         style: {
             color: "#2b6cb0",
@@ -21,9 +73,9 @@ const LAKES_URL = "__LAKES_URL__";
         },
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
-            layer.bindTooltip(
-                `${p.name} &mdash; ${p.acres.toFixed(1)} acres, ${p.num_campsites} campsite(s)`
-            );
+            lakeLayersByGuid.set(p.unique_guid, layer);
+            layer.bindTooltip(`${escapeHTML(p.name)} — ${escapeHTML(p.acres)} acres, ${escapeHTML(p.num_campsites)} campsite(s)`);
+            layer.on("click", () => openLakeData(layer, p.unique_guid));
         }
     }).addTo(map);
 
@@ -148,10 +200,10 @@ const LAKES_URL = "__LAKES_URL__";
   try {
         const guid = new URLSearchParams(location.hash.slice(1)).get("lake");
         if (!guid) return;
-        const feature = lakes.features.find(f => f.properties.unique_guid === guid);
-        if (!feature) return;
-        const [w, s, e, n] = turf.bbox(feature);
-        map.fitBounds([[s, w], [n, e]], { maxZoom: 14 });
+        const layer = lakeLayersByGuid.get(guid);
+        if (!layer) return;
+        map.fitBounds(layer.getBounds(), { maxZoom: 14 });
+        openLakeData(layer, guid);
       } catch (err) { console.error("lake hash zoom failed", err); }
     }
     zoomToLakeFromHash();
