@@ -31,12 +31,12 @@ function lakeBundleHTML(bundle) {
         return `<li>${escapeHTML(code)}: max sampled ${escapeHTML(sampled.length ? Math.max(...sampled) : null)} in; CPUE ${cpue.map(row => `${escapeHTML(row.cpue)} (${escapeHTML(row.gear)}, ${escapeHTML(row.date)})`).join("; ") || "N/A"}</li>`;
     }).join("");
     const latestClarity = clarity ? Object.entries(clarity).map(([k,v]) => `${escapeHTML(k)}: ${escapeHTML(v)}`).join(", ") : "N/A";
-    return `<div style="max-height:350px;overflow:auto"><b>${escapeHTML(bundle.name)}</b><br>
+    return `<div><h2>${escapeHTML(bundle.name)}</h2>
       DOW: ${escapeHTML(bundle.dowlknum)}<br>Area: ${escapeHTML(info.areaAcres ?? bundle.project.area_acres)} acres<br>
       Maximum depth: ${escapeHTML(info.maxDepthFeet)} ft<br>Latest clarity: ${latestClarity}<br>
       Detailed surveys: ${escapeHTML(bundle.surveys.length)}; inventory surveys: ${escapeHTML(bundle.survey_inventory.length)}<br>
       MPCA assessments: ${escapeHTML(bundle.assessments.length)}${bundle.incomplete ? " (source collection incomplete)" : ""}<br>
-      Fish species / maximum sampled length / CPUE:<ul>${fish || "<li>No fish observations available.</li>"}</ul>
+      <details><summary>Fish observations</summary><ul>${fish || "<li>No fish observations available.</li>"}</ul></details>
       <a href="${escapeHTML(LAKE_BUNDLES_URL + encodeURIComponent(bundle.unique_guid) + ".json")}" target="_blank" rel="noopener">Complete normalized JSON bundle</a></div>`;
 }
 const LAKES_URL = "bwca_graph_map_lakes.json";
@@ -53,29 +53,48 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
 
+    let mode = "explore", selectedLayer = null, selectionRequest = 0;
+    const content = document.getElementById("lake-content");
+    const closeDetails = document.getElementById("close-details");
+    function showInfo(html) { content.innerHTML = html; closeDetails.hidden = false; }
+    function resetSelection() {
+        selectionRequest++;
+        if (selectedLayer) lakesLayer.resetStyle(selectedLayer);
+        selectedLayer = null;
+        content.innerHTML = "<p>Select a lake to explore its details.</p>";
+        closeDetails.hidden = true;
+    }
+    closeDetails.addEventListener("click", resetSelection);
+    function bindFeatureInfo(layer, html) {
+        layer.on("click", () => { if (mode === "explore") { resetSelection(); showInfo(html); } });
+    }
     const lakeLayersByGuid = new Map();
     async function openLakeData(layer, guid) {
-        if (!layer.getPopup()) layer.bindPopup("Loading lake data…", {maxWidth: 420});
-        layer.setPopupContent("Loading lake data…").openPopup();
+        resetSelection();
+        selectedLayer = layer;
+        layer.setStyle({color: "#d48a29", weight: 3, fillOpacity: 0.3});
+        const request = selectionRequest;
+        const name = escapeHTML(layer.feature.properties.name || "Unnamed lake");
+        showInfo(`<h2>${name}</h2><p>Loading lake details…</p>`);
         try {
             const bundle = await fetchLakeBundle(guid);
-            layer.setPopupContent(lakeBundleHTML(bundle));
+            if (request === selectionRequest) showInfo(lakeBundleHTML(bundle));
         } catch (error) {
-            layer.setPopupContent("Could not load lake data. Click the lake to retry.");
+            if (request === selectionRequest) showInfo(`<h2>${name}</h2><p>Could not load lake data. Select this lake again to retry.</p>`);
         }
     }
     const lakesLayer = L.geoJSON(lakes, {
         style: {
-            color: "#2b6cb0",
+            color: "#4c8e99",
             weight: 1,
-            fillColor: "#63b3ed",
-            fillOpacity: 0.35
+            fillColor: "#8bc3c8",
+            fillOpacity: 0.28
         },
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
             lakeLayersByGuid.set(p.unique_guid, layer);
-            layer.bindTooltip(`${escapeHTML(p.name)} — ${escapeHTML(p.acres)} acres, ${escapeHTML(p.num_campsites)} campsite(s)`);
-            layer.on("click", () => openLakeData(layer, p.unique_guid));
+            layer.bindTooltip(escapeHTML(p.name || "Unnamed lake"), {sticky: true});
+            layer.on("click", () => { if (mode === "explore") openLakeData(layer, p.unique_guid); });
         }
     }).addTo(map);
 
@@ -94,7 +113,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             const snappedNote = (p.start_snapped || p.end_snapped)
                 ? '<span style="color:#7c3aed;font-size:11px;">Endpoint adjusted &mdash; not surveyed</span><br>'
                 : "";
-            layer.bindPopup(
+            bindFeatureInfo(layer,
                 `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
                 `${label} &mdash; ${rods}<br>` +
                 `${p.lake_a} &rarr; ${p.lake_b}<br>` +
@@ -107,9 +126,10 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     }).addTo(map);
 
     // ADDED: burn area rendering
-    const FIRE_STYLE = { color: "#9a3412", weight: 1.5, fillColor: "#ea580c", fillOpacity: 0.35, dashArray: "4 3" };
+    const FIRE_STYLE = { color: "#9a3412", weight: 1.5, fillColor: "#ea580c", fillOpacity: 0.28, dashArray: "4 3" };
     const firesLayer = L.geoJSON(fires, {
         style: FIRE_STYLE,
+        interactive: false,
         onEachFeature: function (feature, layer) {
             const p = feature.properties || {};
             const label = p.incident_name || p.name || "Burn area";
@@ -122,15 +142,17 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     legend.onAdd = function () {
         const div = L.DomUtil.create("div", "legend");
         div.innerHTML = `
-            <b>Portages</b><br>
+            <details><summary>Map legend</summary><b>Portages</b><br>
             <span style="display:inline-block;width:20px;border-top:3px solid #0f5c2e;margin-right:4px;"></span>Portage (surveyed)<br>
             <span style="display:inline-block;width:20px;border-top:3px dashed #7c3aed;margin-right:4px;"></span>Portage (endpoint adjusted)<br>
             <b>Rivers &amp; streams</b><br>
             <span style="display:inline-block;width:20px;border-top:2px solid #0891b2;margin-right:4px;"></span>Routable (river/connector)<br>
             <span style="display:inline-block;width:20px;border-top:2px dotted #0891b2;margin-right:4px;"></span>Display only (small stream)<br>
             <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f59e0b;border:2px solid white;box-shadow:0 0 2px rgba(0,0,0,0.5);margin-right:4px;vertical-align:middle;"></span>Entry point<br>
-            <span style="display:inline-block;width:14px;height:10px;background:#ea580c;opacity:0.5;border:1px dashed #9a3412;margin-right:4px;vertical-align:middle;"></span>Burn area
+            <span style="display:inline-block;width:14px;height:10px;background:#ea580c;opacity:0.5;border:1px dashed #9a3412;margin-right:4px;vertical-align:middle;"></span>Burn area</details>
         `;
+        L.DomEvent.disableClickPropagation(div);
+        L.DomEvent.disableScrollPropagation(div);
         return div;
     };
     legend.addTo(map);
@@ -161,7 +183,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
             const dist = p.distance_to_lake == null ? "N/A" : `${p.distance_to_lake.toFixed(1)} m`;
-            layer.bindPopup(
+            bindFeatureInfo(layer,
                 `<b>Campsite:</b> ${p.camp_id}<br>` +
                 `<b>Lake:</b> ${p.lake_name}<br>` +
                 `<b>Status:</b> ${p.status}<br>` +
@@ -187,7 +209,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         },
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
-            layer.bindPopup(
+            bindFeatureInfo(layer,
                 `<b>Entry Point ${p.code ?? ""}</b><br>` +
                 `${p.name || "(unnamed)"}<br>` +
                 `<span style="font-size:11px; color:#555;">Lake: ${p.lake_name || "unmatched"}</span>`
@@ -322,6 +344,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         routeLayer = L.geoJSON(
             segments.map((s) => ({ type: "Feature", properties: { kind: s.kind }, geometry: s.geometry })),
             {
+                interactive: false,
                 style: (feature) => ({
                     color: ROUTE_COLORS[feature.properties.kind],
                     weight: 5,
@@ -348,8 +371,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         );
     }
 
-    const routeControl = L.control({ position: "topleft" });
-    routeControl.onAdd = function () {
+    function makeRouteControls() {
         const div = L.DomUtil.create("div", "legend");
         div.style.minWidth = "220px";
         div.innerHTML = `
@@ -366,7 +388,17 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         L.DomEvent.disableClickPropagation(div);
         return div;
     };
-    routeControl.addTo(map);
+    document.getElementById("route-controls").appendChild(makeRouteControls());
+    function setMode(next) {
+        mode = next;
+        if (mode === "route") resetSelection();
+        document.getElementById("explore-mode").setAttribute("aria-pressed", String(mode === "explore"));
+        document.getElementById("route-mode").setAttribute("aria-pressed", String(mode === "route"));
+        document.getElementById("route-controls").hidden = mode !== "route";
+        document.getElementById("mode-help").textContent = mode === "route" ? "Click your start, then your destination. Lake details stay closed while you plan." : "Click a lake to explore its details. Your map stays clear.";
+    }
+    document.getElementById("explore-mode").addEventListener("click", () => setMode("explore"));
+    document.getElementById("route-mode").addEventListener("click", () => setMode("route"));
     document.getElementById("route-clear-btn").addEventListener("click", clearRoute);
     // ADDED: toggling the checkbox re-runs the search immediately if a route is already showing
     document.getElementById("avoid-burn-checkbox").addEventListener("change", (e) => {
@@ -430,11 +462,21 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         }
     }
 
-    map.on("click", (e) => handleRouteClick(e.latlng));
-    portagesLayer.on("click", (e) => handleRouteClick(e.latlng));
-    campsitesLayer.on("click", (e) => handleRouteClick(e.latlng));
-    riversLayer.on("click", (e) => handleRouteClick(e.latlng));
-    entryPointsLayer.on("click", (e) => handleEntryPointClick(e.layer.feature, e.latlng));
+    const handledClicks = new WeakSet();
+    function routeClick(e, entry = false) {
+        if (mode !== "route") return;
+        if (e.originalEvent) {
+            if (handledClicks.has(e.originalEvent)) return;
+            handledClicks.add(e.originalEvent);
+        }
+        if (entry) handleEntryPointClick(e.layer.feature, e.latlng);
+        else handleRouteClick(e.latlng);
+    }
+    map.on("click", e => routeClick(e));
+    portagesLayer.on("click", e => routeClick(e));
+    campsitesLayer.on("click", e => routeClick(e));
+    riversLayer.on("click", e => routeClick(e));
+    entryPointsLayer.on("click", e => routeClick(e, true));
     }
 
     Promise.all([
@@ -450,5 +492,5 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             init(lakes, campsites, portages, rivers, entryPoints, fires, paddleEdges))
         .catch((err) => {
             console.error("Failed to load map data:", err);
-            document.getElementById("map").textContent = "Failed to load map data - see console for details.";
+            document.getElementById("map").textContent = `Could not load the map: ${err.message}. Check that the server is running and rebuild with APP.py if needed.`;
         });
