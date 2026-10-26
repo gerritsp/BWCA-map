@@ -60,49 +60,19 @@ const LAKES_URL = "__LAKES_URL__";
         attribution: "Tiles courtesy of the U.S. Geological Survey"
     });
 
-    function exteriorRings(collection) {
-        const rings = [];
-        for (const feature of collection.features || []) {
-            const geometry = feature.geometry || {};
-            if (geometry.type === "Polygon" && geometry.coordinates?.[0]) {
-                rings.push(geometry.coordinates[0]);
-            } else if (geometry.type === "MultiPolygon") {
-                for (const polygon of geometry.coordinates || []) {
-                    if (polygon[0]) rings.push(polygon[0]);
-                }
-            }
-        }
-        return rings;
-    }
-
     const boundaryOutline = L.geoJSON(boundary, {
         interactive: false,
-        style: { color: "#163f35", weight: 2.5, opacity: 0.9, fillOpacity: 0 }
+        style: { color: "#6aa6bf", weight: 1.5, opacity: 0.8, fillOpacity: 0 }
     });
     const boundaryBounds = boundaryOutline.getBounds();
-    const boundaryVisuals = L.layerGroup();
     if (boundaryBounds.isValid()) {
         const padded = boundaryBounds.pad(0.14);
-        const outerRing = [
-            [padded.getSouth(), padded.getWest()],
-            [padded.getNorth(), padded.getWest()],
-            [padded.getNorth(), padded.getEast()],
-            [padded.getSouth(), padded.getEast()]
-        ];
-        const holes = exteriorRings(boundary).map(ring =>
-            ring.map(([lng, lat]) => [lat, lng])
-        );
-        L.polygon([outerRing, ...holes], {
-            interactive: false,
-            stroke: false,
-            fillColor: "#173a32",
-            fillOpacity: 0.2,
-            fillRule: "evenodd"
-        }).addTo(boundaryVisuals);
         map.setMaxBounds(padded);
         map.fitBounds(boundaryBounds);
+        // maxBounds keeps the center nearby; minZoom prevents zooming out far
+        // enough to see the whole planet around it.
+        map.setMinZoom(map.getZoom());
     }
-    boundaryOutline.addTo(boundaryVisuals);
 
     let mode = "explore", selectedLayer = null, selectionRequest = 0;
     const content = document.getElementById("lake-content");
@@ -276,9 +246,8 @@ const LAKES_URL = "__LAKES_URL__";
         }
     }).addTo(map);
 
-    // Add the non-interactive mask last so its boundary line stays legible.
-    // The transparent holes leave the BWCA itself unshaded.
-    boundaryVisuals.addTo(map);
+    // Add the non-interactive outline last so the soft boundary stays legible.
+    boundaryOutline.addTo(map);
 
     L.control.layers(
         { "Street map": streetMap, "Topographic": topoMap },
@@ -289,7 +258,7 @@ const LAKES_URL = "__LAKES_URL__";
             "Rivers & streams": riversLayer,
             "Entry points": entryPointsLayer,
             "Burn areas": firesLayer,
-            "BWCA boundary & shading": boundaryVisuals,
+            "BWCA boundary": boundaryOutline,
         },
         { collapsed: true }
     ).addTo(map);

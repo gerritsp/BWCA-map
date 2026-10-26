@@ -94,7 +94,7 @@ switchable basemap.
 
 All expected snapshot counts matched. Source collection completed without failures.
 A second build from the response cache produced byte-identical bundles and indexes.
-The 14-test suite includes every encoded bundle URL and all 14 application assets,
+The 15-test suite includes every encoded bundle URL and all 15 application assets,
 identifier cleaning, observation deduplication, source-cache refresh, exact search
 correspondence, campsite counts, entry-point access states, boundary geometry and
 executable popup/cache behavior. JavaScript syntax and `git diff --check` passed.

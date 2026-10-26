@@ -17,7 +17,7 @@ table{border-collapse:collapse;width:100%}th,td{padding:7px 8px;border-bottom:1p
 th{cursor:pointer;font-size:12px;color:var(--mut)}td.n{font-weight:600}
 
 :root{--bg:#f7f8f2;--fg:#193b35;--mut:#61736b;--line:#dbe3d8;--card:#fff;--acc:#256653}
-main{max-width:1180px;padding:24px}nav{display:flex;justify-content:space-between;gap:16px;align-items:center;font-size:12px}nav a{text-decoration:none}nav span,.eyebrow{letter-spacing:.14em;font-size:10px;font-weight:700}.intro{padding:38px 0 24px}.intro h1{font:42px Georgia,serif;margin:12px 0}.intro p{color:var(--mut)}.bar{padding:22px;gap:18px;border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 30px #193b3505}label{flex:1;min-width:115px;gap:8px}input,select{width:100%;padding:11px;font-size:14px;border-radius:8px}#q{min-width:160px}input:focus,select:focus,button:focus{outline:2px solid var(--acc);outline-offset:2px}input:disabled{opacity:.55;cursor:not-allowed}.trip-bar{margin-top:14px;background:#edf2e9}.trip-heading{flex:1 0 100%}.trip-heading strong{display:block;font:20px Georgia,serif}.trip-heading span,.trip-help{color:var(--mut);font-size:12px}.reset{align-self:end;padding:11px 16px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--fg);font-weight:600;cursor:pointer}#ep{min-width:230px}#count{margin:25px 0 12px;font-size:13px}.wrap{background:white;border:1px solid var(--line);border-radius:14px}th,td{padding:15px 16px}th{background:#edf2e9}tbody tr:hover{background:#f0f6ef}td.n a{text-decoration:none;display:block;padding:4px 0}td.n a:hover{text-decoration:underline}.trip-result{font-size:12px;color:var(--mut)} @media(max-width:600px){main{padding:16px}.intro{padding:25px 0 16px}.intro h1{font-size:32px}nav span{display:none}.bar{padding:16px;gap:12px}#ep{min-width:0}.reset{width:100%}}
+main{max-width:1180px;padding:24px}nav{display:flex;justify-content:space-between;gap:16px;align-items:center;font-size:12px}nav a{text-decoration:none}nav span,.eyebrow{letter-spacing:.14em;font-size:10px;font-weight:700}.intro{padding:38px 0 24px}.intro h1{font:42px Georgia,serif;margin:12px 0}.intro p{color:var(--mut)}.bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));align-items:end;padding:22px;gap:18px;border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 30px #193b3505}label{min-width:0;gap:8px}input,select{width:100%;min-width:0;max-width:100%;padding:11px;font-size:14px;border-radius:8px}select{text-overflow:ellipsis}input:focus,select:focus,button:focus{outline:2px solid var(--acc);outline-offset:2px}input:disabled{opacity:.55;cursor:not-allowed}.trip-bar{margin-top:14px;background:#edf2e9}.trip-heading{grid-column:1/-1}.trip-heading strong{display:block;font:20px Georgia,serif}.trip-heading span,.trip-help{color:var(--mut);font-size:12px}.reset{align-self:end;padding:11px 16px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--fg);font-weight:600;cursor:pointer}#count{margin:25px 0 12px;font-size:13px}.wrap{background:white;border:1px solid var(--line);border-radius:14px}th,td{padding:15px 16px}th{background:#edf2e9}tbody tr:hover{background:#f0f6ef}td.n a{text-decoration:none;display:block;padding:4px 0}td.n a:hover{text-decoration:underline}.trip-result{font-size:12px;color:var(--mut)} @media(max-width:600px){main{padding:16px}.intro{padding:25px 0 16px}.intro h1{font-size:32px}nav span{display:none}.bar{padding:16px;gap:12px;grid-template-columns:1fr}.reset{width:100%}}
 </style>
 </head>
 <body><main>
@@ -31,16 +31,17 @@ main{max-width:1180px;padding:24px}nav{display:flex;justify-content:space-betwee
  <label>Max depth ≥ (ft)<input id="mindp" type="number" min="0"></label>
  <label>Clarity ≥ (ft)<input id="mincl" type="number" min="0"></label>
  <label>Campsites ≥<input id="mincs" type="number" min="0"></label>
+ <label>Campsites ≤<input id="maxcs" type="number" min="0"></label>
 </div>
 <div class="bar trip-bar">
- <div class="trip-heading"><strong>How far into the BWCA?</strong><span>Choose an entry point, then limit cumulative portage effort and lake transitions.</span></div>
+ <div class="trip-heading"><strong>How far into the BWCA?</strong><span>Choose an entry point, then limit recorded portage effort and lake transitions.</span></div>
  <label>Entry point<select id="ep"><option value="">Any entry point</option></select></label>
  <label>Total portage rods ≤<input id="maxrods" class="trip-limit" type="number" min="0" disabled></label>
  <label>Portages in ≤<input id="maxports" class="trip-limit" type="number" min="0" disabled></label>
  <label>Lakes in ≤<input id="maxlakes" class="trip-limit" type="number" min="0" disabled></label>
  <button id="reset" class="reset" type="button">Reset filters</button>
 </div>
-<p class="trip-help">“Lakes in” counts lake-to-lake transitions; the entry lake is 0. Rods are cumulative across the route. Results use recorded routable rivers and portages and remain a planning aid.</p>
+<p class="trip-help">“Lakes in” counts lake-to-lake transitions; the matched entry lake is 0. Rods are cumulative across recorded portages. These filters do not include paddle distance across the entry lake or distance from a parking or landing point, and some source locations still need field verification.</p>
 <div id="count">Loading…</div>
 <div class="wrap"><table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
 <p style="color:var(--mut);font-size:12px">Fish data: Minnesota DNR LakeFinder surveys. Largest fish is the biggest sampled, not a guarantee. Planning aid only.</p>
@@ -55,8 +56,8 @@ async function loadBundle(requestedGuid) {
 }
 const esc=value=>String(value??"–").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const MAP_PAGE="bwca_graph_map.html";
-const NAMES={WAE:"Walleye",NOP:"Northern Pike",YEP:"Yellow Perch",SMB:"Smallmouth Bass",LMB:"Largemouth Bass",LKT:"Lake Trout",WTS:"White Sucker",RKB:"Rock Bass",BLC:"Black Crappie",BLG:"Bluegill",CIS:"Cisco",BUB:"Burbot",LKW:"Lake Whitefish",PMK:"Pumpkinseed",BLB:"Black Bullhead",SHR:"Shorthead Redhorse"};
-const nm=c=>NAMES[c]||c;
+let speciesNames={};
+const nm=c=>{const name=speciesNames[c]?.common_name;return name?name.replace(/\b\w/g,letter=>letter.toUpperCase()):c};
 const COLS=[["n","Lake"],["ac","Acres"],["md","Max depth"],["cl","Clarity"],["cs","Campsites"],["fish","Fish (largest, in)"],["trip","From entry point"]];
 let data=[],access={entries:[],starts:{}},entryByCode=new Map(),sortKey="n",sortDir=1;
 const $=id=>document.getElementById(id);
@@ -83,7 +84,7 @@ function tripText(r){
 
 function filtered(){
   const q=$("q").value.trim().toLowerCase(),sp=$("sp").value,
-    minlen=num("minlen"),minac=num("minac"),maxac=num("maxac"),mindp=num("mindp"),mincl=num("mincl"),mincs=num("mincs");
+    minlen=num("minlen"),minac=num("minac"),maxac=num("maxac"),mindp=num("mindp"),mincl=num("mincl"),mincs=num("mincs"),maxcs=num("maxcs");
   return data.filter(r=>{
     if(q&&!r.n.toLowerCase().includes(q))return false;
     if(sp){const s=r.sp&&r.sp[sp];if(!s)return false;if(minlen!=null&&(s[0]==null||s[0]<minlen))return false;}
@@ -92,6 +93,7 @@ function filtered(){
     if(mindp!=null&&!(r.md!=null&&r.md>=mindp))return false;
     if(mincl!=null&&!(r.cl!=null&&r.cl>=mincl))return false;
     if(mincs!=null&&r.cs<mincs)return false;
+    if(maxcs!=null&&r.cs>maxcs)return false;
     if($("ep").value&&!tripStates(r)?.length)return false;
     return true;});
 }
@@ -120,11 +122,11 @@ $("head").onclick=e=>{const k=e.target.dataset.k;if(!k)return;sortDir=sortKey===
 document.querySelectorAll("input,select").forEach(el=>el.addEventListener("input",render));
 $("ep").addEventListener("input",()=>{document.querySelectorAll(".trip-limit").forEach(el=>el.disabled=!$("ep").value);render();});
 $("reset").addEventListener("click",()=>{document.querySelectorAll("input").forEach(el=>el.value="");document.querySelectorAll("select").forEach(el=>el.selectedIndex=0);document.querySelectorAll(".trip-limit").forEach(el=>el.disabled=true);sortKey="n";sortDir=1;render();});
-Promise.all([fetch("lake_search_index.json").then(r=>r.json()),fetch("lake_access_index.json").then(r=>r.json())]).then(([d,a])=>{
-  data=d;access=a;entryByCode=new Map(a.entries.map(entry=>[entry.code,entry]));
+Promise.all([fetch("lake_search_index.json").then(r=>r.json()),fetch("lake_access_index.json").then(r=>r.json()),fetch("fisheries/species.json").then(r=>r.json())]).then(([d,a,s])=>{
+  data=d;access=a;speciesNames=s;entryByCode=new Map(a.entries.map(entry=>[entry.code,entry]));
   a.entries.forEach(entry=>$("ep").add(new Option(entry.name,entry.code)));
   const codes=new Set();d.forEach(r=>Object.keys(r.sp||{}).forEach(c=>codes.add(c)));
-  [...codes].sort((a,b)=>nm(a).localeCompare(nm(b))).forEach(c=>$("sp").add(new Option(nm(c),c)));
+  [...codes].sort((a,b)=>nm(a).localeCompare(nm(b))).forEach(c=>$("sp").add(new Option(`${nm(c)} (${c})`,c)));
   render();
 }).catch(()=>{$("count").textContent="Couldn't load the lake search data (serve over http, not file://)."});
 </script>

@@ -45,7 +45,7 @@ class SearchIntegrationTests(unittest.TestCase):
         worker.start()
         base = f'http://127.0.0.1:{server.server_port}/'
         try:
-            assets = ['lake_search.html', 'lake_search_index.json', 'lake_access_index.json'] + ['bwca_graph_map' + suffix for suffix in ('.html', '.js', '_engine.js', '_lakes.json', '_campsites.json', '_portages.json', '_rivers.json', '_entry_points.json', '_boundary.json', '_fires.json', '_paddle_edges.json')]
+            assets = ['lake_search.html', 'lake_search_index.json', 'lake_access_index.json', 'fisheries/species.json'] + ['bwca_graph_map' + suffix for suffix in ('.html', '.js', '_engine.js', '_lakes.json', '_campsites.json', '_portages.json', '_rivers.json', '_entry_points.json', '_boundary.json', '_fires.json', '_paddle_edges.json')]
             for asset in assets:
                 with urlopen(base + asset) as response:
                     self.assertEqual(response.status, 200)
@@ -70,6 +70,14 @@ class SearchIntegrationTests(unittest.TestCase):
         for row in rows:
             with self.subTest(lake=row['n'], guid=row['g']):
                 self.assertEqual(row['cs'], int(counts.get(row['g'], 0)))
+
+    def test_every_search_species_has_an_official_name(self):
+        rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text())
+        species = json.loads((ROOT / 'maps/fisheries/species.json').read_text())
+        search_codes = {code for row in rows for code in row.get('sp', {})}
+        self.assertLessEqual(search_codes, set(species))
+        for code in search_codes:
+            self.assertTrue(species[code]['common_name'])
 
     def test_access_index_contract(self):
         access = json.loads((ROOT / 'maps/lake_access_index.json').read_text())
@@ -115,8 +123,13 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertIn('L.control.layers(', source)
         self.assertIn('USGSTopo/MapServer/tile/{z}/{y}/{x}', source)
         self.assertIn('map.setMaxBounds(padded)', source)
+        self.assertIn('map.setMinZoom(map.getZoom())', source)
+        self.assertNotIn('boundaryVisuals', source)
         self.assertIn('lakeDetailsEnabled.checked', source)
-        self.assertIn('bundle.unique_guid !== requestedGuid', (ROOT / 'maps/lake_search.html').read_text())
+        search_source = (ROOT / 'maps/lake_search.html').read_text()
+        self.assertIn('bundle.unique_guid !== requestedGuid', search_source)
+        self.assertIn('maxcs=num("maxcs")', search_source)
+        self.assertIn('fetch("fisheries/species.json")', search_source)
 
 
 if __name__ == '__main__':
