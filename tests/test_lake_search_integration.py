@@ -130,6 +130,9 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertIn('bundle.unique_guid !== requestedGuid', search_source)
         self.assertIn('maxcs=num("maxcs")', search_source)
         self.assertIn('fetch("fisheries/species.json")', search_source)
+        self.assertIn('const DESC_FIRST=new Set', search_source)
+        self.assertIn('aria-sort=', search_source)
+        self.assertIn('Math.max(...lengths)', search_source)
 
 
 if __name__ == '__main__':
