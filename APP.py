@@ -234,3 +234,6 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
 
 if __name__ == "__main__":
     render_map(build_graph())
+    # Refresh search counts from the same local campsite dataset after every build.
+    subprocess.run([sys.executable, str(REPO_ROOT / "Scripts/build_search_index.py")],
+                   cwd=REPO_ROOT, check=True)

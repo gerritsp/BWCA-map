@@ -29,7 +29,9 @@ class SearchIntegrationTests(unittest.TestCase):
                 bundle = json.loads((ROOT / 'maps/fisheries' / (row['g'] + '.json')).read_text())
                 self.assertEqual(bundle['unique_guid'], row['g'])
                 self.assertEqual(bundle['dowlknum'], row['dowlknum'])
-                self.assertEqual(search_row(bundle), row)
+                # Campsites come from the project parquet, not the fisheries bundle.
+                self.assertEqual({k: v for k, v in search_row(bundle).items() if k != "cs"},
+                                 {k: v for k, v in row.items() if k != "cs"})
 
     def test_full_validation(self):
         self.assertGreater(validate(), 0)
@@ -59,6 +61,15 @@ class SearchIntegrationTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
             worker.join()
+
+    def test_search_campsites_match_source(self):
+        import pandas as pd
+        camps = pd.read_parquet(ROOT / 'Data/processed/bwca_campsites_river.parquet')
+        counts = camps.loc[camps['STATUS'].eq('open'), 'lake_unique_guid'].value_counts()
+        rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text())
+        for row in rows:
+            with self.subTest(lake=row['n'], guid=row['g']):
+                self.assertEqual(row['cs'], int(counts.get(row['g'], 0)))
 
     def test_popup_runtime(self):
         subprocess.run(['node', 'tests/test_lake_popup.js'], cwd=ROOT, check=True)
