@@ -20,7 +20,7 @@ function fetchLakeBundle(unique_guid) {
 }
 function lakeBundleHTML(bundle) {
     if (!bundle) return "No lake data is available for this polygon.";
-    const info = bundle.lake_info;
+    const info = bundle.lake_info || {};
     const lengths = bundle.fish_lengths;
     const catches = bundle.fish_catches;
     const species = [...new Set([...lengths, ...catches].map(row => row.species))].sort();
@@ -44,18 +44,70 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     const PORTAGES_URL = "bwca_graph_map_portages.json";
     const RIVERS_URL = "bwca_graph_map_rivers.json";
     const ENTRY_POINTS_URL = "bwca_graph_map_entry_points.json";
+    const BOUNDARY_URL = "bwca_graph_map_boundary.json";
     const FIRES_URL = "bwca_graph_map_fires.json";
     const PADDLE_EDGES_URL = "bwca_graph_map_paddle_edges.json";
 
-    function init(lakes, campsites, portages, rivers, entryPoints, fires, paddleEdges) {
-    const map = L.map("map");
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    function init(lakes, campsites, portages, rivers, entryPoints, boundary, fires, paddleEdges) {
+    const map = L.map("map", { maxBoundsViscosity: 1.0 });
+    const streetMap = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
         attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
+    const topoMap = L.tileLayer("https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}", {
+        maxNativeZoom: 16,
+        maxZoom: 19,
+        attribution: "Tiles courtesy of the U.S. Geological Survey"
+    });
+
+    function exteriorRings(collection) {
+        const rings = [];
+        for (const feature of collection.features || []) {
+            const geometry = feature.geometry || {};
+            if (geometry.type === "Polygon" && geometry.coordinates?.[0]) {
+                rings.push(geometry.coordinates[0]);
+            } else if (geometry.type === "MultiPolygon") {
+                for (const polygon of geometry.coordinates || []) {
+                    if (polygon[0]) rings.push(polygon[0]);
+                }
+            }
+        }
+        return rings;
+    }
+
+    const boundaryOutline = L.geoJSON(boundary, {
+        interactive: false,
+        style: { color: "#163f35", weight: 2.5, opacity: 0.9, fillOpacity: 0 }
+    });
+    const boundaryBounds = boundaryOutline.getBounds();
+    const boundaryVisuals = L.layerGroup();
+    if (boundaryBounds.isValid()) {
+        const padded = boundaryBounds.pad(0.14);
+        const outerRing = [
+            [padded.getSouth(), padded.getWest()],
+            [padded.getNorth(), padded.getWest()],
+            [padded.getNorth(), padded.getEast()],
+            [padded.getSouth(), padded.getEast()]
+        ];
+        const holes = exteriorRings(boundary).map(ring =>
+            ring.map(([lng, lat]) => [lat, lng])
+        );
+        L.polygon([outerRing, ...holes], {
+            interactive: false,
+            stroke: false,
+            fillColor: "#173a32",
+            fillOpacity: 0.2,
+            fillRule: "evenodd"
+        }).addTo(boundaryVisuals);
+        map.setMaxBounds(padded);
+        map.fitBounds(boundaryBounds);
+    }
+    boundaryOutline.addTo(boundaryVisuals);
 
     let mode = "explore", selectedLayer = null, selectionRequest = 0;
     const content = document.getElementById("lake-content");
     const closeDetails = document.getElementById("close-details");
+    const lakeDetailsEnabled = document.getElementById("lake-details-enabled");
     function showInfo(html) { content.innerHTML = html; closeDetails.hidden = false; }
     function resetSelection() {
         selectionRequest++;
@@ -65,6 +117,9 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         closeDetails.hidden = true;
     }
     closeDetails.addEventListener("click", resetSelection);
+    lakeDetailsEnabled.addEventListener("change", () => {
+        if (!lakeDetailsEnabled.checked) resetSelection();
+    });
     function bindFeatureInfo(layer, html) {
         layer.on("click", () => { if (mode === "explore") { resetSelection(); showInfo(html); } });
     }
@@ -94,7 +149,11 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             const p = feature.properties;
             lakeLayersByGuid.set(p.unique_guid, layer);
             layer.bindTooltip(escapeHTML(p.name || "Unnamed lake"), {sticky: true});
-            layer.on("click", () => { if (mode === "explore") openLakeData(layer, p.unique_guid); });
+            layer.on("click", () => {
+                if (mode === "explore" && lakeDetailsEnabled.checked) {
+                    openLakeData(layer, p.unique_guid);
+                }
+            });
         }
     }).addTo(map);
 
@@ -217,7 +276,25 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         }
     }).addTo(map);
 
-    map.fitBounds(lakesLayer.getBounds());
+    // Add the non-interactive mask last so its boundary line stays legible.
+    // The transparent holes leave the BWCA itself unshaded.
+    boundaryVisuals.addTo(map);
+
+    L.control.layers(
+        { "Street map": streetMap, "Topographic": topoMap },
+        {
+            "Lakes": lakesLayer,
+            "Campsites": campsitesLayer,
+            "Portages": portagesLayer,
+            "Rivers & streams": riversLayer,
+            "Entry points": entryPointsLayer,
+            "Burn areas": firesLayer,
+            "BWCA boundary & shading": boundaryVisuals,
+        },
+        { collapsed: true }
+    ).addTo(map);
+
+    if (!boundaryBounds.isValid()) map.fitBounds(lakesLayer.getBounds());
     function zoomToLakeFromHash() {
   try {
         const guid = new URLSearchParams(location.hash.slice(1)).get("lake");
@@ -225,7 +302,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         const layer = lakeLayersByGuid.get(guid);
         if (!layer) return;
         map.fitBounds(layer.getBounds(), { maxZoom: 14 });
-        openLakeData(layer, guid);
+        if (lakeDetailsEnabled.checked) openLakeData(layer, guid);
       } catch (err) { console.error("lake hash zoom failed", err); }
     }
     zoomToLakeFromHash();
@@ -485,11 +562,12 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         fetch(PORTAGES_URL).then((r) => r.json()),
         fetch(RIVERS_URL).then((r) => r.json()),
         fetch(ENTRY_POINTS_URL).then((r) => r.json()),
+        fetch(BOUNDARY_URL).then((r) => r.json()),
         fetch(FIRES_URL).then((r) => r.json()),
         fetch(PADDLE_EDGES_URL).then((r) => r.json()),
     ])
-        .then(([lakes, campsites, portages, rivers, entryPoints, fires, paddleEdges]) =>
-            init(lakes, campsites, portages, rivers, entryPoints, fires, paddleEdges))
+        .then(([lakes, campsites, portages, rivers, entryPoints, boundary, fires, paddleEdges]) =>
+            init(lakes, campsites, portages, rivers, entryPoints, boundary, fires, paddleEdges))
         .catch((err) => {
             console.error("Failed to load map data:", err);
             document.getElementById("map").textContent = `Could not load the map: ${err.message}. Check that the server is running and rebuild with APP.py if needed.`;

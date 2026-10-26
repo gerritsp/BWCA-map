@@ -14,6 +14,9 @@ python -m http.server 8000 --directory maps
 Open http://localhost:8000/lake_search.html or
 http://localhost:8000/bwca_graph_map.html. APP.py generates the interactive map
 and precomputes its routing graph. Keep the HTTP server running while browsing.
+Use the layers button in the map's upper-right corner to switch to USGS Topo or
+hide map overlays. Lake search can also limit results from an entry point by
+cumulative portage rods, portage count and lake-to-lake transitions.
 
 ## Project layout
 
@@ -22,7 +25,7 @@ and precomputes its routing graph. Keep the HTTP server running while browsing.
 | APP.py | Current map builder |
 | models/ | Active data models and lake identifiers |
 | Templates/ | Editable map HTML, JavaScript, and routing engine |
-| Scripts/ | Lake-data synchronization, validation, indexes, routing build |
+| Scripts/ | Lake-data synchronization, source reconciliation, search/access indexes, routing build |
 | Data/processed/ | Active input datasets; preserve names and paths |
 | Data/SOURCES.md | Data provenance and refresh details |
 | maps/ | Generated map assets, lake bundles, and search page |
@@ -38,6 +41,7 @@ Some older preparation scripts require datasets that are not tracked by Git.
 ```sh
 python -m unittest discover -s tests -v
 python Scripts/validate_lake_bundles.py
+python Scripts/compare_stealing_fish.py ../Stealing-fish
 node tests/test_lake_popup.js
 ```
 

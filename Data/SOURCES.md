@@ -44,14 +44,28 @@ raw `totalWeight` is excluded because its interpretation is ambiguous. Search
 lengths are maximum observed bins, not guaranteed fish size. Search CPUE is an
 arithmetic mean of reported records; popup CPUE retains gear and survey date.
 
-## Reconciliation limitation
+## Stealing-fish reconciliation
 
-The requested comparison against Stealing-fish commit
-`0d2e770d36694141b65ab700893aa379b605511d` was blocked by automatic access review,
-which interpreted the repository-only restriction as excluding that repository.
-No copy of its datasets was used as an authoritative input. Official ArcGIS
-inventory is collected directly. The earlier subset/difference claims remain
-unverified in this implementation.
+`Scripts/compare_stealing_fish.py` verifies the cleaned Stealing-fish snapshot at
+commit `0d2e770d36694141b65ab700893aa379b605511d` against the normalized official
+bundles. The project lake parquet is byte-identical in both repositories. After
+applying the production cleaning rules, Stealing-fish had no additive survey,
+catch, positive fish-length, clarity, access, plant, surveyed-lake inventory or
+survey-inventory records. The official bundles contain six newer survey rows,
+five newer catch rows and eight newer clarity rows. All 31,169 positive length
+rows, 751 access rows, 283 plant rows, 556 inventory lakes and 1,807 inventory
+surveys match exactly. Forty-five zero-length or zero-count fish bins were
+correctly excluded. Both sources cover the same 499 lake-info DOW IDs; 43
+Stealing-fish rows contain older differing values, so they are not imported.
+
+Run the reconciliation from this repository with a local checkout path:
+
+```sh
+python Scripts/compare_stealing_fish.py ../Stealing-fish
+```
+
+The script exits nonzero if a future Stealing-fish snapshot contains additive
+records not present in the official bundles.
 
 ## Application
 
@@ -59,8 +73,14 @@ unverified in this implementation.
 lake file. Missing campsites, portages, rivers, entry points and fires produce
 empty FeatureCollections. Missing routing inputs produce a valid empty graph.
 Serve `maps/` over HTTP; search links use encoded polygon GUIDs in the map hash.
+The search index refreshes campsite counts from the same processed campsite file
+on every application build. `lake_access_index.json` stores Pareto-optimal trip
+states from each matched entry lake: cumulative portage rods, portage count and
+lake-to-lake transitions. The entry lake is zero lakes in. The map is framed by
+the repository's Minnesota DNR legal BWCA boundary and offers USGS Topo as a
+switchable basemap.
 
-## Verified snapshot (2026-10-23)
+## Verified snapshot (2026-10-26)
 
 | Measure | Count |
 | --- | ---: |
@@ -74,11 +94,10 @@ Serve `maps/` over HTTP; search links use encoded polygon GUIDs in the map hash.
 
 All expected snapshot counts matched. Source collection completed without failures.
 A second build from the response cache produced byte-identical bundles and indexes.
-The 10-test suite includes every encoded bundle URL and all 12 application assets,
+The 14-test suite includes every encoded bundle URL and all 14 application assets,
 identifier cleaning, observation deduplication, source-cache refresh, exact search
-correspondence and executable popup/cache behavior. `APP.py` also built from an
-unrelated working directory without any optional datasets. JavaScript syntax and
-`git diff --check` passed.
+correspondence, campsite counts, entry-point access states, boundary geometry and
+executable popup/cache behavior. JavaScript syntax and `git diff --check` passed.
 
 An additional DOM integration check loaded the actual search page and Leaflet map
 scripts, selected Crow Lake (`16028700`), zoomed to level 14 and opened a matching
