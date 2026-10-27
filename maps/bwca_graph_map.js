@@ -238,10 +238,29 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         },
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
+            const locationNote = p.location_count > 1
+                ? `<br><span style="font-size:11px; color:#555;">Official location ${p.location_index} of ${p.location_count}</span>`
+                : "";
+            const attachment = (p.attachments || [])[0];
+            let routingNote = "No routing attachment";
+            if (attachment) {
+                const distance = attachment.connector_distance_m >= 1000
+                    ? `${(attachment.connector_distance_m / 1000).toFixed(2)} km`
+                    : `${attachment.connector_distance_m.toFixed(0)} m`;
+                const rods = attachment.initial_rods > 0
+                    ? `; ${attachment.initial_rods.toFixed(0)} recorded rods from marker`
+                    : "";
+                routingNote = `${escapeHTML(attachment.label)}; ${distance} connector${rods}; ` +
+                    `${escapeHTML(attachment.confidence)} confidence`;
+            }
+            const lon = feature.geometry.coordinates[0].toFixed(6);
+            const lat = feature.geometry.coordinates[1].toFixed(6);
             bindFeatureInfo(layer,
-                `<b>Entry Point ${p.code ?? ""}</b><br>` +
-                `${p.name || "(unnamed)"}<br>` +
-                `<span style="font-size:11px; color:#555;">Lake: ${p.lake_name || "unmatched"}</span>`
+                `<b>Entry Point ${escapeHTML(p.code ?? "")}</b><br>` +
+                `${escapeHTML(p.name || "(unnamed)")}<br>` +
+                `<span style="font-size:11px; color:#555;">` +
+                `Official Forest Service point: ${lat}, ${lon}<br>` +
+                `Routing attachment: ${routingNote}</span>${locationNote}`
             );
         }
     }).addTo(map);
@@ -282,6 +301,28 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     const engine = GraphEngine.createGraphEngine(turf, lakes, rivers, fires);
     const { nodes, adjacency, addNode, removeNode, addEdge, wireRiverSnapEdges, clearRiverSnapEdges } = engine;
     GraphEngine.loadPrecomputed(engine, paddleEdges);
+
+    // A checked-in precomputed dump can lag a corrected portage layer.  Fill
+    // only absent portage nodes/edges here so a data-only portage fix cannot
+    // leave an official entry isolated. A full APP.py rebuild makes this loop
+    // a no-op because all segments are already in the dump.
+    for (const feature of portages.features) {
+        const p = feature.properties;
+        const coords = feature.geometry.coordinates;
+        const nodeA = `portage:${p.portage_number}:a`;
+        const nodeB = `portage:${p.portage_number}:b`;
+        if (!nodes.has(nodeA)) addNode(nodeA, p.unique_guid_a, coords[0]);
+        if (!nodes.has(nodeB)) addNode(nodeB, p.unique_guid_b, coords[coords.length - 1]);
+        const alreadyLoaded = (adjacency.get(nodeA) || []).some(
+            edge => edge.to === nodeB && edge.kind === "portage"
+        );
+        if (!alreadyLoaded) {
+            addEdge(
+                nodeA, nodeB, p.length_rods * GraphEngine.ROD_TO_METERS,
+                "portage", feature.geometry
+            );
+        }
+    }
 
     function findLakeAtPoint(coord) {
         for (const feature of lakes.features) {
@@ -353,6 +394,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     let routeLayer = null;
     let markerStart = null;
     let markerEnd = null;
+    const entryAnchorNodes = new Set();
 
     function setStatus(text) {
         document.getElementById("route-status-text").textContent = text;
@@ -365,6 +407,8 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         clearRiverSnapEdges();
         removeNode("start");
         removeNode("end");
+        for (const nodeId of entryAnchorNodes) removeNode(nodeId);
+        entryAnchorNodes.clear();
         markerStart = null;
         markerEnd = null;
         routeLayer = null;
@@ -385,7 +429,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             segments.push(adjacency.get(result.path[i]).find((e) => e.to === result.path[i + 1]));
         }
 
-        const ROUTE_COLORS = { portage: "#7c2d12", paddle: "#1d4ed8", river: "#0891b2" };
+        const ROUTE_COLORS = { portage: "#7c2d12", paddle: "#1d4ed8", river: "#0891b2", approach: "#d97706" };
 
         routeLayer = L.geoJSON(
             segments.map((s) => ({ type: "Feature", properties: { kind: s.kind }, geometry: s.geometry })),
@@ -395,7 +439,8 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
                     color: ROUTE_COLORS[feature.properties.kind],
                     weight: 5,
                     opacity: 0.9,
-                    dashArray: feature.properties.kind === "portage" ? "2 6" : null
+                    dashArray: feature.properties.kind === "portage" ? "2 6" :
+                        (feature.properties.kind === "approach" ? "8 6" : null)
                 })
             }
         ).addTo(map);
@@ -409,11 +454,15 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         const riverKm = segments
             .filter((s) => s.kind === "river")
             .reduce((sum, s) => sum + s.weight, 0) / 1000;
+        const approachKm = segments
+            .filter((s) => s.kind === "approach")
+            .reduce((sum, s) => sum + s.weight, 0) / 1000;
 
         setStatus(
             `Route found: ${(result.distance / 1000).toFixed(2)} km total ` +
             `(${rods.toFixed(0)} rods of portaging, ${paddleKm.toFixed(2)} km paddling, ` +
-            `${riverKm.toFixed(2)} km river).`
+            `${riverKm.toFixed(2)} km river` +
+            `${approachKm ? `, ${approachKm.toFixed(2)} km approximate approach` : ""}).`
         );
     }
 
@@ -486,17 +535,42 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     }
 
     function handleEntryPointClick(feature, latlng) {
-        const lakeGuid = feature.properties.unique_guid;
-        if (!lakeGuid) {
-            setStatus("This entry point isn't matched to a lake yet.");
+        const attachments = feature.properties.attachments || [];
+        if (!attachments.length) {
+            setStatus("This official entry location still needs a reviewed routing attachment.");
             return;
         }
         if (nodes.has("start") && nodes.has("end")) clearRoute();
 
         const coord = [latlng.lng, latlng.lat];
         const role = nodes.has("start") ? "end" : "start";
-        addNode(role, lakeGuid, coord);
-        wireRiverSnapEdges(role, lakeGuid, coord);
+        nodes.set(role, { lakeId: null, coord });
+        adjacency.set(role, []);
+        let connected = 0;
+        attachments.forEach((attachment, index) => {
+            const targetCoord = attachment.route_coordinates;
+            let targetNode = attachment.node_id;
+            if (targetNode && !nodes.has(targetNode)) targetNode = null;
+            if (!targetNode && attachment.lake_guid && Array.isArray(targetCoord)) {
+                targetNode = `${role}:entry:${index}`;
+                addNode(targetNode, attachment.lake_guid, targetCoord);
+                wireRiverSnapEdges(targetNode, attachment.lake_guid, targetCoord);
+                entryAnchorNodes.add(targetNode);
+            }
+            if (!targetNode) return;
+            const geometry = attachment.connector_geometry ||
+                turf.lineString([coord, targetCoord]).geometry;
+            const weight = attachment.edge_kind === "portage"
+                ? attachment.initial_rods * GraphEngine.ROD_TO_METERS
+                : attachment.connector_distance_m;
+            addEdge(role, targetNode, weight, attachment.edge_kind || "approach", geometry);
+            connected++;
+        });
+        if (!connected) {
+            removeNode(role);
+            setStatus("This entry's routing attachment is missing from the current graph. Rebuild the map data.");
+            return;
+        }
         const marker = L.marker(latlng, { title: role === "start" ? "Start" : "End" }).addTo(map);
 
         if (role === "start") {

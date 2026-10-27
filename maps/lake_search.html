@@ -41,7 +41,7 @@ main{max-width:1180px;padding:24px}nav{display:flex;justify-content:space-betwee
  <label>Lakes in ≤<input id="maxlakes" class="trip-limit" type="number" min="0" disabled></label>
  <button id="reset" class="reset" type="button">Reset filters</button>
 </div>
-<p class="trip-help">“Lakes in” counts lake-to-lake transitions; the matched entry lake is 0. Rods are cumulative across recorded portages. These filters do not include paddle distance across the entry lake or distance from a parking or landing point, and some source locations still need field verification.</p>
+<p class="trip-help">Entry locations use the 2026 Forest Service layer. “Lakes in” counts transitions after the first routed water body, which is 0. Rods include the matched portion of a recorded entry portage. Paddle and approximate approach distance are shown by the map route planner but are not filters; review the marked connector before field use.</p>
 <div id="count">Loading…</div>
 <p class="sort-help">Select any column heading to sort. Numeric columns start largest to smallest; select again to reverse.</p>
 <div class="wrap"><table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
@@ -65,9 +65,16 @@ let data=[],access={entries:[],starts:{}},entryByCode=new Map(),sortKey="n",sort
 const $=id=>document.getElementById(id);
 const num=id=>{const v=parseFloat($(id).value);return isNaN(v)?null:v};
 const fmt=v=>v==null?"–":v.toLocaleString();
+async function loadAccessIndex(){
+  const manifest=await fetch("lake_access_index.json").then(r=>r.json());
+  if(!manifest.shards?.length)return manifest;
+  const parts=await Promise.all(manifest.shards.map(path=>fetch(path).then(r=>r.json())));
+  manifest.starts=Object.assign({},...parts.map(part=>part.starts||{}));
+  return manifest;
+}
 function tripStates(r,applyLimits=true){
   const entry=entryByCode.get($("ep").value);if(!entry)return null;
-  const states=access.starts?.[entry.lake_guid]?.[r.g]||[];
+  const states=access.starts?.[entry.code]?.[r.g]||[];
   if(!applyLimits)return states;
   const maxrods=num("maxrods"),maxports=num("maxports"),maxlakes=num("maxlakes");
   return states.filter(([rods,ports,lakes])=>(maxrods==null||rods<=maxrods)&&(maxports==null||ports<=maxports)&&(maxlakes==null||lakes<=maxlakes));
@@ -80,7 +87,7 @@ function tripText(r){
   if(!$("ep").value)return "Choose an entry point";
   const state=bestTrip(r);if(!state)return "Not within limits";
   const [rods,ports,lakes]=state;
-  const lakeText=lakes===0?"entry lake":`${lakes} lake${lakes===1?"":"s"} in`;
+  const lakeText=lakes===0?"first routed water":`${lakes} lake${lakes===1?"":"s"} in`;
   return `${fmt(rods)} rods · ${ports} portage${ports===1?"":"s"} · ${lakeText}`;
 }
 
@@ -146,7 +153,7 @@ renderHead();
 document.querySelectorAll("input,select").forEach(el=>el.addEventListener("input",render));
 $("ep").addEventListener("input",()=>{document.querySelectorAll(".trip-limit").forEach(el=>el.disabled=!$("ep").value);render();});
 $("reset").addEventListener("click",()=>{document.querySelectorAll("input").forEach(el=>el.value="");document.querySelectorAll("select").forEach(el=>el.selectedIndex=0);document.querySelectorAll(".trip-limit").forEach(el=>el.disabled=true);sortKey="n";sortDir=1;render();});
-Promise.all([fetch("lake_search_index.json").then(r=>r.json()),fetch("lake_access_index.json").then(r=>r.json()),fetch("fisheries/species.json").then(r=>r.json())]).then(([d,a,s])=>{
+Promise.all([fetch("lake_search_index.json").then(r=>r.json()),loadAccessIndex(),fetch("fisheries/species.json").then(r=>r.json())]).then(([d,a,s])=>{
   data=d;access=a;speciesNames=s;entryByCode=new Map(a.entries.map(entry=>[entry.code,entry]));
   a.entries.forEach(entry=>$("ep").add(new Option(entry.name,entry.code)));
   const codes=new Set();d.forEach(r=>Object.keys(r.sp||{}).forEach(c=>codes.add(c)));

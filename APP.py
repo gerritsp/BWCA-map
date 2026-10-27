@@ -6,7 +6,8 @@ from pathlib import Path
 import geopandas as gpd
 
 from models.bwca_graph import bwca_graph
-from Scripts.build_lake_access_index import build_access_index
+from Scripts.build_entry_points import build_entry_points
+from Scripts.build_lake_access_index import build_access_index, write_access_index
 
 # Data/processed/*.parquet is written in NAD83 / UTM zone 15N (see CLAUDE.md's
 # CRS gotcha) - the graph's Lake/Campsite objects carry that geometry as-is,
@@ -34,7 +35,6 @@ def build_graph():
         ("bwca_campsites_river", graph.load_campsites, graph.connect_campsites),
         ("portages_final_snapped", graph.load_portages, graph.connect_portages),
         ("bwca_rivers_lines", graph.load_rivers, graph.connect_rivers),
-        ("entry_points_joined", graph.load_entry_points, graph.connect_entry_points),
     ):
         path = REPO_ROOT / "Data/processed" / (dataset + ".parquet")
         if path.exists():
@@ -118,22 +118,6 @@ def rivers_geojson(graph):
             "length_m": [r.length_m for r in rivers],
         },
         geometry=[r.geometry for r in rivers],
-        crs=SOURCE_CRS,
-    )
-    return json.loads(gdf.to_crs(4326).to_json())
-
-
-def entry_points_geojson(graph):
-    entries = list(graph.entry_points.values())
-    gdf = gpd.GeoDataFrame(
-        {
-            "code": [e.code for e in entries],
-            "name": [e.name for e in entries],
-            "unique_guid": [e.lake_unid for e in entries],
-            "fw_id": [e.fw_id for e in entries],
-            "lake_name": [e.lake.name if e.lake else None for e in entries],
-        },
-        geometry=[e.geometry for e in entries],
         crs=SOURCE_CRS,
     )
     return json.loads(gdf.to_crs(4326).to_json())
@@ -243,7 +227,6 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
         ("campsites", campsites_filename, campsites_geojson(graph)),
         ("portages", portages_filename, portages_geojson(graph)),
         ("rivers", rivers_filename, rivers_geojson(graph)),
-        ("entry_points", entry_points_filename, entry_points_geojson(graph)),
         ("boundary", boundary_filename, boundary_geojson()),
         ("fires", fires_filename, fires_geojson()),  # ADDED
     ):
@@ -252,16 +235,24 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
         written.append(data_path)
         rendered_layers[layer_name] = data
 
+    entry_points = build_entry_points(
+        rendered_layers["lakes"],
+        rendered_layers["portages"],
+        rendered_layers["rivers"],
+        rendered_layers["boundary"],
+    )
+    entry_points_path = out_path.parent / entry_points_filename
+    entry_points_path.write_text(json.dumps(entry_points))
+    written.append(entry_points_path)
+    rendered_layers["entry_points"] = entry_points
+
     access_index = build_access_index(
         rendered_layers["portages"],
         rendered_layers["rivers"],
         rendered_layers["entry_points"],
     )
     access_index_path = out_path.parent / access_index_filename
-    access_index_path.write_text(
-        json.dumps(access_index, sort_keys=True, separators=(",", ":")) + "\n"
-    )
-    written.append(access_index_path)
+    written.extend(write_access_index(access_index, access_index_path))
 
     # build_paddle_edges.js reads <stem>_fires.json too now - it must exist
     # by this point, which it does since the loop above already wrote it.

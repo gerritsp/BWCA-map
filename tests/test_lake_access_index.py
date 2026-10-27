@@ -26,20 +26,23 @@ class LakeAccessIndexTests(unittest.TestCase):
             {"unique_guid_a": "C", "unique_guid_b": "D", "routable": False},
         )
         entries = collection(
-            {"code": "10", "name": "Ten", "unique_guid": "C"},
-            {"code": "2", "name": "Two", "unique_guid": "A"},
-            {"code": None, "name": "Unmatched", "unique_guid": None},
+            {"code": "10", "name": "Ten", "location_count": 1,
+             "attachments": [{"lake_guid": "C", "initial_rods": 0, "initial_portages": 0}]},
+            {"code": "2", "name": "Two", "location_count": 1,
+             "attachments": [{"lake_guid": "A", "initial_rods": 5, "initial_portages": 1}]},
+            {"code": None, "name": "Unmatched", "attachments": []},
         )
 
         result = build_access_index(portages, rivers, entries)
 
+        self.assertEqual(result["schema_version"], 3)
         self.assertEqual([entry["code"] for entry in result["entries"]], ["2", "10"])
-        self.assertEqual(result["starts"]["A"]["A"], [[0.0, 0, 0]])
-        self.assertEqual(result["starts"]["A"]["C"],
-                         [[10.0, 1, 2], [20.0, 1, 1]])
-        self.assertNotIn("D", result["starts"]["A"])
-        self.assertNotIn("X", result["starts"]["A"])
-        self.assertNotIn("Y", result["starts"]["A"])
+        self.assertEqual(result["starts"]["2"]["A"], [[5.0, 1, 0]])
+        self.assertEqual(result["starts"]["2"]["C"],
+                         [[15.0, 2, 2], [25.0, 2, 1]])
+        self.assertNotIn("D", result["starts"]["2"])
+        self.assertNotIn("X", result["starts"]["2"])
+        self.assertNotIn("Y", result["starts"]["2"])
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SHARD_TARGET_BYTES = 650_000
 
 
 def _feature_properties(collection: dict[str, Any]):
@@ -39,10 +40,11 @@ def _dominates(left: tuple[float, int, int], right: tuple[float, int, int]):
 def _frontier_from(
     start: str,
     adjacency: dict[str, list[tuple[str, float, int]]],
+    initial: tuple[float, int, int] = (0.0, 0, 0),
 ):
     frontiers: dict[str, list[tuple[float, int, int]]] = defaultdict(list)
-    frontiers[start] = [(0.0, 0, 0)]
-    queue = [(0.0, 0, 0, start)]
+    frontiers[start] = [initial]
+    queue = [(*initial, start)]
     while queue:
         rods, portages, lakes_in, lake = heapq.heappop(queue)
         state = (rods, portages, lakes_in)
@@ -88,23 +90,53 @@ def build_access_index(portages, rivers, entry_points):
         if row.get("routable"):
             add_edge(row.get("unique_guid_a"), row.get("unique_guid_b"), 0, 0)
 
-    entries = []
+    entries_by_code = {}
+    seeds_by_code = defaultdict(list)
     for row in _feature_properties(entry_points):
-        guid = row.get("unique_guid")
         code = row.get("code")
-        if not isinstance(guid, str) or not guid or code is None:
+        if code is None:
             continue
-        entries.append({
-            "code": str(code),
-            "name": str(row.get("name") or f"Entry Point {code}"),
-            "lake_guid": guid,
+        code = str(code)
+        entries_by_code.setdefault(code, {
+            "code": code,
+            "name": f"{code} - {row.get('name') or f'Entry Point {code}'}",
+            "location_count": int(row.get("location_count") or 1),
         })
+        entries_by_code[code]["location_count"] = max(
+            entries_by_code[code]["location_count"],
+            int(row.get("location_count") or 1),
+        )
+        for attachment in row.get("attachments") or []:
+            guid = attachment.get("lake_guid")
+            rods = attachment.get("initial_rods", 0)
+            portage_count = attachment.get("initial_portages", 0)
+            if not isinstance(guid, str) or not guid:
+                continue
+            if (not isinstance(rods, (int, float)) or isinstance(rods, bool)
+                    or not math.isfinite(rods) or rods < 0):
+                continue
+            if not isinstance(portage_count, int) or isinstance(portage_count, bool) or portage_count < 0:
+                continue
+            seeds_by_code[code].append((guid, (float(rods), portage_count, 0)))
+
+    entries = [entry for code, entry in entries_by_code.items() if seeds_by_code.get(code)]
     entries.sort(key=_entry_sort_key)
 
     starts = {}
-    for start in sorted({entry["lake_guid"] for entry in entries}):
+    for entry in entries:
+        code = entry["code"]
+        combined = defaultdict(list)
+        for start, initial in seeds_by_code[code]:
+            for destination, states in _frontier_from(start, adjacency, initial).items():
+                existing = combined[destination]
+                for state in states:
+                    if any(_dominates(item, state) for item in existing):
+                        continue
+                    existing[:] = [item for item in existing if not _dominates(state, item)]
+                    existing.append(state)
+
         routes = {}
-        for destination, states in _frontier_from(start, adjacency).items():
+        for destination, states in combined.items():
             rounded = sorted({(round(rods, 1), portages, lakes_in)
                               for rods, portages, lakes_in in states})
             # Rounding can make two formerly distinct states dominate each other.
@@ -112,18 +144,52 @@ def build_access_index(portages, rivers, entry_points):
                        if not any(other != state and _dominates(other, state)
                                   for other in rounded)]
             routes[destination] = [list(state) for state in rounded]
-        starts[start] = routes
+        starts[code] = routes
 
     return {
-        "schema_version": 1,
+        "schema_version": 3,
         "definitions": {
-            "portage_rods": "Cumulative portage length in rods",
+            "portage_rods": "Cumulative recorded portage length from the official entry location, in rods",
             "portages": "Number of portage segments",
-            "lakes_in": "Lake-to-lake transitions; the entry lake is zero",
+            "lakes_in": "Lake-to-lake transitions after the entry attachment; its first routed water body is zero",
         },
         "entries": entries,
         "starts": starts,
     }
+
+
+def write_access_index(result, output: Path, target_bytes=SHARD_TARGET_BYTES):
+    """Write a small manifest plus independently fetchable entry-code shards."""
+    output = Path(output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    groups = []
+    current = {}
+    current_size = len('{"starts":{}}\n')
+    for entry in result["entries"]:
+        code = entry["code"]
+        routes = result["starts"][code]
+        encoded_size = len(json.dumps({code: routes}, separators=(",", ":")))
+        if current and current_size + encoded_size > target_bytes:
+            groups.append(current)
+            current = {}
+            current_size = len('{"starts":{}}\n')
+        current[code] = routes
+        current_size += encoded_size
+    if current:
+        groups.append(current)
+
+    shard_paths = [
+        output.with_name(f"{output.stem}_{index}{output.suffix}")
+        for index in range(1, len(groups) + 1)
+    ]
+    for path, starts in zip(shard_paths, groups):
+        path.write_text(json.dumps({"starts": starts}, sort_keys=True,
+                                   separators=(",", ":")) + "\n")
+
+    manifest = {key: value for key, value in result.items() if key != "starts"}
+    manifest["shards"] = [path.name for path in shard_paths]
+    output.write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n")
+    return [output, *shard_paths]
 
 
 def main():
@@ -139,10 +205,11 @@ def main():
 
     result = build_access_index(load("portages"), load("rivers"), load("entry_points"))
     output = args.output or maps_dir / "lake_access_index.json"
-    output.write_text(json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n")
+    written = write_access_index(result, output)
     route_count = sum(len(routes) for routes in result["starts"].values())
-    print(f"Wrote {output}: {len(result['entries'])} entries, "
-          f"{len(result['starts'])} entry lakes, {route_count} reachable pairs")
+    print(f"Wrote {output} and {len(written) - 1} shards: "
+          f"{len(result['entries'])} entries, {len(result['starts'])} permit codes, "
+          f"{route_count} reachable pairs")
 
 
 if __name__ == "__main__":

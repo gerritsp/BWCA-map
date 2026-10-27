@@ -91,7 +91,10 @@ class bwca_graph:
                 end_snapped=row.get("end_snapped", False),
                 geometry=row.geometry
             )
-            self.portages[portage.usfs_id] = portage
+            # A USFS ID may describe more than one mapped segment (37 records
+            # in the current snapshot would otherwise overwrite a sibling).
+            # portage_num is the processed layer's unique per-feature key.
+            self.portages[portage.portage_num] = portage
 
     def load_entry_points(self, filename):
         entry_points_df = gpd.read_parquet(filename)
