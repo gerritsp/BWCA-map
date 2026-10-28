@@ -14,6 +14,16 @@ from Scripts.validate_lake_bundles import validate
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def load_access_index():
+    manifest = json.loads((ROOT / 'maps/lake_access_index.json').read_text())
+    starts = {}
+    for shard in manifest.get('shards', []):
+        starts.update(json.loads((ROOT / 'maps' / shard).read_text())['starts'])
+    if manifest.get('shards'):
+        manifest['starts'] = starts
+    return manifest
+
+
 class SearchIntegrationTests(unittest.TestCase):
     def test_every_search_bundle(self):
         rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text())
@@ -29,7 +39,9 @@ class SearchIntegrationTests(unittest.TestCase):
                 bundle = json.loads((ROOT / 'maps/fisheries' / (row['g'] + '.json')).read_text())
                 self.assertEqual(bundle['unique_guid'], row['g'])
                 self.assertEqual(bundle['dowlknum'], row['dowlknum'])
-                self.assertEqual(search_row(bundle), row)
+                # Campsites come from the project parquet, not the fisheries bundle.
+                self.assertEqual({k: v for k, v in search_row(bundle).items() if k != "cs"},
+                                 {k: v for k, v in row.items() if k != "cs"})
 
     def test_full_validation(self):
         self.assertGreater(validate(), 0)
@@ -43,7 +55,8 @@ class SearchIntegrationTests(unittest.TestCase):
         worker.start()
         base = f'http://127.0.0.1:{server.server_port}/'
         try:
-            assets = ['lake_search.html', 'lake_search_index.json'] + ['bwca_graph_map' + suffix for suffix in ('.html', '.js', '_engine.js', '_lakes.json', '_campsites.json', '_portages.json', '_rivers.json', '_entry_points.json', '_fires.json', '_paddle_edges.json')]
+            access = load_access_index()
+            assets = ['lake_search.html', 'lake_search_index.json', 'lake_access_index.json', 'fisheries/species.json', *access.get('shards', [])] + ['bwca_graph_map' + suffix for suffix in ('.html', '.js', '_engine.js', '_lakes.json', '_campsites.json', '_portages.json', '_rivers.json', '_entry_points.json', '_boundary.json', '_fires.json', '_paddle_edges.json')]
             for asset in assets:
                 with urlopen(base + asset) as response:
                     self.assertEqual(response.status, 200)
@@ -60,6 +73,110 @@ class SearchIntegrationTests(unittest.TestCase):
             server.server_close()
             worker.join()
 
+    def test_search_campsites_match_source(self):
+        import pandas as pd
+        camps = pd.read_parquet(ROOT / 'Data/processed/bwca_campsites_river.parquet')
+        counts = camps.loc[camps['STATUS'].eq('open'), 'lake_unique_guid'].value_counts()
+        rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text())
+        for row in rows:
+            with self.subTest(lake=row['n'], guid=row['g']):
+                self.assertEqual(row['cs'], int(counts.get(row['g'], 0)))
+
+    def test_every_search_species_has_an_official_name(self):
+        rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text())
+        species = json.loads((ROOT / 'maps/fisheries/species.json').read_text())
+        search_codes = {code for row in rows for code in row.get('sp', {})}
+        self.assertLessEqual(search_codes, set(species))
+        for code in search_codes:
+            self.assertTrue(species[code]['common_name'])
+
+    def test_access_index_contract(self):
+        access = load_access_index()
+        lakes = json.loads((ROOT / 'maps/bwca_graph_map_lakes.json').read_text())
+        lake_guids = {feature['properties']['unique_guid']
+                      for feature in lakes['features']}
+        entry_points = json.loads((ROOT / 'maps/bwca_graph_map_entry_points.json').read_text())
+        entry_codes = {feature['properties']['code'] for feature in entry_points['features']}
+        self.assertEqual(access['schema_version'], 3)
+        self.assertEqual(len(access['entries']), 69)
+        self.assertEqual(len(access['entries']),
+                         len({entry['code'] for entry in access['entries']}))
+        self.assertEqual({entry['code'] for entry in access['entries']}, entry_codes)
+        for entry in access['entries']:
+            self.assertIn(entry['code'], access['starts'])
+            self.assertGreater(len(access['starts'][entry['code']]), 0)
+        for routes in access['starts'].values():
+            for destination, states in routes.items():
+                self.assertIn(destination, lake_guids)
+                self.assertGreater(len(states), 0)
+                for rods, portages, lakes_in in states:
+                    self.assertGreaterEqual(rods, 0)
+                    self.assertGreaterEqual(portages, 0)
+                    self.assertGreaterEqual(lakes_in, 0)
+
+        crab = next(feature for feature in entry_points['features']
+                    if feature['properties']['code'] == '4')
+        crab_guid = crab['properties']['attachments'][0]['lake_guid']
+        self.assertIn([347.3, 1, 0], access['starts']['4'][crab_guid])
+
+    def test_official_entry_points_are_connected_without_moving_markers(self):
+        source = json.loads((ROOT / 'Data/entry_points/usfs_bwca_entry_points_2026.geojson').read_text())
+        entries = json.loads((ROOT / 'maps/bwca_graph_map_entry_points.json').read_text())
+        lakes = json.loads((ROOT / 'maps/bwca_graph_map_lakes.json').read_text())
+        paddle = json.loads((ROOT / 'maps/bwca_graph_map_paddle_edges.json').read_text())
+        portages = json.loads((ROOT / 'maps/bwca_graph_map_portages.json').read_text())
+        lake_guids = {feature['properties']['unique_guid'] for feature in lakes['features']}
+        node_ids = {node[0] for node in paddle['nodes']}
+        portage_node_ids = {
+            f"portage:{feature['properties']['portage_number']}:{side}"
+            for feature in portages['features'] for side in ('a', 'b')
+        }
+
+        self.assertEqual(len(source['features']), 87)
+        self.assertEqual(len(entries['features']), 71)
+        counts = {}
+        for feature in entries['features']:
+            p = feature['properties']
+            counts[p['code']] = counts.get(p['code'], 0) + 1
+            self.assertEqual(p['routing_status'], 'connected')
+            self.assertGreater(len(p['attachments']), 0)
+            for attachment in p['attachments']:
+                self.assertIn(attachment['lake_guid'], lake_guids)
+                self.assertIn(attachment['confidence'], {'high', 'medium', 'review'})
+                if attachment['node_id']:
+                    self.assertIn(attachment['node_id'], node_ids | portage_node_ids)
+        self.assertEqual({code for code, count in counts.items() if count > 1}, {'47', '49'})
+        self.assertNotIn('54A', counts)
+        self.assertNotIn('55A', counts)
+        self.assertNotIn('86', counts)  # hiking-only entry; canoe graph intentionally excludes it
+
+        crab = next(feature for feature in entries['features']
+                    if feature['properties']['code'] == '4')
+        self.assertAlmostEqual(crab['geometry']['coordinates'][0], -92.033187318921, places=10)
+        self.assertAlmostEqual(crab['geometry']['coordinates'][1], 47.931414809367, places=10)
+        self.assertEqual(crab['properties']['routing_method'], 'portage')
+        self.assertGreater(crab['properties']['attachments'][0]['initial_rods'], 300)
+
+        snowbank = next(feature for feature in entries['features']
+                        if feature['properties']['code'] == '27')
+        self.assertAlmostEqual(snowbank['geometry']['coordinates'][0], -91.432158476718, places=10)
+        self.assertEqual(snowbank['properties']['attachments'][0]['lake_name'], 'Snowbank')
+        self.assertEqual(snowbank['properties']['attachments'][0]['confidence'], 'review')
+        self.assertGreater(snowbank['properties']['attachments'][0]['connector_distance_m'], 1500)
+
+        self.assertEqual(len(portages['features']), 905)
+        self.assertEqual(len({feature['properties']['portage_number']
+                              for feature in portages['features']}), 905)
+
+    def test_boundary_asset_contract(self):
+        boundary = json.loads((ROOT / 'maps/bwca_graph_map_boundary.json').read_text())
+        self.assertEqual(boundary['type'], 'FeatureCollection')
+        self.assertEqual({feature['properties']['unit']
+                          for feature in boundary['features']},
+                         {'Central', 'Eastern', 'Southwest'})
+        self.assertTrue(all(feature['geometry']['type'] in {'Polygon', 'MultiPolygon'}
+                            for feature in boundary['features']))
+
     def test_popup_runtime(self):
         subprocess.run(['node', 'tests/test_lake_popup.js'], cwd=ROOT, check=True)
 
@@ -69,7 +186,25 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertIn('lakeBundlePromises.delete(unique_guid)', source)
         self.assertIn('encodeURIComponent(unique_guid)', source)
         self.assertIn('openLakeData(layer, guid)', source)
-        self.assertIn('bundle.unique_guid !== requestedGuid', (ROOT / 'maps/lake_search.html').read_text())
+        self.assertIn('L.control.layers(', source)
+        self.assertIn('USGSTopo/MapServer/tile/{z}/{y}/{x}', source)
+        self.assertIn('map.setMaxBounds(padded)', source)
+        self.assertIn('map.setMinZoom(map.getZoom())', source)
+        self.assertNotIn('boundaryVisuals', source)
+        self.assertIn('lakeDetailsEnabled.checked', source)
+        self.assertIn('feature.properties.attachments || []', source)
+        self.assertIn('entryAnchorNodes', source)
+        self.assertIn('approximate approach', source)
+        self.assertIn('if (!nodes.has(nodeA)) addNode', source)
+        search_source = (ROOT / 'maps/lake_search.html').read_text()
+        self.assertIn('bundle.unique_guid !== requestedGuid', search_source)
+        self.assertIn('maxcs=num("maxcs")', search_source)
+        self.assertIn('fetch("fisheries/species.json")', search_source)
+        self.assertIn('const DESC_FIRST=new Set', search_source)
+        self.assertIn('aria-sort=', search_source)
+        self.assertIn('Math.max(...lengths)', search_source)
+        self.assertIn('access.starts?.[entry.code]', search_source)
+        self.assertIn('async function loadAccessIndex()', search_source)
 
 
 if __name__ == '__main__':

@@ -26,6 +26,8 @@ const source = fs.readFileSync('Templates/js_template.js', 'utf8').split('    fu
   assert(html.includes('clarity_ft: 8'));
   assert(html.includes('CPUE 0'));
   assert(html.includes('fisheries/%7BA%7D.json'));
+  context.bundle.lake_info = null;
+  assert(vm.runInContext('lakeBundleHTML(bundle)',context).includes('Maximum depth: N/A'));
   assert(vm.runInContext('lakeBundleHTML(null)',context).includes('No lake data'));
   console.log('Popup escaping, latest clarity, zero CPUE, cache reuse, mismatch rejection and retry passed');
 })().catch(e=>{console.error(e);process.exit(1);});

@@ -171,6 +171,7 @@
 
         // ---- Burn-area awareness ----
         const burnFeatures = fires && fires.features ? fires.features : [];
+        const burnBBoxes = burnFeatures.map((burn) => turf.bbox(burn));
 
         function edgeCrossesBurn(geometry) {
             if (burnFeatures.length === 0) return false;
@@ -180,7 +181,9 @@
             } catch {
                 return false;
             }
-            return burnFeatures.some((burn) => {
+            const lineBbox = turf.bbox(line);
+            return burnFeatures.some((burn, index) => {
+                if (!bboxesOverlap(lineBbox, burnBBoxes[index])) return false;
                 try {
                     return turf.booleanIntersects(line, burn);
                 } catch {

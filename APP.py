@@ -6,12 +6,19 @@ from pathlib import Path
 import geopandas as gpd
 
 from models.bwca_graph import bwca_graph
+from Scripts.build_entry_points import build_entry_points
+from Scripts.build_lake_access_index import build_access_index, write_access_index
 
 # Data/processed/*.parquet is written in NAD83 / UTM zone 15N (see CLAUDE.md's
 # CRS gotcha) - the graph's Lake/Campsite objects carry that geometry as-is,
 # with no CRS attached to the dataclass itself, so this has to match whatever
 # fileCreator.py/portageCreator.py actually wrote.
 SOURCE_CRS = "EPSG:26915"
+BOUNDARY_PATH = (
+    "Data/Boundaries/bdry_boundary_waters_canoe_area/"
+    "bdry_boundary_waters_canoe_area.gdb"
+)
+BOUNDARY_LAYER = "boundary_waters_canoe_area_wilderness"
 
 REPO_ROOT = Path(__file__).resolve().parent
 TEMPLATES_DIR = REPO_ROOT / "Templates"
@@ -28,7 +35,6 @@ def build_graph():
         ("bwca_campsites_river", graph.load_campsites, graph.connect_campsites),
         ("portages_final_snapped", graph.load_portages, graph.connect_portages),
         ("bwca_rivers_lines", graph.load_rivers, graph.connect_rivers),
-        ("entry_points_joined", graph.load_entry_points, graph.connect_entry_points),
     ):
         path = REPO_ROOT / "Data/processed" / (dataset + ".parquet")
         if path.exists():
@@ -117,22 +123,6 @@ def rivers_geojson(graph):
     return json.loads(gdf.to_crs(4326).to_json())
 
 
-def entry_points_geojson(graph):
-    entries = list(graph.entry_points.values())
-    gdf = gpd.GeoDataFrame(
-        {
-            "code": [e.code for e in entries],
-            "name": [e.name for e in entries],
-            "unique_guid": [e.lake_unid for e in entries],
-            "fw_id": [e.fw_id for e in entries],
-            "lake_name": [e.lake.name if e.lake else None for e in entries],
-        },
-        geometry=[e.geometry for e in entries],
-        crs=SOURCE_CRS,
-    )
-    return json.loads(gdf.to_crs(4326).to_json())
-
-
 def fires_geojson(path="Data/processed/fires2026.parquet", simplify_tolerance=0.0003):
     """ADDED - burn-area polygons for the "avoid burn areas" routing toggle.
     You mentioned your fires data is already simplified/loading quickly, so
@@ -149,6 +139,22 @@ def fires_geojson(path="Data/processed/fires2026.parquet", simplify_tolerance=0.
     if simplify_tolerance:
         fires["geometry"] = fires.geometry.simplify(simplify_tolerance, preserve_topology=True)
     return json.loads(fires.to_json())
+
+
+def boundary_geojson(path=BOUNDARY_PATH, simplify_tolerance=0.0001):
+    """Return the legal BWCA units used to frame and constrain the map."""
+    path = REPO_ROOT / path
+    if not path.exists():
+        return {"type": "FeatureCollection", "features": []}
+    boundary = gpd.read_file(path, layer=BOUNDARY_LAYER).to_crs(4326)
+    boundary = boundary[["BWCA_UNIT", "geometry"]].rename(
+        columns={"BWCA_UNIT": "unit"}
+    )
+    if simplify_tolerance:
+        boundary["geometry"] = boundary.geometry.simplify(
+            simplify_tolerance, preserve_topology=True
+        )
+    return json.loads(boundary.to_json())
 
 
 def build_paddle_edges(stem_path):
@@ -187,8 +193,10 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
     portages_filename = out_path.stem + "_portages.json"
     rivers_filename = out_path.stem + "_rivers.json"
     entry_points_filename = out_path.stem + "_entry_points.json"
+    boundary_filename = out_path.stem + "_boundary.json"
     fires_filename = out_path.stem + "_fires.json"  # ADDED
     paddle_edges_filename = out_path.stem + "_paddle_edges.json"
+    access_index_filename = "lake_access_index.json"
 
     html = (
         HTML_TEMPLATE
@@ -203,6 +211,7 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
         .replace("__PORTAGES_URL__", portages_filename)
         .replace("__RIVERS_URL__", rivers_filename)
         .replace("__ENTRY_POINTS_URL__", entry_points_filename)
+        .replace("__BOUNDARY_URL__", boundary_filename)
         .replace("__FIRES_URL__", fires_filename)  # ADDED
         .replace("__PADDLE_EDGES_URL__", paddle_edges_filename)
     )
@@ -212,17 +221,38 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
     written[1].write_text(js)
     written[2].write_text(ENGINE_TEMPLATE)
 
-    for filename, data in (
-        (lakes_filename, lakes_geojson(graph)),
-        (campsites_filename, campsites_geojson(graph)),
-        (portages_filename, portages_geojson(graph)),
-        (rivers_filename, rivers_geojson(graph)),
-        (entry_points_filename, entry_points_geojson(graph)),
-        (fires_filename, fires_geojson()),  # ADDED
+    rendered_layers = {}
+    for layer_name, filename, data in (
+        ("lakes", lakes_filename, lakes_geojson(graph)),
+        ("campsites", campsites_filename, campsites_geojson(graph)),
+        ("portages", portages_filename, portages_geojson(graph)),
+        ("rivers", rivers_filename, rivers_geojson(graph)),
+        ("boundary", boundary_filename, boundary_geojson()),
+        ("fires", fires_filename, fires_geojson()),  # ADDED
     ):
         data_path = out_path.parent / filename
         data_path.write_text(json.dumps(data))
         written.append(data_path)
+        rendered_layers[layer_name] = data
+
+    entry_points = build_entry_points(
+        rendered_layers["lakes"],
+        rendered_layers["portages"],
+        rendered_layers["rivers"],
+        rendered_layers["boundary"],
+    )
+    entry_points_path = out_path.parent / entry_points_filename
+    entry_points_path.write_text(json.dumps(entry_points))
+    written.append(entry_points_path)
+    rendered_layers["entry_points"] = entry_points
+
+    access_index = build_access_index(
+        rendered_layers["portages"],
+        rendered_layers["rivers"],
+        rendered_layers["entry_points"],
+    )
+    access_index_path = out_path.parent / access_index_filename
+    written.extend(write_access_index(access_index, access_index_path))
 
     # build_paddle_edges.js reads <stem>_fires.json too now - it must exist
     # by this point, which it does since the loop above already wrote it.
@@ -234,3 +264,6 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
 
 if __name__ == "__main__":
     render_map(build_graph())
+    # Refresh search counts from the same local campsite dataset after every build.
+    subprocess.run([sys.executable, str(REPO_ROOT / "Scripts/build_search_index.py")],
+                   cwd=REPO_ROOT, check=True)
