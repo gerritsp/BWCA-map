@@ -19,6 +19,10 @@ hide map overlays. Lake search can also limit results from an entry point by
 cumulative portage rods, portage count and lake-to-lake transitions. Entry
 markers use the checked-in 2026 Forest Service layer; routing connectors leave
 the official point in place and show how it was attached to the local graph.
+Portages needing a reviewed water connection are orange and dotted. Entry 75
+(Little Isabella River) and entry 84 (Snake River) remain visible but are not
+offered as distance-filter starts until their missing lake-network connections
+are verified.
 
 ## Project layout
 

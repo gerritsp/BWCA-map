@@ -78,6 +78,8 @@ def _json_value(value):
             return None
     except (TypeError, ValueError):
         pass
+    if hasattr(value, "item"):
+        return value.item()
     return value
 
 
@@ -122,6 +124,8 @@ def _lake_attachment(entry, point, lake, distance_m):
     connector = LineString([point, target])
     return {
         "kind": "lake",
+        "routing_type": "lake",
+        "routing_river_id": None,
         "edge_kind": "paddle" if distance_m <= 25 else "approach",
         "lake_guid": lake.unique_guid,
         "lake_name": _json_value(lake.get("name")),
@@ -145,14 +149,24 @@ def _portage_attachment(entry, point, portage, distance_m, lake_names):
     endpoints = {
         "a": {
             "coord": Point(line.coords[0]),
-            "lake_guid": portage.unique_guid_a,
+            "routing_type": _json_value(portage.get("routing_type_a")) or "lake",
+            "lake_guid": (
+                _json_value(portage.get("routing_lake_guid_a"))
+                if "routing_lake_guid_a" in portage else portage.unique_guid_a
+            ),
+            "river_id": _json_value(portage.get("routing_river_id_a")),
             "node_id": f"portage:{portage.portage_number}:a",
             "segment": substring(line, 0, location),
             "along_m": location,
         },
         "b": {
             "coord": Point(line.coords[-1]),
-            "lake_guid": portage.unique_guid_b,
+            "routing_type": _json_value(portage.get("routing_type_b")) or "lake",
+            "lake_guid": (
+                _json_value(portage.get("routing_lake_guid_b"))
+                if "routing_lake_guid_b" in portage else portage.unique_guid_b
+            ),
+            "river_id": _json_value(portage.get("routing_river_id_b")),
             "node_id": f"portage:{portage.portage_number}:b",
             "segment": substring(line, location, line.length),
             "along_m": line.length - location,
@@ -163,17 +177,32 @@ def _portage_attachment(entry, point, portage, distance_m, lake_names):
 
     code = str(entry.entry_number)
     side = PORTAGE_SIDE_OVERRIDES.get(code)
-    if side is None and endpoints["a"]["lake_guid"] != endpoints["b"]["lake_guid"]:
+    supported = {
+        key for key, value in endpoints.items()
+        if value["routing_type"] in {"lake", "river"}
+        and (
+            bool(value["lake_guid"])
+            if value["routing_type"] == "lake"
+            else value["river_id"] is not None
+        )
+    }
+    if not supported:
+        return None
+    if side not in supported:
+        side = None
+    if (side is None and len(supported) > 1
+            and endpoints["a"]["lake_guid"] != endpoints["b"]["lake_guid"]):
         scores = {
             key: _name_score(entry["name"], lake_names.get(value["lake_guid"]))
-            for key, value in endpoints.items()
+            for key, value in endpoints.items() if key in supported
         }
         best = max(scores, key=scores.get)
-        other = "b" if best == "a" else "a"
-        if scores[best] >= 0.55 and scores[best] - scores[other] >= 0.08:
+        other_scores = [score for key, score in scores.items() if key != best]
+        if (scores[best] >= 0.55
+                and (not other_scores or scores[best] - max(other_scores) >= 0.08)):
             side = best
     if side is None:
-        side = max(endpoints, key=lambda key: endpoints[key]["along_m"])
+        side = max(supported, key=lambda key: endpoints[key]["along_m"])
 
     target = endpoints[side]
     route = _route_line(point, projected, target["segment"])
@@ -182,6 +211,8 @@ def _portage_attachment(entry, point, portage, distance_m, lake_names):
     lake_name = lake_names.get(target["lake_guid"])
     return {
         "kind": "portage",
+        "routing_type": target["routing_type"],
+        "routing_river_id": target["river_id"],
         "edge_kind": "portage",
         "lake_guid": target["lake_guid"],
         "lake_name": lake_name,
@@ -211,7 +242,7 @@ def _river_attachments(entry, point, river, distance_m, lake_names, fallback_lak
         lake_guid = _json_value(lake_guid)
         if not lake_guid and fallback_lake is not None:
             lake_guid = fallback_lake.unique_guid
-        if not node_id or not lake_guid or node_id in seen:
+        if not node_id or node_id in seen:
             continue
         seen.add(node_id)
         if side == "a" and segment.geom_type != "Point":
@@ -220,6 +251,8 @@ def _river_attachments(entry, point, river, distance_m, lake_names, fallback_lak
         route = _route_line(point, projected, segment)
         attachments.append({
             "kind": "river",
+            "routing_type": "river",
+            "routing_river_id": _json_value(river.get("river_id")),
             "edge_kind": "river",
             "lake_guid": lake_guid,
             "lake_name": lake_names.get(lake_guid),
@@ -289,13 +322,38 @@ def build_entry_points(lakes, portages, rivers, boundary, source_path=SOURCE_PAT
         if method == "lake":
             attachments = [_lake_attachment(entry, point, lake, lake_distance)]
         elif method == "portage":
-            attachments = [_portage_attachment(entry, point, portage, portage_distance, lake_names)]
+            attachment = _portage_attachment(
+                entry, point, portage, portage_distance, lake_names
+            )
+            attachments = [attachment] if attachment else []
         elif method == "river":
             override_name = RIVER_SEARCH_LAKE_OVERRIDES.get(code)
             override_lake = _named_lake(lake_gdf, override_name, point) if override_name else None
             attachments = _river_attachments(
                 entry, point, river, river_distance, lake_names, override_lake
             )
+            if override_lake is not None:
+                attachments.append(_lake_attachment(
+                    entry,
+                    point,
+                    override_lake,
+                    float(point.distance(override_lake.geometry)),
+                ))
+
+        # If a nearby portage ends outside the clipped local water layers, do
+        # not revive its old arbitrary nearest-lake assignment.  A strong
+        # official-name match to a lake or river is a safer visible fallback;
+        # the long connector remains marked "review" by _confidence().
+        if not attachments and lake is not None and lake_distance <= 2500:
+            if _name_score(entry["name"], lake.get("name")) >= 0.65:
+                method = "lake"
+                attachments = [_lake_attachment(entry, point, lake, lake_distance)]
+        if not attachments and river is not None and river_distance <= 1000:
+            if _name_score(entry["name"], river.get("name")) >= 0.65:
+                method = "river"
+                attachments = _river_attachments(
+                    entry, point, river, river_distance, lake_names
+                )
 
         public_point = gpd.GeoSeries([point], crs=SOURCE_CRS).to_crs(WGS84).iloc[0]
         records.append({

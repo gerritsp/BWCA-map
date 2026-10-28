@@ -18,6 +18,7 @@ Multiple polygons with the same DOW receive separate bundles sharing observation
 - [DNR data/software license](https://www.dnr.state.mn.us/sitetools/data_software_license.html).
 - [Superior National Forest 2026 BWCAW entry-point layer](https://services1.arcgis.com/gGHDlz6USftL5Pau/ArcGIS/rest/services/R09_SNF_BWCAW_Entry_Points_2026/FeatureServer/0): official point, permit code, name and access type. The checked-in snapshot keeps all 87 source features; the canoe app publishes 71 water-access locations representing 69 permit codes and excludes hiking-only entries.
 - [Superior National Forest entry-point guide](https://www.fs.usda.gov/r09/superior/wilderness/boundary-water-canoe-area-wilderness-entry-points): official access descriptions and the agency's warning that its online map is a general planning aid rather than a replacement for navigational maps and local advice.
+- [USDA Forest Service EDW Trail NFS Publish](https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_TrailNFSPublish_01/MapServer/0): current public trail geometry used to verify portage topology. `Data/portage_geometry_corrections.geojson` snapshots `BIG RICE-HOOK` (`trail_cn 5790010436`, trail 6154) because processed portage 126 had collapsed to one point. The official 2,671.9 m line ends within 25 m of Big Rice and Hook and is applied at build time without modifying the source parquet.
 
 ## Rebuild
 
@@ -105,7 +106,26 @@ by USFS ID silently discarded 37 route segments, including one official entry
 49 approach. The browser also fills any portage edge absent from an older
 precomputed paddle dump; this is a no-op after a normal `APP.py` rebuild.
 
-## Verified snapshot (2026-10-27)
+Routing attachments are geometry-checked rather than trusting the processed
+nearest-lake columns. A portage landing is assigned to its recorded lake only
+when it is within 25 m of that polygon; otherwise it may attach to a mapped
+routable river within 25 m, or it remains review-only. The static graph adds
+only the minimum water-contained bridge edges needed to connect access points
+on the same actual lake polygon part. It does not bridge separate islands or
+invent a connection across land. The repair is idempotent and every generated
+edge is checked for valid node references.
+
+The project intentionally made DNR `Stream (Perennial)` segments routable in
+commit `73b7bfd` to connect recorded portages. That is a project routing policy,
+not proof that every mapped stream is canoeable in current field conditions.
+Users still need current maps, water levels and local guidance.
+
+Entry points 75 (Little Isabella River) and 84 (Snake River) retain their
+official markers and river evidence, but their river components have no
+verified path to a mapped lake. They are marked for review and omitted from the
+entry-distance search instead of being assigned an arbitrary nearest lake.
+
+## Verified snapshot (2026-10-28)
 
 | Measure | Count |
 | --- | ---: |
@@ -117,15 +137,20 @@ precomputed paddle dump; this is a no-op after a normal `APP.py` rebuild.
 | Lakes with inventory history | 556 |
 | Inventory records | 1,807 |
 | Official entry source features | 87 |
-| Routable water-entry locations / permit codes | 71 / 69 |
+| Published water-entry locations / permit codes | 71 / 69 |
+| Searchable entry permit codes | 67 |
 | Preserved portage segments | 905 |
+| Connected / review-only portages | 724 / 181 |
+| Lake / river / unresolved portage endpoints | 1,338 / 209 / 263 |
+| Lake bridge edges / repaired polygon parts | 51 / 40 |
 
 All expected snapshot counts matched. Source collection completed without failures.
 A second build from the response cache produced byte-identical bundles and indexes.
 The test suite includes every encoded bundle URL and all 15 application assets,
 identifier cleaning, observation deduplication, source-cache refresh, exact search
 correspondence, campsite counts, official entry coordinates and routing
-attachments, entry-point access states, boundary geometry and
+attachments, entry-point access states, portage endpoint tolerances, lake-part
+connectivity, repair idempotency, boundary geometry and
 executable popup/cache behavior. JavaScript syntax and `git diff --check` passed.
 
 An additional DOM integration check loaded the actual search page and Leaflet map

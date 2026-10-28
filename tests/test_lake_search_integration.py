@@ -96,9 +96,10 @@ class SearchIntegrationTests(unittest.TestCase):
         lake_guids = {feature['properties']['unique_guid']
                       for feature in lakes['features']}
         entry_points = json.loads((ROOT / 'maps/bwca_graph_map_entry_points.json').read_text())
-        entry_codes = {feature['properties']['code'] for feature in entry_points['features']}
+        entry_codes = {feature['properties']['code'] for feature in entry_points['features']
+                       if feature['properties']['routing_status'] == 'connected'}
         self.assertEqual(access['schema_version'], 3)
-        self.assertEqual(len(access['entries']), 69)
+        self.assertEqual(len(access['entries']), 67)
         self.assertEqual(len(access['entries']),
                          len({entry['code'] for entry in access['entries']}))
         self.assertEqual({entry['code'] for entry in access['entries']}, entry_codes)
@@ -138,14 +139,23 @@ class SearchIntegrationTests(unittest.TestCase):
         for feature in entries['features']:
             p = feature['properties']
             counts[p['code']] = counts.get(p['code'], 0) + 1
-            self.assertEqual(p['routing_status'], 'connected')
+            self.assertIn(p['routing_status'], {'connected', 'review'})
             self.assertGreater(len(p['attachments']), 0)
             for attachment in p['attachments']:
-                self.assertIn(attachment['lake_guid'], lake_guids)
+                self.assertIn(attachment['routing_type'], {'lake', 'river'})
+                if attachment['routing_type'] == 'lake':
+                    self.assertIn(attachment['lake_guid'], lake_guids)
+                else:
+                    self.assertIsNotNone(attachment['routing_river_id'])
                 self.assertIn(attachment['confidence'], {'high', 'medium', 'review'})
                 if attachment['node_id']:
                     self.assertIn(attachment['node_id'], node_ids | portage_node_ids)
         self.assertEqual({code for code, count in counts.items() if count > 1}, {'47', '49'})
+        self.assertEqual(
+            {feature['properties']['code'] for feature in entries['features']
+             if feature['properties']['routing_status'] == 'review'},
+            {'75', '84'},
+        )
         self.assertNotIn('54A', counts)
         self.assertNotIn('55A', counts)
         self.assertNotIn('86', counts)  # hiking-only entry; canoe graph intentionally excludes it

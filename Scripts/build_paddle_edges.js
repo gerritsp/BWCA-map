@@ -46,8 +46,12 @@ function main() {
         const coords = feature.geometry.coordinates;
         const nodeA = `portage:${p.portage_number}:a`;
         const nodeB = `portage:${p.portage_number}:b`;
-        addNode(nodeA, p.unique_guid_a, coords[0]);
-        addNode(nodeB, p.unique_guid_b, coords[coords.length - 1]);
+        const lakeA = Object.prototype.hasOwnProperty.call(p, "routing_lake_guid_a")
+            ? p.routing_lake_guid_a : p.unique_guid_a;
+        const lakeB = Object.prototype.hasOwnProperty.call(p, "routing_lake_guid_b")
+            ? p.routing_lake_guid_b : p.unique_guid_b;
+        addNode(nodeA, lakeA, coords[0]);
+        addNode(nodeB, lakeB, coords[coords.length - 1]);
         addEdge(nodeA, nodeB, p.length_rods * ROD_TO_METERS, "portage", feature.geometry);
     }
 

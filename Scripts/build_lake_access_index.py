@@ -39,7 +39,7 @@ def _dominates(left: tuple[float, int, int], right: tuple[float, int, int]):
 
 def _frontier_from(
     start: str,
-    adjacency: dict[str, list[tuple[str, float, int]]],
+    adjacency: dict[str, list[tuple[str, float, int, int]]],
     initial: tuple[float, int, int] = (0.0, 0, 0),
 ):
     frontiers: dict[str, list[tuple[float, int, int]]] = defaultdict(list)
@@ -50,11 +50,11 @@ def _frontier_from(
         state = (rods, portages, lakes_in)
         if state not in frontiers[lake]:
             continue
-        for neighbor, edge_rods, edge_portages in adjacency.get(lake, []):
+        for neighbor, edge_rods, edge_portages, edge_lakes in adjacency.get(lake, []):
             candidate = (
                 rods + edge_rods,
                 portages + edge_portages,
-                lakes_in + 1,
+                lakes_in + edge_lakes,
             )
             existing = frontiers[neighbor]
             if any(_dominates(item, candidate) for item in existing):
@@ -68,27 +68,118 @@ def _frontier_from(
 
 
 def build_access_index(portages, rivers, entry_points):
-    adjacency: dict[str, list[tuple[str, float, int]]] = defaultdict(list)
+    adjacency: dict[str, list[tuple[str, float, int, int]]] = defaultdict(list)
 
-    def add_edge(a, b, rods, portage_count):
+    class Components:
+        def __init__(self):
+            self.parent = {}
+
+        def find(self, value):
+            self.parent.setdefault(value, value)
+            if self.parent[value] != value:
+                self.parent[value] = self.find(self.parent[value])
+            return self.parent[value]
+
+        def union(self, left, right):
+            left, right = self.find(left), self.find(right)
+            if left != right:
+                self.parent[right] = left
+
+    def lake_node(guid):
+        return f"lake:{guid}"
+
+    def id_key(value):
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            if math.isfinite(value) and float(value).is_integer():
+                return str(int(value))
+        return str(value)
+
+    def add_edge(a, b, rods, portage_count, lakes_ab=1, lakes_ba=1):
         if not isinstance(a, str) or not isinstance(b, str) or not a or not b or a == b:
             return
         if (not isinstance(rods, (int, float)) or isinstance(rods, bool)
                 or not math.isfinite(rods) or rods < 0):
             return
-        adjacency[a].append((b, float(rods), portage_count))
-        adjacency[b].append((a, float(rods), portage_count))
+        adjacency[a].append((b, float(rods), portage_count, lakes_ab))
+        adjacency[b].append((a, float(rods), portage_count, lakes_ba))
+
+    river_rows = [row for row in _feature_properties(rivers) if row.get("routable")]
+    river_components = Components()
+    river_by_id = {}
+    legacy_river_rows = []
+    for row in river_rows:
+        node_a, node_b = row.get("node_a"), row.get("node_b")
+        if isinstance(node_a, str) and node_a and isinstance(node_b, str) and node_b:
+            river_components.union(node_a, node_b)
+        else:
+            legacy_river_rows.append(row)
+        river_by_id[id_key(row.get("river_id"))] = row
+
+    for row in legacy_river_rows:
+        guid_a, guid_b = row.get("unique_guid_a"), row.get("unique_guid_b")
+        if isinstance(guid_a, str) and guid_a and isinstance(guid_b, str) and guid_b:
+            add_edge(lake_node(guid_a), lake_node(guid_b), 0, 0)
+
+    component_lakes = defaultdict(set)
+    all_river_components = set()
+    for row in river_rows:
+        node = row.get("node_a") or row.get("node_b")
+        if not isinstance(node, str) or not node:
+            continue
+        component = river_components.find(node)
+        all_river_components.add(component)
+        for guid in (row.get("unique_guid_a"), row.get("unique_guid_b")):
+            if isinstance(guid, str) and guid:
+                component_lakes[component].add(guid)
+
+    water_nodes = {}
+    for component in all_river_components:
+        water = f"river:{component}"
+        water_nodes[component] = water
+        for guid in component_lakes[component]:
+            # Leaving a lake for its river network does not add a lake.  A
+            # different lake is counted only when the route enters it.
+            add_edge(lake_node(guid), water, 0, 0, lakes_ab=0, lakes_ba=1)
+
+    def river_anchor(river_id):
+        row = river_by_id.get(id_key(river_id))
+        if row is None:
+            return None
+        node = row.get("node_a") or row.get("node_b")
+        if not isinstance(node, str) or not node:
+            return None
+        component = river_components.find(node)
+        return water_nodes.get(component)
+
+    def river_node_anchor(node_id):
+        if (not isinstance(node_id, str) or not node_id
+                or node_id not in river_components.parent):
+            return None
+        return water_nodes.get(river_components.find(node_id))
+
+    def portage_anchor(row, side):
+        routing_type = row.get(f"routing_type_{side}")
+        if routing_type is None:  # compatibility with older generated layers
+            guid = row.get(f"unique_guid_{side}")
+            return lake_node(guid) if isinstance(guid, str) and guid else None
+        if routing_type == "lake":
+            guid = row.get(f"routing_lake_guid_{side}")
+            return lake_node(guid) if isinstance(guid, str) and guid else None
+        if routing_type == "river":
+            return river_anchor(row.get(f"routing_river_id_{side}"))
+        return None
 
     for row in _feature_properties(portages):
+        anchor_a = portage_anchor(row, "a")
+        anchor_b = portage_anchor(row, "b")
         add_edge(
-            row.get("unique_guid_a"),
-            row.get("unique_guid_b"),
+            anchor_a,
+            anchor_b,
             row.get("length_rods"),
             1,
+            lakes_ab=1 if isinstance(anchor_b, str) and anchor_b.startswith("lake:") else 0,
+            lakes_ba=1 if isinstance(anchor_a, str) and anchor_a.startswith("lake:") else 0,
         )
-    for row in _feature_properties(rivers):
-        if row.get("routable"):
-            add_edge(row.get("unique_guid_a"), row.get("unique_guid_b"), 0, 0)
 
     entries_by_code = {}
     seeds_by_code = defaultdict(list)
@@ -107,17 +198,33 @@ def build_access_index(portages, rivers, entry_points):
             int(row.get("location_count") or 1),
         )
         for attachment in row.get("attachments") or []:
+            routing_type = attachment.get("routing_type")
             guid = attachment.get("lake_guid")
+            if routing_type == "river":
+                start = river_anchor(attachment.get("routing_river_id"))
+                if start is None:
+                    start = river_node_anchor(attachment.get("node_id"))
+                # The first lake reached from an entry on a river is still
+                # zero lakes in, matching a direct lake entry.
+                initial_lakes = -1
+            elif routing_type in {None, "lake"}:
+                start = lake_node(guid) if isinstance(guid, str) and guid else None
+                initial_lakes = 0
+            else:
+                start = None
+                initial_lakes = 0
             rods = attachment.get("initial_rods", 0)
             portage_count = attachment.get("initial_portages", 0)
-            if not isinstance(guid, str) or not guid:
+            if not isinstance(start, str) or not start:
                 continue
             if (not isinstance(rods, (int, float)) or isinstance(rods, bool)
                     or not math.isfinite(rods) or rods < 0):
                 continue
             if not isinstance(portage_count, int) or isinstance(portage_count, bool) or portage_count < 0:
                 continue
-            seeds_by_code[code].append((guid, (float(rods), portage_count, 0)))
+            seeds_by_code[code].append(
+                (start, (float(rods), portage_count, initial_lakes))
+            )
 
     entries = [entry for code, entry in entries_by_code.items() if seeds_by_code.get(code)]
     entries.sort(key=_entry_sort_key)
@@ -127,7 +234,10 @@ def build_access_index(portages, rivers, entry_points):
         code = entry["code"]
         combined = defaultdict(list)
         for start, initial in seeds_by_code[code]:
-            for destination, states in _frontier_from(start, adjacency, initial).items():
+            for destination_node, states in _frontier_from(start, adjacency, initial).items():
+                if not destination_node.startswith("lake:"):
+                    continue
+                destination = destination_node[len("lake:"):]
                 existing = combined[destination]
                 for state in states:
                     if any(_dominates(item, state) for item in existing):
@@ -145,6 +255,12 @@ def build_access_index(portages, rivers, entry_points):
                                   for other in rounded)]
             routes[destination] = [list(state) for state in rounded]
         starts[code] = routes
+
+    # An attachment to an isolated river component is still useful evidence
+    # on the map, but it must not appear as a working entry filter until that
+    # component has a verified path to at least one lake.
+    entries = [entry for entry in entries if starts.get(entry["code"])]
+    starts = {entry["code"]: starts[entry["code"]] for entry in entries}
 
     return {
         "schema_version": 3,

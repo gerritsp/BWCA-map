@@ -44,6 +44,39 @@ class LakeAccessIndexTests(unittest.TestCase):
         self.assertNotIn("X", result["starts"]["2"])
         self.assertNotIn("Y", result["starts"]["2"])
 
+    def test_river_entry_and_portage_use_verified_water_component(self):
+        portages = collection({
+            "routing_type_a": "river",
+            "routing_river_id_a": 7,
+            "routing_type_b": "lake",
+            "routing_lake_guid_b": "B",
+            "length_rods": 10,
+        })
+        rivers = collection({
+            "river_id": 7,
+            "node_a": "n1",
+            "node_b": "n2",
+            "unique_guid_a": None,
+            "unique_guid_b": None,
+            "routable": True,
+        })
+        entries = collection({
+            "code": "1",
+            "name": "River entry",
+            "location_count": 1,
+            "attachments": [{
+                "routing_type": "river",
+                "routing_river_id": 7,
+                "node_id": "n1",
+                "initial_rods": 0,
+                "initial_portages": 0,
+            }],
+        })
+
+        result = build_access_index(portages, rivers, entries)
+
+        self.assertEqual(result["starts"]["1"]["B"], [[10.0, 1, 0]])
+
 
 if __name__ == "__main__":
     unittest.main()
