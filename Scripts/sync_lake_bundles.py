@@ -137,7 +137,7 @@ class SourceCache:
         url = base + ('?' + urlencode(sorted(params.items())) if params else '')
         path = CACHE / (hashlib.sha256(url.encode()).hexdigest() + '.json')
         if path.exists() and not self.refresh:
-            record = json.loads(path.read_text())
+            record = json.loads(path.read_text(encoding="utf-8"))
             if record['url'] != url:
                 raise ValueError('Cache URL mismatch')
             return record['data'], {'url': url, 'sha256': record['sha256']}

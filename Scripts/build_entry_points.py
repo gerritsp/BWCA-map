@@ -275,7 +275,7 @@ def _river_attachments(entry, point, river, distance_m, lake_names, fallback_lak
 
 
 def build_entry_points(lakes, portages, rivers, boundary, source_path=SOURCE_PATH):
-    source = json.loads(Path(source_path).read_text())
+    source = json.loads(Path(source_path).read_text(encoding="utf-8"))
     official = gpd.GeoDataFrame.from_features(source["features"], crs=WGS84)
     official = official[official.access_type.isin(ROUTABLE_ACCESS_TYPES)].to_crs(SOURCE_CRS)
     lake_gdf = _collection_gdf(lakes)

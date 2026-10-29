@@ -25,8 +25,9 @@ def search_row(bundle):
 
 def main():
     directory = ROOT / 'maps/fisheries'
-    index = json.loads((directory / '_index.json').read_text())
-    rows = [search_row(json.loads((directory / (guid + '.json')).read_text())) for guid in sorted(index)]
+    index = json.loads((directory / '_index.json').read_text(encoding='utf-8'))
+    rows = [search_row(json.loads((directory / (guid + '.json')).read_text(
+        encoding='utf-8'))) for guid in sorted(index)]
     camps_path = ROOT / 'Data/processed/bwca_campsites_river.parquet'
     if camps_path.exists():
         camps = pd.read_parquet(camps_path)

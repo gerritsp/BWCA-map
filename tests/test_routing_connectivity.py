@@ -18,7 +18,8 @@ TO_UTM = Transformer.from_crs(4326, 26915, always_xy=True).transform
 
 
 def load(suffix):
-    return json.loads((MAPS / f"bwca_graph_map_{suffix}.json").read_text())
+    return json.loads((MAPS / f"bwca_graph_map_{suffix}.json").read_text(
+        encoding="utf-8"))
 
 
 class Components:
@@ -174,9 +175,11 @@ class RoutingConnectivityTests(unittest.TestCase):
                     MAPS / f"bwca_graph_map_{suffix}.json",
                     directory / f"bwca_graph_map_{suffix}.json",
                 )
-            before = json.loads(stem.with_name(stem.name + "_paddle_edges.json").read_text())
+            before = json.loads(stem.with_name(stem.name + "_paddle_edges.json").read_text(
+                encoding="utf-8"))
             repair_routing_graph(stem)
-            after = json.loads(stem.with_name(stem.name + "_paddle_edges.json").read_text())
+            after = json.loads(stem.with_name(stem.name + "_paddle_edges.json").read_text(
+                encoding="utf-8"))
             self.assertEqual(len(after["nodes"]), len(before["nodes"]))
             self.assertEqual(len(after["edges"]), len(before["edges"]))
             self.assertEqual(after["topology_repair"], before["topology_repair"])

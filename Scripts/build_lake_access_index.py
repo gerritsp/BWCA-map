@@ -303,11 +303,13 @@ def write_access_index(result, output: Path, target_bytes=SHARD_TARGET_BYTES):
     ]
     for path, starts in zip(shard_paths, groups):
         path.write_text(json.dumps({"starts": starts}, sort_keys=True,
-                                   separators=(",", ":")) + "\n")
+                                   separators=(",", ":")) + "\n",
+                        encoding="utf-8")
 
     manifest = {key: value for key, value in result.items() if key != "starts"}
     manifest["shards"] = [path.name for path in shard_paths]
-    output.write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n")
+    output.write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n",
+                      encoding="utf-8")
     return [output, *shard_paths]
 
 
@@ -320,7 +322,8 @@ def main():
     maps_dir = args.maps_dir.resolve()
 
     def load(suffix):
-        return json.loads((maps_dir / f"{args.stem}_{suffix}.json").read_text())
+        return json.loads((maps_dir / f"{args.stem}_{suffix}.json").read_text(
+            encoding="utf-8"))
 
     result = build_access_index(load("portages"), load("rivers"), load("entry_points"))
     output = args.output or maps_dir / "lake_access_index.json"

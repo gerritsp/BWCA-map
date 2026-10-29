@@ -1,3 +1,4 @@
+import ast
 import json
 from pathlib import Path
 import re
@@ -15,10 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_access_index():
-    manifest = json.loads((ROOT / 'maps/lake_access_index.json').read_text())
+    manifest = json.loads((ROOT / 'maps/lake_access_index.json').read_text(encoding='utf-8'))
     starts = {}
     for shard in manifest.get('shards', []):
-        starts.update(json.loads((ROOT / 'maps' / shard).read_text())['starts'])
+        starts.update(json.loads((ROOT / 'maps' / shard).read_text(encoding='utf-8'))['starts'])
     if manifest.get('shards'):
         manifest['starts'] = starts
     return manifest
@@ -26,8 +27,8 @@ def load_access_index():
 
 class SearchIntegrationTests(unittest.TestCase):
     def test_every_search_bundle(self):
-        rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text())
-        index = json.loads((ROOT / 'maps/fisheries/_index.json').read_text())
+        rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text(encoding='utf-8'))
+        index = json.loads((ROOT / 'maps/fisheries/_index.json').read_text(encoding='utf-8'))
         self.assertEqual({r['g'] for r in rows}, set(index))
         self.assertEqual(len(rows), len(index))
         for row in rows:
@@ -36,7 +37,8 @@ class SearchIntegrationTests(unittest.TestCase):
                 self.assertIsInstance(row['g'], str)
                 self.assertIsInstance(row['dowlknum'], str)
                 self.assertRegex(row['dowlknum'], r'^\d{8}$')
-                bundle = json.loads((ROOT / 'maps/fisheries' / (row['g'] + '.json')).read_text())
+                bundle = json.loads((ROOT / 'maps/fisheries' / (row['g'] + '.json')).read_text(
+                    encoding='utf-8'))
                 self.assertEqual(bundle['unique_guid'], row['g'])
                 self.assertEqual(bundle['dowlknum'], row['dowlknum'])
                 # Campsites come from the project parquet, not the fisheries bundle.
@@ -61,7 +63,7 @@ class SearchIntegrationTests(unittest.TestCase):
                 with urlopen(base + asset) as response:
                     self.assertEqual(response.status, 200)
                     response.read()
-            rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text())
+            rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text(encoding='utf-8'))
             for row in rows:
                 with urlopen(base + 'fisheries/' + quote(row['g'], safe='') + '.json') as response:
                     self.assertEqual(response.status, 200)
@@ -77,14 +79,14 @@ class SearchIntegrationTests(unittest.TestCase):
         import pandas as pd
         camps = pd.read_parquet(ROOT / 'Data/processed/bwca_campsites_river.parquet')
         counts = camps.loc[camps['STATUS'].eq('open'), 'lake_unique_guid'].value_counts()
-        rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text())
+        rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text(encoding='utf-8'))
         for row in rows:
             with self.subTest(lake=row['n'], guid=row['g']):
                 self.assertEqual(row['cs'], int(counts.get(row['g'], 0)))
 
     def test_every_search_species_has_an_official_name(self):
-        rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text())
-        species = json.loads((ROOT / 'maps/fisheries/species.json').read_text())
+        rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text(encoding='utf-8'))
+        species = json.loads((ROOT / 'maps/fisheries/species.json').read_text(encoding='utf-8'))
         search_codes = {code for row in rows for code in row.get('sp', {})}
         self.assertLessEqual(search_codes, set(species))
         for code in search_codes:
@@ -92,10 +94,11 @@ class SearchIntegrationTests(unittest.TestCase):
 
     def test_access_index_contract(self):
         access = load_access_index()
-        lakes = json.loads((ROOT / 'maps/bwca_graph_map_lakes.json').read_text())
+        lakes = json.loads((ROOT / 'maps/bwca_graph_map_lakes.json').read_text(encoding='utf-8'))
         lake_guids = {feature['properties']['unique_guid']
                       for feature in lakes['features']}
-        entry_points = json.loads((ROOT / 'maps/bwca_graph_map_entry_points.json').read_text())
+        entry_points = json.loads((ROOT / 'maps/bwca_graph_map_entry_points.json').read_text(
+            encoding='utf-8'))
         entry_codes = {feature['properties']['code'] for feature in entry_points['features']
                        if feature['properties']['routing_status'] == 'connected'}
         self.assertEqual(access['schema_version'], 3)
@@ -123,11 +126,15 @@ class SearchIntegrationTests(unittest.TestCase):
                             for rods, portages, lakes_in in crab_states))
 
     def test_official_entry_points_are_connected_without_moving_markers(self):
-        source = json.loads((ROOT / 'Data/entry_points/usfs_bwca_entry_points_2026.geojson').read_text())
-        entries = json.loads((ROOT / 'maps/bwca_graph_map_entry_points.json').read_text())
-        lakes = json.loads((ROOT / 'maps/bwca_graph_map_lakes.json').read_text())
-        paddle = json.loads((ROOT / 'maps/bwca_graph_map_paddle_edges.json').read_text())
-        portages = json.loads((ROOT / 'maps/bwca_graph_map_portages.json').read_text())
+        source = json.loads((ROOT / 'Data/entry_points/usfs_bwca_entry_points_2026.geojson').read_text(
+            encoding='utf-8'))
+        entries = json.loads((ROOT / 'maps/bwca_graph_map_entry_points.json').read_text(
+            encoding='utf-8'))
+        lakes = json.loads((ROOT / 'maps/bwca_graph_map_lakes.json').read_text(encoding='utf-8'))
+        paddle = json.loads((ROOT / 'maps/bwca_graph_map_paddle_edges.json').read_text(
+            encoding='utf-8'))
+        portages = json.loads((ROOT / 'maps/bwca_graph_map_portages.json').read_text(
+            encoding='utf-8'))
         lake_guids = {feature['properties']['unique_guid'] for feature in lakes['features']}
         node_ids = {node[0] for node in paddle['nodes']}
         portage_node_ids = {
@@ -194,7 +201,8 @@ class SearchIntegrationTests(unittest.TestCase):
                               for feature in portages['features']}), 905)
 
     def test_boundary_asset_contract(self):
-        boundary = json.loads((ROOT / 'maps/bwca_graph_map_boundary.json').read_text())
+        boundary = json.loads((ROOT / 'maps/bwca_graph_map_boundary.json').read_text(
+            encoding='utf-8'))
         self.assertEqual(boundary['type'], 'FeatureCollection')
         self.assertEqual({feature['properties']['unit']
                           for feature in boundary['features']},
@@ -206,6 +214,19 @@ class SearchIntegrationTests(unittest.TestCase):
         subprocess.run(['node', 'tests/test_lake_popup.js'], cwd=ROOT, check=True)
 
     def test_map_bundle_contract(self):
+        build_sources = [ROOT / 'APP.py', *(ROOT / 'Scripts').glob('*.py')]
+        implicit_text_io = []
+        for path in build_sources:
+            tree = ast.parse(path.read_text(encoding='utf-8'))
+            for call in ast.walk(tree):
+                if (isinstance(call, ast.Call)
+                        and isinstance(call.func, ast.Attribute)
+                        and call.func.attr in {'read_text', 'write_text'}
+                        and not any(keyword.arg == 'encoding' for keyword in call.keywords)):
+                    implicit_text_io.append(f'{path.relative_to(ROOT)}:{call.lineno}')
+        self.assertEqual(implicit_text_io, [],
+                         'Build text I/O must explicitly use UTF-8')
+
         source = (ROOT / 'Templates/js_template.js').read_text(encoding='utf-8')
         self.assertIn('bundle.unique_guid !== unique_guid', source)
         self.assertIn('lakeBundlePromises.delete(unique_guid)', source)

@@ -376,9 +376,9 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
     )
 
     written = [out_path, out_path.parent / js_filename, out_path.parent / engine_filename]
-    out_path.write_text(html)
-    written[1].write_text(js)
-    written[2].write_text(ENGINE_TEMPLATE)
+    out_path.write_text(html, encoding="utf-8")
+    written[1].write_text(js, encoding="utf-8")
+    written[2].write_text(ENGINE_TEMPLATE, encoding="utf-8")
 
     rendered_layers = {}
     for layer_name, filename, data in (
@@ -390,7 +390,7 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
         ("fires", fires_filename, fires_geojson()),  # ADDED
     ):
         data_path = out_path.parent / filename
-        data_path.write_text(json.dumps(data))
+        data_path.write_text(json.dumps(data), encoding="utf-8")
         written.append(data_path)
         rendered_layers[layer_name] = data
 
@@ -401,7 +401,7 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
         rendered_layers["boundary"],
     )
     entry_points_path = out_path.parent / entry_points_filename
-    entry_points_path.write_text(json.dumps(entry_points))
+    entry_points_path.write_text(json.dumps(entry_points), encoding="utf-8")
     written.append(entry_points_path)
     rendered_layers["entry_points"] = entry_points
 
@@ -416,7 +416,7 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
         if properties["code"] not in searchable_entry_codes:
             properties["routing_status"] = "review"
             properties["routing_issue"] = "no_verified_lake_route"
-    entry_points_path.write_text(json.dumps(entry_points))
+    entry_points_path.write_text(json.dumps(entry_points), encoding="utf-8")
     access_index_path = out_path.parent / access_index_filename
     written.extend(write_access_index(access_index, access_index_path))
 
