@@ -108,6 +108,19 @@ class RoutingConnectivityTests(unittest.TestCase):
         self.assertEqual(corrected["properties"]["lake_a"], "Big Rice")
         self.assertEqual(corrected["properties"]["lake_b"], "Hook")
         self.assertAlmostEqual(corrected_line.length, 2671.9, delta=1.0)
+        snake_entry = next(
+            feature for feature in self.portages["features"]
+            if feature["properties"]["portage_number"] == 679
+        )
+        snake_line = shapely.transform(
+            shape(snake_entry["geometry"]), TO_UTM, interleaved=False
+        )
+        self.assertEqual(
+            snake_entry["properties"]["geometry_source"],
+            "usfs_trail_correction",
+        )
+        self.assertEqual(snake_entry["properties"]["routing_type_b"], "river")
+        self.assertAlmostEqual(snake_line.length, 1132.9, delta=1.0)
 
     def test_graph_references_exist_and_each_lake_part_is_connected(self):
         for edge in self.graph["edges"]:
@@ -133,6 +146,24 @@ class RoutingConnectivityTests(unittest.TestCase):
                 self.assertEqual(
                     len({self.components.component[node] for node in nodes}), 1
                 )
+
+    def test_exact_river_junction_components_are_connected(self):
+        groups = defaultdict(list)
+        for feature in self.rivers["features"]:
+            properties = feature["properties"]
+            component = properties.get("routing_component")
+            if properties.get("routable") and component:
+                groups[component].extend(
+                    [properties["node_a"], properties["node_b"]]
+                )
+        for component, nodes in groups.items():
+            with self.subTest(river_component=component):
+                self.assertEqual(
+                    len({self.components.component[node] for node in nodes}), 1
+                )
+        self.assertGreater(
+            self.graph["topology_repair"]["river_junction_attachments"], 0
+        )
 
     def test_topology_repair_is_idempotent(self):
         with tempfile.TemporaryDirectory() as directory:

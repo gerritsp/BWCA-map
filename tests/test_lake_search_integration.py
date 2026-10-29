@@ -99,7 +99,7 @@ class SearchIntegrationTests(unittest.TestCase):
         entry_codes = {feature['properties']['code'] for feature in entry_points['features']
                        if feature['properties']['routing_status'] == 'connected'}
         self.assertEqual(access['schema_version'], 3)
-        self.assertEqual(len(access['entries']), 67)
+        self.assertEqual(len(access['entries']), 69)
         self.assertEqual(len(access['entries']),
                          len({entry['code'] for entry in access['entries']}))
         self.assertEqual({entry['code'] for entry in access['entries']}, entry_codes)
@@ -118,7 +118,9 @@ class SearchIntegrationTests(unittest.TestCase):
         crab = next(feature for feature in entry_points['features']
                     if feature['properties']['code'] == '4')
         crab_guid = crab['properties']['attachments'][0]['lake_guid']
-        self.assertIn([347.3, 1, 0], access['starts']['4'][crab_guid])
+        crab_states = access['starts']['4'][crab_guid]
+        self.assertTrue(any(348 <= rods <= 349 and portages == 1 and lakes_in == 0
+                            for rods, portages, lakes_in in crab_states))
 
     def test_official_entry_points_are_connected_without_moving_markers(self):
         source = json.loads((ROOT / 'Data/entry_points/usfs_bwca_entry_points_2026.geojson').read_text())
@@ -154,7 +156,7 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertEqual(
             {feature['properties']['code'] for feature in entries['features']
              if feature['properties']['routing_status'] == 'review'},
-            {'75', '84'},
+            set(),
         )
         self.assertNotIn('54A', counts)
         self.assertNotIn('55A', counts)
@@ -174,6 +176,19 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertEqual(snowbank['properties']['attachments'][0]['confidence'], 'review')
         self.assertGreater(snowbank['properties']['attachments'][0]['connector_distance_m'], 1500)
 
+        little_isabella = next(feature for feature in entries['features']
+                               if feature['properties']['code'] == '75')
+        self.assertEqual(little_isabella['properties']['routing_status'], 'connected')
+        self.assertGreater(little_isabella['properties']['attachments'][0]['initial_rods'], 15)
+        self.assertLess(little_isabella['properties']['attachments'][0]['initial_rods'], 25)
+
+        snake = next(feature for feature in entries['features']
+                     if feature['properties']['code'] == '84')
+        self.assertEqual(snake['properties']['routing_method'], 'portage')
+        self.assertEqual(snake['properties']['routing_status'], 'connected')
+        self.assertGreater(snake['properties']['attachments'][0]['initial_rods'], 160)
+        self.assertLess(snake['properties']['attachments'][0]['initial_rods'], 180)
+
         self.assertEqual(len(portages['features']), 905)
         self.assertEqual(len({feature['properties']['portage_number']
                               for feature in portages['features']}), 905)
@@ -191,7 +206,7 @@ class SearchIntegrationTests(unittest.TestCase):
         subprocess.run(['node', 'tests/test_lake_popup.js'], cwd=ROOT, check=True)
 
     def test_map_bundle_contract(self):
-        source = (ROOT / 'Templates/js_template.js').read_text()
+        source = (ROOT / 'Templates/js_template.js').read_text(encoding='utf-8')
         self.assertIn('bundle.unique_guid !== unique_guid', source)
         self.assertIn('lakeBundlePromises.delete(unique_guid)', source)
         self.assertIn('encodeURIComponent(unique_guid)', source)
@@ -206,7 +221,7 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertIn('entryAnchorNodes', source)
         self.assertIn('approximate approach', source)
         self.assertIn('if (!nodes.has(nodeA)) addNode', source)
-        search_source = (ROOT / 'maps/lake_search.html').read_text()
+        search_source = (ROOT / 'maps/lake_search.html').read_text(encoding='utf-8')
         self.assertIn('bundle.unique_guid !== requestedGuid', search_source)
         self.assertIn('maxcs=num("maxcs")', search_source)
         self.assertIn('fetch("fisheries/species.json")', search_source)

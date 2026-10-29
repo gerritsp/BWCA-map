@@ -47,7 +47,7 @@ class LakeAccessIndexTests(unittest.TestCase):
     def test_river_entry_and_portage_use_verified_water_component(self):
         portages = collection({
             "routing_type_a": "river",
-            "routing_river_id_a": 7,
+            "routing_river_id_a": 8,
             "routing_type_b": "lake",
             "routing_lake_guid_b": "B",
             "length_rods": 10,
@@ -56,6 +56,15 @@ class LakeAccessIndexTests(unittest.TestCase):
             "river_id": 7,
             "node_a": "n1",
             "node_b": "n2",
+            "routing_component": "joined-river",
+            "unique_guid_a": None,
+            "unique_guid_b": None,
+            "routable": True,
+        }, {
+            "river_id": 8,
+            "node_a": "n3",
+            "node_b": "n4",
+            "routing_component": "joined-river",
             "unique_guid_a": None,
             "unique_guid_b": None,
             "routable": True,

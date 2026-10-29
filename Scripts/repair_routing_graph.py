@@ -28,6 +28,11 @@ from shapely.ops import nearest_points, substring, unary_union
 from shapely.strtree import STRtree
 from pyproj import Transformer
 
+from Scripts.river_topology import (
+    RIVER_JUNCTION_TOLERANCE_M,
+    find_river_junctions,
+)
+
 
 WGS84 = "EPSG:4326"
 SOURCE_CRS = "EPSG:26915"
@@ -69,7 +74,7 @@ class UnionFind:
 
 
 def _load(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def _write_atomic(path, value):
@@ -302,6 +307,53 @@ def repair_routing_graph(stem_path):
                 add_edge(snap_node, node_b, second, "river")
             river_attachments += 1
 
+    river_rows = []
+    for feature in rivers.get("features", []):
+        properties = feature.get("properties") or {}
+        if not properties.get("routable") or not feature.get("geometry"):
+            continue
+        river_rows.append({
+            "river_id": _id_key(properties.get("river_id")),
+            "node_a": properties.get("node_a"),
+            "node_b": properties.get("node_b"),
+            "geometry": _to_utm(shape(feature["geometry"])),
+        })
+
+    river_junctions = 0
+    for junction in find_river_junctions(river_rows):
+        source_node = junction["source_node"]
+        node_a = junction["target_node_a"]
+        node_b = junction["target_node_b"]
+        if source_node not in nodes or node_a not in nodes or node_b not in nodes:
+            continue
+        line = junction["target_line"]
+        point = junction["point"]
+        location = line.project(point)
+        projected = line.interpolate(location)
+        if location <= 0.05:
+            add_edge(source_node, node_a,
+                     _line([point.coords[0], line.coords[0]]), "river")
+        elif line.length - location <= 0.05:
+            add_edge(source_node, node_b,
+                     _line([point.coords[0], line.coords[-1]]), "river")
+        else:
+            snap_node = (
+                f"river-junction:{junction['source_id']}:"
+                f"{junction['source_side']}:{junction['target_id']}"
+            )
+            add_node(snap_node, None, projected)
+            add_edge(source_node, snap_node,
+                     _line([point.coords[0], projected.coords[0]]), "river")
+            first = substring(line, 0, location)
+            second = substring(line, location, line.length)
+            if first.geom_type == "Point":
+                first = _line([first.coords[0], first.coords[0]])
+            if second.geom_type == "Point":
+                second = _line([second.coords[0], second.coords[0]])
+            add_edge(snap_node, node_a, first, "river")
+            add_edge(snap_node, node_b, second, "river")
+        river_junctions += 1
+
     lake_rows = []
     for feature in lakes.get("features", []):
         if not feature.get("geometry"):
@@ -389,12 +441,15 @@ def repair_routing_graph(stem_path):
         "lake_bridge_edges": int(prior_repair.get("lake_bridge_edges", 0)) + lake_bridges,
         "repaired_lake_parts": int(prior_repair.get("repaired_lake_parts", 0)) + repaired_parts,
         "river_portage_attachments": river_attachments,
+        "river_junction_attachments": river_junctions,
+        "river_junction_tolerance_m": RIVER_JUNCTION_TOLERANCE_M,
         "lake_tolerance_m": LAKE_TOLERANCE_M,
     }
     _write_atomic(graph_path, graph)
     print(
         f"Repaired {graph_path}: {river_attachments} portage/river attachments, "
-        f"{lake_bridges} lake bridge edges across {repaired_parts} polygon parts"
+        f"{river_junctions} river junctions, {lake_bridges} lake bridge edges "
+        f"across {repaired_parts} polygon parts"
     )
     return graph["topology_repair"]
 

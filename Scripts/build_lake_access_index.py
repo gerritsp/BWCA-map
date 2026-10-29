@@ -111,6 +111,9 @@ def build_access_index(portages, rivers, entry_points):
         node_a, node_b = row.get("node_a"), row.get("node_b")
         if isinstance(node_a, str) and node_a and isinstance(node_b, str) and node_b:
             river_components.union(node_a, node_b)
+            routing_component = row.get("routing_component")
+            if isinstance(routing_component, str) and routing_component:
+                river_components.union(node_a, f"routing:{routing_component}")
         else:
             legacy_river_rows.append(row)
         river_by_id[id_key(row.get("river_id"))] = row

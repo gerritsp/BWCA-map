@@ -149,14 +149,13 @@ class bwca_graph:
             lake_a = self.lakes.get(portage.start_unid)
             lake_b = self.lakes.get(portage.end_unid)
 
-            if lake_a is None or lake_b is None:
-                continue
-
             portage.lake_a = lake_a
             portage.lake_b = lake_b
 
-            lake_a.portages.append(portage)
-            lake_b.portages.append(portage)
+            if lake_a:
+                lake_a.portages.append(portage)
+            if lake_b and lake_b is not lake_a:
+                lake_b.portages.append(portage)
 
 
 

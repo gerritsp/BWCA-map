@@ -18,7 +18,8 @@ Multiple polygons with the same DOW receive separate bundles sharing observation
 - [DNR data/software license](https://www.dnr.state.mn.us/sitetools/data_software_license.html).
 - [Superior National Forest 2026 BWCAW entry-point layer](https://services1.arcgis.com/gGHDlz6USftL5Pau/ArcGIS/rest/services/R09_SNF_BWCAW_Entry_Points_2026/FeatureServer/0): official point, permit code, name and access type. The checked-in snapshot keeps all 87 source features; the canoe app publishes 71 water-access locations representing 69 permit codes and excludes hiking-only entries.
 - [Superior National Forest entry-point guide](https://www.fs.usda.gov/r09/superior/wilderness/boundary-water-canoe-area-wilderness-entry-points): official access descriptions and the agency's warning that its online map is a general planning aid rather than a replacement for navigational maps and local advice.
-- [USDA Forest Service EDW Trail NFS Publish](https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_TrailNFSPublish_01/MapServer/0): current public trail geometry used to verify portage topology. `Data/portage_geometry_corrections.geojson` snapshots `BIG RICE-HOOK` (`trail_cn 5790010436`, trail 6154) because processed portage 126 had collapsed to one point. The official 2,671.9 m line ends within 25 m of Big Rice and Hook and is applied at build time without modifying the source parquet.
+- [USDA Forest Service EDW Trail NFS Publish](https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_TrailNFSPublish_01/MapServer/0): current public trail geometry used to verify portage topology. `Data/portage_geometry_corrections.geojson` snapshots `BIG RICE-HOOK` (`trail_cn 5790010436`, trail 6154) because processed portage 126 had collapsed to one point, and `SNAKE CREEK ENTRY-SNAKE CREEK` (`trail_cn 20214010602`, trail 5190) because the local entry trail was shortened. Corrections are applied at build time without modifying the source parquet.
+- [OpenStreetMap portage tagging and Overpass geometry](https://wiki.openstreetmap.org/wiki/Tag%3Acanoe%3Dportage): the Street map is OpenStreetMap. A read-only Overpass comparison of `portage=*` paths identified visually aligned candidates and exposed missing river confluences. No OSM trail geometry is published in the project; authoritative geometry corrections use the Forest Service source above.
 
 ## Rebuild
 
@@ -115,15 +116,20 @@ on the same actual lake polygon part. It does not bridge separate islands or
 invent a connection across land. The repair is idempotent and every generated
 edge is checked for valid node references.
 
+River topology also joins an endpoint when it lies within 0.1 m of another
+routable river segment's interior. This resolves exact mapped confluences that
+were visually continuous but had different endpoint node IDs; it does not join
+merely nearby waterways. The current snapshot contains 1,013 such junctions.
+
 The project intentionally made DNR `Stream (Perennial)` segments routable in
 commit `73b7bfd` to connect recorded portages. That is a project routing policy,
 not proof that every mapped stream is canoeable in current field conditions.
 Users still need current maps, water levels and local guidance.
 
 Entry points 75 (Little Isabella River) and 84 (Snake River) retain their
-official markers and river evidence, but their river components have no
-verified path to a mapped lake. They are marked for review and omitted from the
-entry-distance search instead of being assigned an arbitrary nearest lake.
+official markers. Exact confluence repair connects both rivers to the Isabella
+River network; their initial access distances include the visible approach to
+the recorded portage. Entry 84 also uses the corrected official trail 5190.
 
 ## Verified snapshot (2026-10-28)
 
@@ -138,11 +144,12 @@ entry-distance search instead of being assigned an arbitrary nearest lake.
 | Inventory records | 1,807 |
 | Official entry source features | 87 |
 | Published water-entry locations / permit codes | 71 / 69 |
-| Searchable entry permit codes | 67 |
+| Searchable entry permit codes | 69 |
 | Preserved portage segments | 905 |
 | Connected / review-only portages | 724 / 181 |
-| Lake / river / unresolved portage endpoints | 1,338 / 209 / 263 |
-| Lake bridge edges / repaired polygon parts | 51 / 40 |
+| Lake / river / unresolved portage endpoints | 1,338 / 210 / 262 |
+| Exact river endpoint/interior junctions | 1,013 |
+| Lake bridge edges / repaired polygon parts | 33 / 25 |
 
 All expected snapshot counts matched. Source collection completed without failures.
 A second build from the response cache produced byte-identical bundles and indexes.
@@ -150,7 +157,7 @@ The test suite includes every encoded bundle URL and all 15 application assets,
 identifier cleaning, observation deduplication, source-cache refresh, exact search
 correspondence, campsite counts, official entry coordinates and routing
 attachments, entry-point access states, portage endpoint tolerances, lake-part
-connectivity, repair idempotency, boundary geometry and
+connectivity, exact river confluences, repair idempotency, boundary geometry and
 executable popup/cache behavior. JavaScript syntax and `git diff --check` passed.
 
 An additional DOM integration check loaded the actual search page and Leaflet map

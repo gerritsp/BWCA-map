@@ -33,6 +33,7 @@ PORTAGE_SIDE_OVERRIDES = {"7": "b", "19": "b", "70": "b"}
 RIVER_SEARCH_LAKE_OVERRIDES = {"36": "Perent", "66": "Crocodile"}
 SOURCE_CRS = "EPSG:26915"
 WGS84 = "EPSG:4326"
+ROD_TO_METERS = 5.0292
 
 
 def _natural_key(value: str):
@@ -207,7 +208,11 @@ def _portage_attachment(entry, point, portage, distance_m, lake_names):
     target = endpoints[side]
     route = _route_line(point, projected, target["segment"])
     fraction = target["along_m"] / line.length if line.length else 0.0
-    rods = max(0.0, float(_json_value(portage.length_rods) or 0.0) * fraction)
+    recorded_rods = max(
+        0.0, float(_json_value(portage.length_rods) or 0.0) * fraction
+    )
+    approach_rods = float(point.distance(projected)) / ROD_TO_METERS
+    rods = recorded_rods + approach_rods
     lake_name = lake_names.get(target["lake_guid"])
     return {
         "kind": "portage",

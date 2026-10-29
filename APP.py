@@ -10,6 +10,7 @@ from models.bwca_graph import bwca_graph
 from Scripts.build_entry_points import build_entry_points
 from Scripts.build_lake_access_index import build_access_index, write_access_index
 from Scripts.repair_routing_graph import repair_routing_graph
+from Scripts.river_topology import river_component_labels
 
 # Data/processed/*.parquet is written in NAD83 / UTM zone 15N (see CLAUDE.md's
 # CRS gotcha) - the graph's Lake/Campsite objects carry that geometry as-is,
@@ -27,9 +28,9 @@ PORTAGE_CORRECTIONS_PATH = "Data/portage_geometry_corrections.geojson"
 
 REPO_ROOT = Path(__file__).resolve().parent
 TEMPLATES_DIR = REPO_ROOT / "Templates"
-HTML_TEMPLATE = (TEMPLATES_DIR / "html_template.html").read_text()
-JS_TEMPLATE = (TEMPLATES_DIR / "js_template.js").read_text()
-ENGINE_TEMPLATE = (TEMPLATES_DIR / "graph_engine.js").read_text()
+HTML_TEMPLATE = (TEMPLATES_DIR / "html_template.html").read_text(encoding="utf-8")
+JS_TEMPLATE = (TEMPLATES_DIR / "js_template.js").read_text(encoding="utf-8")
+ENGINE_TEMPLATE = (TEMPLATES_DIR / "graph_engine.js").read_text(encoding="utf-8")
 
 
 def build_graph():
@@ -74,10 +75,18 @@ def _apply_portage_geometry_corrections(graph):
             raise ValueError(f"Portage correction USFS ID mismatch for {number}")
         if correction.geometry.is_empty or not correction.geometry.is_valid:
             raise ValueError(f"Portage correction has invalid geometry for {number}")
-        start_guid = str(correction["start_lake_guid"])
-        end_guid = str(correction["end_lake_guid"])
-        if start_guid not in graph.lakes or end_guid not in graph.lakes:
-            raise ValueError(f"Portage correction references an unknown lake for {number}")
+        def correction_guid(value):
+            if value is None or (isinstance(value, float) and value != value):
+                return None
+            return str(value)
+
+        start_guid = correction_guid(correction.get("start_lake_guid"))
+        end_guid = correction_guid(correction.get("end_lake_guid"))
+        for guid in (start_guid, end_guid):
+            if guid is not None and guid not in graph.lakes:
+                raise ValueError(
+                    f"Portage correction references an unknown lake for {number}"
+                )
 
         portage.geometry = correction.geometry
         portage.start_unid = start_guid
@@ -204,12 +213,12 @@ def portages_geojson(graph):
             "portage_number": [p.portage_num for p in portages],
             "usfs_id": [p.usfs_id for p in portages],
             "name": [p.name for p in portages],
-            "lake_a": [p.lake_a.name for p in portages],
-            "lake_b": [p.lake_b.name for p in portages],
-            "unique_guid_a": [p.lake_a.unique_guid for p in portages],
-            "unique_guid_b": [p.lake_b.unique_guid for p in portages],
-            "fw_id_a": [p.lake_a.fw_id for p in portages],
-            "fw_id_b": [p.lake_b.fw_id for p in portages],
+            "lake_a": [p.lake_a.name if p.lake_a else p.lake1_name for p in portages],
+            "lake_b": [p.lake_b.name if p.lake_b else p.lake2_name for p in portages],
+            "unique_guid_a": [p.lake_a.unique_guid if p.lake_a else None for p in portages],
+            "unique_guid_b": [p.lake_b.unique_guid if p.lake_b else None for p in portages],
+            "fw_id_a": [p.lake_a.fw_id if p.lake_a else None for p in portages],
+            "fw_id_b": [p.lake_b.fw_id if p.lake_b else None for p in portages],
             "length_rods": [p.length_rods for p in portages],
             "start_snapped": [bool(p.start_snapped) for p in portages],
             "end_snapped": [bool(p.end_snapped) for p in portages],
@@ -242,6 +251,16 @@ def portages_geojson(graph):
 
 def rivers_geojson(graph):
     rivers = list(graph.rivers.values())
+    routable_rows = [
+        {
+            "river_id": river.river_id,
+            "node_a": river.node_a,
+            "node_b": river.node_b,
+            "geometry": river.geometry,
+        }
+        for river in rivers if river.routable
+    ]
+    component_by_id = river_component_labels(routable_rows)
     gdf = gpd.GeoDataFrame(
         {
             "river_id": [r.river_id for r in rivers],
@@ -250,6 +269,7 @@ def rivers_geojson(graph):
             "routable": [bool(r.routable) for r in rivers],
             "node_a": [r.node_a for r in rivers],
             "node_b": [r.node_b for r in rivers],
+            "routing_component": [component_by_id.get(r.river_id) for r in rivers],
             "unique_guid_a": [r.lake_a.unique_guid if r.lake_a else None for r in rivers],
             "unique_guid_b": [r.lake_b.unique_guid if r.lake_b else None for r in rivers],
             "fw_id_a": [r.lake_a.fw_id if r.lake_a else None for r in rivers],
