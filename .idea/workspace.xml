@@ -4,7 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="many progress" />
+    <list default="true" id="20f83aaa-00ab-474f-9262-a64c745a5504" name="Changes" comment="hgfugugyu">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/maps/bwca_graph_map_boundary.json" beforeDir="false" afterPath="$PROJECT_DIR$/maps/bwca_graph_map_boundary.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/maps/bwca_graph_map_entry_points.json" beforeDir="false" afterPath="$PROJECT_DIR$/maps/bwca_graph_map_entry_points.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/maps/bwca_graph_map_portages.json" beforeDir="false" afterPath="$PROJECT_DIR$/maps/bwca_graph_map_portages.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/maps/bwca_graph_map_rivers.json" beforeDir="false" afterPath="$PROJECT_DIR$/maps/bwca_graph_map_rivers.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/maps/lake_access_index.json" beforeDir="false" afterPath="$PROJECT_DIR$/maps/lake_access_index.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/maps/lake_access_index_1.json" beforeDir="false" afterPath="$PROJECT_DIR$/maps/lake_access_index_1.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/maps/lake_access_index_2.json" beforeDir="false" afterPath="$PROJECT_DIR$/maps/lake_access_index_2.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/maps/lake_access_index_3.json" beforeDir="false" afterPath="$PROJECT_DIR$/maps/lake_access_index_3.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/maps/lake_access_index_4.json" beforeDir="false" afterPath="$PROJECT_DIR$/maps/lake_access_index_4.json" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -33,7 +44,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="codex/map-discovery-tools" />
+        <entry key="$PROJECT_DIR$" value="codex/routing-connectivity-audit" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -498,15 +509,7 @@
       <option name="project" value="LOCAL" />
       <updated>1791814516272</updated>
     </task>
-    <task id="LOCAL-00043" summary="many progress">
-      <option name="closed" value="true" />
-      <created>1792684246366</created>
-      <option name="number" value="00043" />
-      <option name="presentableId" value="LOCAL-00043" />
-      <option name="project" value="LOCAL" />
-      <updated>1792684246366</updated>
-    </task>
-    <option name="localTasksCounter" value="44" />
+    <option name="localTasksCounter" value="43" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -524,6 +527,7 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
+    <MESSAGE value="merged almost ready to write to file" />
     <MESSAGE value="wow real map very cool" />
     <MESSAGE value="gfjfdsa" />
     <MESSAGE value="wasnt fully commited" />
@@ -548,8 +552,18 @@
     <MESSAGE value="stuff" />
     <MESSAGE value="oijireiu" />
     <MESSAGE value="hgfugugyu" />
-    <MESSAGE value="many progress" />
-    <option name="LAST_COMMIT_MESSAGE" value="many progress" />
+    <option name="LAST_COMMIT_MESSAGE" value="hgfugugyu" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/maps/bwca_graph_map.js</url>
+          <line>402</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/BWCA_map$crs_changer.coverage" NAME="crs_changer Coverage Results" MODIFIED="1788536313827" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/processing/File_creation" />
