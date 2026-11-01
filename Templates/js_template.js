@@ -27,8 +27,16 @@ function lakeBundleHTML(bundle) {
     const clarity = [...bundle.clarity].sort((a,b) => String(b.date ?? "").localeCompare(String(a.date ?? "")))[0];
     const fish = species.map(code => {
         const sampled = lengths.filter(row => row.species === code).map(row => row.length_inches);
-        const cpue = catches.filter(row => row.species === code && typeof row.cpue === "number");
-        return `<li>${escapeHTML(code)}: max sampled ${escapeHTML(sampled.length ? Math.max(...sampled) : null)} in; CPUE ${cpue.map(row => `${escapeHTML(row.cpue)} (${escapeHTML(row.gear)}, ${escapeHTML(row.date)})`).join("; ") || "N/A"}</li>`;
+        const observations = catches.filter(row => row.species === code && typeof row.cpue === "number")
+            .sort((a,b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
+        const catchText = observations.map(row => {
+            const sameGear = catches.filter(other => other.survey_id === row.survey_id && other.date === row.date && other.gear === row.gear);
+            const denominator = sameGear.reduce((sum, other) => sum + (typeof other.totalCatch === "number" ? other.totalCatch : 0), 0);
+            const share = typeof row.totalCatch === "number" && denominator ? `${(row.totalCatch / denominator * 100).toFixed(1)}% of same-gear catch; ` : "";
+            const count = typeof row.totalCatch === "number" ? `${escapeHTML(row.totalCatch)} caught; ` : "";
+            return `${count}${escapeHTML(share)}CPUE ${escapeHTML(row.cpue)} (${escapeHTML(row.gear)}, ${escapeHTML(row.date)})`;
+        });
+        return `<li>${escapeHTML(code)}: max sampled ${escapeHTML(sampled.length ? Math.max(...sampled) : null)} in; ${catchText.join("; ") || "no catch-rate record"}</li>`;
     }).join("");
     const latestClarity = clarity ? Object.entries(clarity).map(([k,v]) => `${escapeHTML(k)}: ${escapeHTML(v)}`).join(", ") : "N/A";
     return `<div><h2>${escapeHTML(bundle.name)}</h2>

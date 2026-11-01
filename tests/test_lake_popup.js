@@ -16,7 +16,9 @@ const source = fs.readFileSync('Templates/js_template.js', 'utf8').split('    fu
   assert.equal((await vm.runInContext('fetchLakeBundle("{B}")',context)).unique_guid,'{B}');
   context.bundle = {unique_guid:'{A}',name:'<img src=x onerror=alert(1)>',dowlknum:'04013500',
     lake_info:{maxDepthFeet:50}, project:{area_acres:10},clarity:[{date:'2020-01-01',clarity_ft:5},{date:'2024-01-01',clarity_ft:8}],
-    fish_lengths:[{species:'WAE',length_inches:20}], fish_catches:[{species:'WAE',cpue:0,gear:'<script>',date:'2024-01-01'}],
+    fish_lengths:[{species:'WAE',length_inches:20}], fish_catches:[
+      {species:'WAE',survey_id:'1',cpue:0,totalCatch:4,gearCount:2,gear:'<script>',date:'2024-01-01'},
+      {species:'NOP',survey_id:'1',cpue:3,totalCatch:6,gearCount:2,gear:'<script>',date:'2024-01-01'}],
     surveys:[{}],survey_inventory:[{}],assessments:[{}]};
   const html=vm.runInContext('lakeBundleHTML(bundle)',context);
   assert(!html.includes('<img'));
@@ -25,6 +27,8 @@ const source = fs.readFileSync('Templates/js_template.js', 'utf8').split('    fu
   assert(html.includes('2024-01-01'));
   assert(html.includes('clarity_ft: 8'));
   assert(html.includes('CPUE 0'));
+  assert(html.includes('4 caught'));
+  assert(html.includes('40.0% of same-gear catch'));
   assert(html.includes('fisheries/%7BA%7D.json'));
   context.bundle.lake_info = null;
   assert(vm.runInContext('lakeBundleHTML(bundle)',context).includes('Maximum depth: N/A'));

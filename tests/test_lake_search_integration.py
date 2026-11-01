@@ -26,6 +26,30 @@ def load_access_index():
 
 
 class SearchIntegrationTests(unittest.TestCase):
+    def test_walleye_abundance_uses_latest_standard_gill_net_sample(self):
+        bundle = {
+            'unique_guid': '{TEST}', 'dowlknum': '04000000', 'name': 'Test',
+            'lake_info': {}, 'project': {'area_acres': 10},
+            'fish_lengths': [{'species': 'WAE', 'length_inches': 24}],
+            'fish_catches': [
+                {'species': 'WAE', 'survey_id': '1', 'date': '2023-01-01',
+                 'gear': 'Standard gill nets', 'gearCount': 2, 'cpue': 4,
+                 'totalCatch': 8, 'quartileCount': '2.0-5.0'},
+                {'species': 'WAE', 'survey_id': '2', 'date': '2025-01-01',
+                 'gear': 'Standard gill nets', 'gearCount': 3, 'cpue': 6,
+                 'totalCatch': 18, 'quartileCount': '2.0-5.0'},
+                {'species': 'NOP', 'survey_id': '2', 'date': '2025-01-01',
+                 'gear': 'Standard gill nets', 'gearCount': 3, 'cpue': 4,
+                 'totalCatch': 12},
+                {'species': 'WAE', 'survey_id': '3', 'date': '2026-01-01',
+                 'gear': 'Standard trap nets', 'gearCount': 2, 'cpue': 99,
+                 'totalCatch': 198},
+            ],
+        }
+        metrics = search_row(bundle)['sp']['WAE']
+        self.assertEqual(metrics, [24, 6, 18, 60.0, '2025-01-01',
+                                   'Standard gill nets', 3, '2.0-5.0'])
+
     def test_every_search_bundle(self):
         rows = json.loads((ROOT / 'maps/lake_search_index.json').read_text(encoding='utf-8'))
         index = json.loads((ROOT / 'maps/fisheries/_index.json').read_text(encoding='utf-8'))
@@ -245,6 +269,11 @@ class SearchIntegrationTests(unittest.TestCase):
         search_source = (ROOT / 'maps/lake_search.html').read_text(encoding='utf-8')
         self.assertIn('bundle.unique_guid !== requestedGuid', search_source)
         self.assertIn('maxcs=num("maxcs")', search_source)
+        self.assertIn('mincpue=num("mincpue")', search_source)
+        self.assertIn('minshare=num("minshare")', search_source)
+        self.assertIn('minyear=num("minyear")', search_source)
+        self.assertIn('["ab","Survey abundance"]', search_source)
+        self.assertIn('same-gear catch', search_source)
         self.assertIn('fetch("fisheries/species.json")', search_source)
         self.assertIn('const DESC_FIRST=new Set', search_source)
         self.assertIn('aria-sort=', search_source)
