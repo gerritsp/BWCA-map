@@ -25,7 +25,10 @@ main{max-width:1180px;padding:24px}nav{display:flex;justify-content:space-betwee
 <div class="bar">
  <label>Name<input id="q" placeholder="e.g. Saganaga"></label>
  <label>Fish species<select id="sp"><option value="">Any</option></select></label>
- <label>Largest fish ≥ (in)<input id="minlen" type="number" min="0" placeholder="needs species"></label>
+ <label>Largest fish ≥ (in)<input id="minlen" class="species-limit" type="number" min="0" placeholder="choose species" disabled></label>
+ <label>Catch rate/CPUE ≥<input id="mincpue" class="species-limit" type="number" min="0" step="0.1" placeholder="choose species" disabled></label>
+ <label>Survey catch share ≥ (%)<input id="minshare" class="species-limit" type="number" min="0" max="100" step="1" placeholder="choose species" disabled></label>
+ <label>Survey year ≥<input id="minyear" class="species-limit" type="number" min="1900" max="2100" step="1" placeholder="choose species" disabled></label>
  <label>Lake acres ≥<input id="minac" type="number" min="0"></label>
  <label>Lake acres ≤<input id="maxac" type="number" min="0"></label>
  <label>Max depth ≥ (ft)<input id="mindp" type="number" min="0"></label>
@@ -33,6 +36,7 @@ main{max-width:1180px;padding:24px}nav{display:flex;justify-content:space-betwee
  <label>Campsites ≥<input id="mincs" type="number" min="0"></label>
  <label>Campsites ≤<input id="maxcs" type="number" min="0"></label>
 </div>
+<p class="trip-help">Survey abundance compares the latest observation for the selected species. Walleye uses standard gill nets: CPUE is fish per net, and catch share is walleye’s percentage of all fish caught in the same gear and survey. It is not an estimate of the lake’s total fish population.</p>
 <div class="bar trip-bar">
  <div class="trip-heading"><strong>How far into the BWCA?</strong><span>Choose an entry point, then limit recorded portage effort and lake transitions.</span></div>
  <label>Entry point<select id="ep"><option value="">Any entry point</option></select></label>
@@ -45,7 +49,7 @@ main{max-width:1180px;padding:24px}nav{display:flex;justify-content:space-betwee
 <div id="count">Loading…</div>
 <p class="sort-help">Select any column heading to sort. Numeric columns start largest to smallest; select again to reverse.</p>
 <div class="wrap"><table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
-<p style="color:var(--mut);font-size:12px">Fish data: Minnesota DNR LakeFinder surveys. Largest fish is the biggest sampled, not a guarantee. Planning aid only.</p>
+<p style="color:var(--mut);font-size:12px">Fish data: Minnesota DNR LakeFinder surveys. Counts and percentages describe survey catches, not total lake populations. Largest fish is the biggest sampled, not a guarantee. Planning aid only.</p>
 </main>
 <script>
 async function loadBundle(requestedGuid) {
@@ -59,8 +63,9 @@ const esc=value=>String(value??"–").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&
 const MAP_PAGE="bwca_graph_map.html";
 let speciesNames={};
 const nm=c=>{const name=speciesNames[c]?.common_name;return name?name.replace(/\b\w/g,letter=>letter.toUpperCase()):c};
-const COLS=[["n","Lake"],["ac","Acres"],["md","Max depth"],["cl","Clarity"],["cs","Campsites"],["fish","Fish (largest, in)"],["trip","From entry point"]];
-const DESC_FIRST=new Set(["ac","md","cl","cs","fish","trip"]);
+// Species value: [max length, CPUE, total caught, same-gear share, date, gear, effort, normal range].
+const COLS=[["n","Lake"],["ac","Acres"],["md","Max depth"],["cl","Clarity"],["cs","Campsites"],["fish","Fish (largest, in)"],["ab","Survey abundance"],["trip","From entry point"]];
+const DESC_FIRST=new Set(["ac","md","cl","cs","fish","ab","trip"]);
 let data=[],access={entries:[],starts:{}},entryByCode=new Map(),sortKey="n",sortDir=1;
 const $=id=>document.getElementById(id);
 const num=id=>{const v=parseFloat($(id).value);return isNaN(v)?null:v};
@@ -93,10 +98,10 @@ function tripText(r){
 
 function filtered(){
   const q=$("q").value.trim().toLowerCase(),sp=$("sp").value,
-    minlen=num("minlen"),minac=num("minac"),maxac=num("maxac"),mindp=num("mindp"),mincl=num("mincl"),mincs=num("mincs"),maxcs=num("maxcs");
+    minlen=num("minlen"),mincpue=num("mincpue"),minshare=num("minshare"),minyear=num("minyear"),minac=num("minac"),maxac=num("maxac"),mindp=num("mindp"),mincl=num("mincl"),mincs=num("mincs"),maxcs=num("maxcs");
   return data.filter(r=>{
     if(q&&!r.n.toLowerCase().includes(q))return false;
-    if(sp){const s=r.sp&&r.sp[sp];if(!s)return false;if(minlen!=null&&(s[0]==null||s[0]<minlen))return false;}
+    if(sp){const s=r.sp&&r.sp[sp];if(!s)return false;if(minlen!=null&&(s[0]==null||s[0]<minlen))return false;if(mincpue!=null&&(s[1]==null||s[1]<mincpue))return false;if(minshare!=null&&(s[3]==null||s[3]<minshare))return false;if(minyear!=null&&(s[4]==null||Number(s[4].slice(0,4))<minyear))return false;}
     if(minac!=null&&!(r.ac!=null&&r.ac>=minac))return false;
     if(maxac!=null&&!(r.ac!=null&&r.ac<=maxac))return false;
     if(mindp!=null&&!(r.md!=null&&r.md>=mindp))return false;
@@ -108,9 +113,26 @@ function filtered(){
 }
 function fishText(r){
   const sp=$("sp").value;
-  if(sp&&r.sp&&r.sp[sp])return nm(sp)+" "+r.sp[sp][0]+"\"";
-  const top=Object.entries(r.sp||{}).sort((a,b)=>b[1][1]-a[1][1]).slice(0,3);
-  return top.map(([c,v])=>nm(c)+" "+v[0]+"\"").join(", ")||"–";
+  if(sp&&r.sp&&r.sp[sp])return r.sp[sp][0]==null?nm(sp)+" (no measured length)":nm(sp)+" "+r.sp[sp][0]+"\"";
+  const top=Object.entries(r.sp||{}).sort((a,b)=>(b[1][1]??-Infinity)-(a[1][1]??-Infinity)).slice(0,3);
+  return top.map(([c,v])=>v[0]==null?nm(c):nm(c)+" "+v[0]+"\"").join(", ")||"–";
+}
+function abundanceText(r){
+  const sp=$("sp").value;if(!sp)return "Choose a fish species";
+  const v=r.sp?.[sp];if(!v)return "–";
+  const [length,cpue,total,share,date,gear]=v;
+  const parts=[];
+  if(cpue!=null)parts.push((gear||"").toLowerCase().includes("net")?fmt(cpue)+" fish/net":"CPUE "+fmt(cpue));
+  if(total!=null)parts.push(fmt(total)+" caught");
+  if(share!=null)parts.push(fmt(share)+"% of same-gear catch");
+  if(date)parts.push(date.slice(0,4));
+  return parts.join(" · ")||"No catch-rate record";
+}
+function abundanceTitle(r){
+  const sp=$("sp").value,v=r.sp?.[sp];if(!sp||!v)return "";
+  const normal=v[7]!=null?`; DNR normal range ${v[7]}`:"";
+  const effort=v[6]!=null?`; effort ${v[6]} gear sets`:"";
+  return `${v[5]||"Gear not recorded"}${effort}${normal}`;
 }
 function sortVal(r,k){
   if(k==="fish"){
@@ -119,6 +141,7 @@ function sortVal(r,k){
     const lengths=Object.values(r.sp||{}).map(v=>v[0]).filter(Number.isFinite);
     return lengths.length?Math.max(...lengths):null;
   }
+  if(k==="ab"){const selected=$("sp").value;return selected?r.sp?.[selected]?.[1]??null:null;}
   if(k==="trip")return bestTrip(r)?.[0]??null;
   return r[k];
 }
@@ -138,7 +161,7 @@ function render(){
   const rows=filtered().sort((a,b)=>{const x=sortVal(a,sortKey),y=sortVal(b,sortKey);
     if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*sortDir;});
   $("count").textContent=rows.length+" of "+data.length+" lakes match";
-  $("body").innerHTML=rows.slice(0,300).map(r=>`<tr><td class="n"><a href="${MAP_PAGE}#lake=${encodeURIComponent(r.g)}">${esc(r.n)}</a></td><td>${fmt(r.ac)}</td><td>${fmt(r.md)}</td><td>${fmt(r.cl)}</td><td>${r.cs}</td><td>${esc(fishText(r))}</td><td class="trip-result">${esc(tripText(r))}</td></tr>`).join("");
+  $("body").innerHTML=rows.slice(0,300).map(r=>`<tr><td class="n"><a href="${MAP_PAGE}#lake=${encodeURIComponent(r.g)}">${esc(r.n)}</a></td><td>${fmt(r.ac)}</td><td>${fmt(r.md)}</td><td>${fmt(r.cl)}</td><td>${r.cs}</td><td>${esc(fishText(r))}</td><td class="trip-result" title="${esc(abundanceTitle(r))}">${esc(abundanceText(r))}</td><td class="trip-result">${esc(tripText(r))}</td></tr>`).join("");
 }
 $("body").addEventListener("click", async event=>{
   const link=event.target.closest("a"); if(!link)return;
@@ -151,8 +174,9 @@ $("head").onclick=e=>{const heading=e.target.closest("th[data-k]");if(heading)ch
 $("head").onkeydown=e=>{if(e.key!=="Enter"&&e.key!==" ")return;const heading=e.target.closest("th[data-k]");if(heading){e.preventDefault();changeSort(heading.dataset.k);}};
 renderHead();
 document.querySelectorAll("input,select").forEach(el=>el.addEventListener("input",render));
+$("sp").addEventListener("input",()=>{const enabled=!!$("sp").value;document.querySelectorAll(".species-limit").forEach(el=>{el.disabled=!enabled;if(!enabled)el.value="";});render();});
 $("ep").addEventListener("input",()=>{document.querySelectorAll(".trip-limit").forEach(el=>el.disabled=!$("ep").value);render();});
-$("reset").addEventListener("click",()=>{document.querySelectorAll("input").forEach(el=>el.value="");document.querySelectorAll("select").forEach(el=>el.selectedIndex=0);document.querySelectorAll(".trip-limit").forEach(el=>el.disabled=true);sortKey="n";sortDir=1;render();});
+$("reset").addEventListener("click",()=>{document.querySelectorAll("input").forEach(el=>el.value="");document.querySelectorAll("select").forEach(el=>el.selectedIndex=0);document.querySelectorAll(".trip-limit,.species-limit").forEach(el=>el.disabled=true);sortKey="n";sortDir=1;render();});
 Promise.all([fetch("lake_search_index.json").then(r=>r.json()),loadAccessIndex(),fetch("fisheries/species.json").then(r=>r.json())]).then(([d,a,s])=>{
   data=d;access=a;speciesNames=s;entryByCode=new Map(a.entries.map(entry=>[entry.code,entry]));
   a.entries.forEach(entry=>$("ep").add(new Option(entry.name,entry.code)));

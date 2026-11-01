@@ -49,7 +49,7 @@ def row_key(value):
 def project_rows():
     by_dow = {}
     for path in (ROOT / "maps/fisheries").glob("{*.json"):
-        bundle = json.loads(path.read_text())
+        bundle = json.loads(path.read_text(encoding="utf-8"))
         by_dow.setdefault(bundle["dowlknum"], bundle)
 
     output = {key: [] for key in (*COMPARABLE, "lake_info", "inventory_lakes", "inventory")}

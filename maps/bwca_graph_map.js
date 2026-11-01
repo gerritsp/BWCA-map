@@ -27,8 +27,16 @@ function lakeBundleHTML(bundle) {
     const clarity = [...bundle.clarity].sort((a,b) => String(b.date ?? "").localeCompare(String(a.date ?? "")))[0];
     const fish = species.map(code => {
         const sampled = lengths.filter(row => row.species === code).map(row => row.length_inches);
-        const cpue = catches.filter(row => row.species === code && typeof row.cpue === "number");
-        return `<li>${escapeHTML(code)}: max sampled ${escapeHTML(sampled.length ? Math.max(...sampled) : null)} in; CPUE ${cpue.map(row => `${escapeHTML(row.cpue)} (${escapeHTML(row.gear)}, ${escapeHTML(row.date)})`).join("; ") || "N/A"}</li>`;
+        const observations = catches.filter(row => row.species === code && typeof row.cpue === "number")
+            .sort((a,b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
+        const catchText = observations.map(row => {
+            const sameGear = catches.filter(other => other.survey_id === row.survey_id && other.date === row.date && other.gear === row.gear);
+            const denominator = sameGear.reduce((sum, other) => sum + (typeof other.totalCatch === "number" ? other.totalCatch : 0), 0);
+            const share = typeof row.totalCatch === "number" && denominator ? `${(row.totalCatch / denominator * 100).toFixed(1)}% of same-gear catch; ` : "";
+            const count = typeof row.totalCatch === "number" ? `${escapeHTML(row.totalCatch)} caught; ` : "";
+            return `${count}${escapeHTML(share)}CPUE ${escapeHTML(row.cpue)} (${escapeHTML(row.gear)}, ${escapeHTML(row.date)})`;
+        });
+        return `<li>${escapeHTML(code)}: max sampled ${escapeHTML(sampled.length ? Math.max(...sampled) : null)} in; ${catchText.join("; ") || "no catch-rate record"}</li>`;
     }).join("");
     const latestClarity = clarity ? Object.entries(clarity).map(([k,v]) => `${escapeHTML(k)}: ${escapeHTML(v)}`).join(", ") : "N/A";
     return `<div><h2>${escapeHTML(bundle.name)}</h2>
@@ -132,7 +140,9 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
 
     const portagesLayer = L.geoJSON(portages, {
         style: (feature) =>
-            (feature.properties.start_snapped || feature.properties.end_snapped)
+            feature.properties.routing_status === "review"
+                ? { color: "#c2410c", weight: 3, opacity: 0.9, dashArray: "2 5" }
+                : (feature.properties.start_snapped || feature.properties.end_snapped)
                 ? { color: "#7c3aed", weight: 3, opacity: 0.9, dashArray: "4 2" }
                 : PORTAGE_STYLE,
         onEachFeature: function (feature, layer) {
@@ -142,11 +152,15 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             const snappedNote = (p.start_snapped || p.end_snapped)
                 ? '<span style="color:#7c3aed;font-size:11px;">Endpoint adjusted &mdash; not surveyed</span><br>'
                 : "";
+            const routingNote = p.routing_status === "review"
+                ? '<span style="color:#c2410c;font-size:11px;"><b>Routing review needed:</b> at least one landing is not connected to mapped water.</span><br>'
+                : "";
             bindFeatureInfo(layer,
                 `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
                 `${label} &mdash; ${rods}<br>` +
                 `${p.lake_a} &rarr; ${p.lake_b}<br>` +
                 snappedNote +
+                routingNote +
                 `<span style="font-size:11px; color:#555;">` +
                 `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
                 `unique_guid_b=${p.unique_guid_b ?? "N/A"}</span>`
@@ -174,9 +188,9 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             <details><summary>Map legend</summary><b>Portages</b><br>
             <span style="display:inline-block;width:20px;border-top:3px solid #0f5c2e;margin-right:4px;"></span>Portage (surveyed)<br>
             <span style="display:inline-block;width:20px;border-top:3px dashed #7c3aed;margin-right:4px;"></span>Portage (endpoint adjusted)<br>
+            <span style="display:inline-block;width:20px;border-top:3px dotted #c2410c;margin-right:4px;"></span>Portage (routing review needed)<br>
             <b>Rivers &amp; streams</b><br>
-            <span style="display:inline-block;width:20px;border-top:2px solid #0891b2;margin-right:4px;"></span>Routable (river/connector)<br>
-            <span style="display:inline-block;width:20px;border-top:2px dotted #0891b2;margin-right:4px;"></span>Display only (small stream)<br>
+            <span style="display:inline-block;width:20px;border-top:2px solid #0891b2;margin-right:4px;"></span>Mapped routable river/stream<br>
             <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f59e0b;border:2px solid white;box-shadow:0 0 2px rgba(0,0,0,0.5);margin-right:4px;vertical-align:middle;"></span>Entry point<br>
             <span style="display:inline-block;width:14px;height:10px;background:#ea580c;opacity:0.5;border:1px dashed #9a3412;margin-right:4px;vertical-align:middle;"></span>Burn area</details>
         `;
@@ -253,6 +267,9 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
                 routingNote = `${escapeHTML(attachment.label)}; ${distance} connector${rods}; ` +
                     `${escapeHTML(attachment.confidence)} confidence`;
             }
+            if (p.routing_status === "review") {
+                routingNote += '<br><span style="color:#c2410c;"><b>Review needed:</b> no verified route from this attachment to a mapped lake.</span>';
+            }
             const lon = feature.geometry.coordinates[0].toFixed(6);
             const lat = feature.geometry.coordinates[1].toFixed(6);
             bindFeatureInfo(layer,
@@ -311,8 +328,12 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         const coords = feature.geometry.coordinates;
         const nodeA = `portage:${p.portage_number}:a`;
         const nodeB = `portage:${p.portage_number}:b`;
-        if (!nodes.has(nodeA)) addNode(nodeA, p.unique_guid_a, coords[0]);
-        if (!nodes.has(nodeB)) addNode(nodeB, p.unique_guid_b, coords[coords.length - 1]);
+        const lakeA = Object.prototype.hasOwnProperty.call(p, "routing_lake_guid_a")
+            ? p.routing_lake_guid_a : p.unique_guid_a;
+        const lakeB = Object.prototype.hasOwnProperty.call(p, "routing_lake_guid_b")
+            ? p.routing_lake_guid_b : p.unique_guid_b;
+        if (!nodes.has(nodeA)) addNode(nodeA, lakeA, coords[0]);
+        if (!nodes.has(nodeB)) addNode(nodeB, lakeB, coords[coords.length - 1]);
         const alreadyLoaded = (adjacency.get(nodeA) || []).some(
             edge => edge.to === nodeB && edge.kind === "portage"
         );
@@ -535,6 +556,10 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     }
 
     function handleEntryPointClick(feature, latlng) {
+        if (feature.properties.routing_status === "review") {
+            setStatus("This entry still needs a reviewed connection to the mapped lake network.");
+            return;
+        }
         const attachments = feature.properties.attachments || [];
         if (!attachments.length) {
             setStatus("This official entry location still needs a reviewed routing attachment.");

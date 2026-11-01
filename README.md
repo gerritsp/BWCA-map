@@ -16,9 +16,17 @@ http://localhost:8000/bwca_graph_map.html. APP.py generates the interactive map
 and precomputes its routing graph. Keep the HTTP server running while browsing.
 Use the layers button in the map's upper-right corner to switch to USGS Topo or
 hide map overlays. Lake search can also limit results from an entry point by
-cumulative portage rods, portage count and lake-to-lake transitions. Entry
+cumulative portage rods, portage count and lake-to-lake transitions. It can
+rank a selected fish species by its latest survey catch rate and
+filter by CPUE, same-gear catch share and survey year. Walleye comparisons use
+standard gill-net records; survey catches are evidence of relative abundance,
+not an estimate of the lake's total population. Entry
 markers use the checked-in 2026 Forest Service layer; routing connectors leave
 the official point in place and show how it was attached to the local graph.
+Portages needing a reviewed water connection are orange and dotted. River
+segments that end exactly on another river's interior are joined as real
+confluences, so entry 75 (Little Isabella River) and entry 84 (Snake River)
+route into the Isabella River network without moving their official markers.
 
 ## Project layout
 
