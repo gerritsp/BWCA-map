@@ -27,6 +27,9 @@ Portages needing a reviewed water connection are orange and dotted. River
 segments that end exactly on another river's interior are joined as real
 confluences, so entry 75 (Little Isabella River) and entry 84 (Snake River)
 route into the Isabella River network without moving their official markers.
+The route planner offers A* and Dijkstra over the same mapped-distance cost.
+A* is the default goal-directed option; the result reports graph nodes searched
+and browser time so the two algorithms can be compared on the same trip.
 
 ## Project layout
 

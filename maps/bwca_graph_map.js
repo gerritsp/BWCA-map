@@ -368,49 +368,8 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         return { feature: best, coord: bestCoord, distance: bestDist };
     }
 
-    const PADDLE_PREFERENCE_PENALTY = 1.3;
-
     // ADDED: burn-area avoidance state - the checkbox below sets this
     let avoidBurnAreas = false;
-
-    function dijkstra(startNode, endNode) {
-        const cost = new Map([[startNode, 0]]);
-        const trueDist = new Map([[startNode, 0]]);
-        const prev = new Map();
-        const visited = new Set();
-        const queue = [[0, startNode]];
-
-        while (queue.length) {
-            queue.sort((a, b) => a[0] - b[0]);
-            const [c, u] = queue.shift();
-            if (visited.has(u)) continue;
-            visited.add(u);
-            if (u === endNode) break;
-
-            for (const edge of adjacency.get(u) || []) {
-                if (avoidBurnAreas && edge.crossesBurn) continue; // ADDED - this is the line that makes the checkbox do anything
-                const edgeCost = edge.kind === "paddle" ? edge.weight * PADDLE_PREFERENCE_PENALTY : edge.weight;
-                const alt = c + edgeCost;
-                if (alt < (cost.get(edge.to) ?? Infinity)) {
-                    cost.set(edge.to, alt);
-                    trueDist.set(edge.to, trueDist.get(u) + edge.weight);
-                    prev.set(edge.to, u);
-                    queue.push([alt, edge.to]);
-                }
-            }
-        }
-
-        if (!cost.has(endNode)) return null;
-
-        const path = [endNode];
-        let current = endNode;
-        while (current !== startNode) {
-            current = prev.get(current);
-            path.push(current);
-        }
-        path.reverse();
-        return { distance: trueDist.get(endNode), path };
-    }
 
     let routeLayer = null;
     let markerStart = null;
@@ -437,7 +396,15 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     }
 
     function computeAndDrawRoute() {
-        const result = dijkstra("start", "end");
+        const algorithm = document.getElementById("route-algorithm").value;
+        const started = performance.now();
+        const result = GraphEngine.shortestPath(engine, "start", "end", {
+            algorithm,
+            avoidBurnAreas,
+            paddlePenalty: 1,
+            geographicFloor: true,
+        });
+        const elapsedMs = performance.now() - started;
         if (routeLayer) map.removeLayer(routeLayer);
 
         if (!result) {
@@ -479,11 +446,13 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             .filter((s) => s.kind === "approach")
             .reduce((sum, s) => sum + s.weight, 0) / 1000;
 
+        const algorithmName = algorithm === "astar" ? "A*" : "Dijkstra";
         setStatus(
-            `Route found: ${(result.distance / 1000).toFixed(2)} km total ` +
+            `${algorithmName} route: ${(result.distance / 1000).toFixed(2)} km total ` +
             `(${rods.toFixed(0)} rods of portaging, ${paddleKm.toFixed(2)} km paddling, ` +
             `${riverKm.toFixed(2)} km river` +
-            `${approachKm ? `, ${approachKm.toFixed(2)} km approximate approach` : ""}).`
+            `${approachKm ? `, ${approachKm.toFixed(2)} km approximate approach` : ""}). ` +
+            `Searched ${result.expanded.toLocaleString()} graph nodes in ${elapsedMs.toFixed(1)} ms.`
         );
     }
 
@@ -494,6 +463,11 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             <b>Route finder</b><br>
             <span id="route-status-text">Click a point on a lake to start a route.</span>
             <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb;">
+                <label for="route-algorithm" style="display:block; margin-bottom:4px;">Routing algorithm</label>
+                <select id="route-algorithm" style="width:100%; margin-bottom:8px; padding:5px; border:1px solid #d1d5db; border-radius:4px; background:white;">
+                    <option value="astar">A* (faster shortest route)</option>
+                    <option value="dijkstra">Dijkstra (baseline)</option>
+                </select>
                 <label style="display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none;">
                     <input type="checkbox" id="avoid-burn-checkbox" style="accent-color:#ea580c; width:15px; height:15px;" />
                     <span>Avoid burn areas</span>
@@ -516,6 +490,9 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     document.getElementById("explore-mode").addEventListener("click", () => setMode("explore"));
     document.getElementById("route-mode").addEventListener("click", () => setMode("route"));
     document.getElementById("route-clear-btn").addEventListener("click", clearRoute);
+    document.getElementById("route-algorithm").addEventListener("change", () => {
+        if (nodes.has("start") && nodes.has("end")) computeAndDrawRoute();
+    });
     // ADDED: toggling the checkbox re-runs the search immediately if a route is already showing
     document.getElementById("avoid-burn-checkbox").addEventListener("change", (e) => {
         avoidBurnAreas = e.target.checked;

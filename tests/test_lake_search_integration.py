@@ -237,6 +237,9 @@ class SearchIntegrationTests(unittest.TestCase):
     def test_popup_runtime(self):
         subprocess.run(['node', 'tests/test_lake_popup.js'], cwd=ROOT, check=True)
 
+    def test_route_algorithms(self):
+        subprocess.run(['node', 'tests/test_route_algorithms.js'], cwd=ROOT, check=True)
+
     def test_map_bundle_contract(self):
         build_sources = [ROOT / 'APP.py', *(ROOT / 'Scripts').glob('*.py')]
         implicit_text_io = []
@@ -266,6 +269,8 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertIn('entryAnchorNodes', source)
         self.assertIn('approximate approach', source)
         self.assertIn('if (!nodes.has(nodeA)) addNode', source)
+        self.assertIn('GraphEngine.shortestPath(engine', source)
+        self.assertIn('id="route-algorithm"', source)
         search_source = (ROOT / 'maps/lake_search.html').read_text(encoding='utf-8')
         self.assertIn('bundle.unique_guid !== requestedGuid', search_source)
         self.assertIn('maxcs=num("maxcs")', search_source)
