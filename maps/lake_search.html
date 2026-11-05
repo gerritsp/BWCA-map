@@ -12,7 +12,7 @@ main{max-width:980px;margin:0 auto;padding:16px}h1{font-size:20px;margin:4px 0 1
 a{color:var(--acc)}.bar{display:flex;gap:12px;flex-wrap:wrap;background:var(--card);padding:12px;border-radius:8px}
 label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
 input,select{font:inherit;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:130px}
-#count{margin:12px 0 6px;color:var(--mut)}.wrap{overflow-x:auto}
+#count{margin:12px 0 6px;color:var(--mut)}.wrap{overflow-x:auto}.site-legal{margin-top:24px;padding-top:16px;border-top:1px solid var(--line);color:var(--mut);font-size:12px;line-height:1.6}
 table{border-collapse:collapse;width:100%}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 th{cursor:pointer;font-size:12px;color:var(--mut)}td.n{font-weight:600}
 
@@ -50,6 +50,7 @@ main{max-width:1180px;padding:24px}nav{display:flex;justify-content:space-betwee
 <p class="sort-help">Select any column heading to sort. Numeric columns start largest to smallest; select again to reverse.</p>
 <div class="wrap"><table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
 <p style="color:var(--mut);font-size:12px">Fish data: Minnesota DNR LakeFinder surveys. Counts and percentages describe survey catches, not total lake populations. Largest fish is the biggest sampled, not a guarantee. Planning aid only.</p>
+<footer class="site-legal">© 2026 Peter Gerrits and contributors · <a href="legal.html">Data sources, copyright &amp; terms</a><br>Planning aid only—not for navigation.</footer>
 </main>
 <script>
 async function loadBundle(requestedGuid) {
