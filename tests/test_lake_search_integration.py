@@ -82,7 +82,7 @@ class SearchIntegrationTests(unittest.TestCase):
         base = f'http://127.0.0.1:{server.server_port}/'
         try:
             access = load_access_index()
-            assets = ['lake_search.html', 'lake_search_index.json', 'lake_access_index.json', 'fisheries/species.json', *access.get('shards', [])] + ['bwca_graph_map' + suffix for suffix in ('.html', '.js', '_engine.js', '_lakes.json', '_campsites.json', '_portages.json', '_rivers.json', '_entry_points.json', '_boundary.json', '_fires.json', '_paddle_edges.json')]
+            assets = ['lake_search.html', 'legal.html', 'lake_search_index.json', 'lake_access_index.json', 'fisheries/species.json', *access.get('shards', [])] + ['bwca_graph_map' + suffix for suffix in ('.html', '.js', '_engine.js', '_lakes.json', '_campsites.json', '_portages.json', '_rivers.json', '_entry_points.json', '_boundary.json', '_fires.json', '_paddle_edges.json')]
             for asset in assets:
                 with urlopen(base + asset) as response:
                     self.assertEqual(response.status, 200)
@@ -280,6 +280,24 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertIn('Math.max(...lengths)', search_source)
         self.assertIn('access.starts?.[entry.code]', search_source)
         self.assertIn('async function loadAccessIndex()', search_source)
+
+    def test_public_legal_notices(self):
+        copyright_notice = (ROOT / 'COPYRIGHT.md').read_text(encoding='utf-8')
+        third_party = (ROOT / 'THIRD_PARTY_NOTICES.md').read_text(encoding='utf-8')
+        legal_page = (ROOT / 'maps/legal.html').read_text(encoding='utf-8')
+        map_template = (ROOT / 'Templates/html_template.html').read_text(encoding='utf-8')
+        generated_map = (ROOT / 'maps/bwca_graph_map.html').read_text(encoding='utf-8')
+        search_page = (ROOT / 'maps/lake_search.html').read_text(encoding='utf-8')
+
+        self.assertIn('Copyright © 2026 Peter Gerrits', copyright_notice)
+        self.assertIn('does **not** claim ownership of facts', copyright_notice)
+        self.assertIn('Minnesota Department of Natural Resources', third_party)
+        self.assertIn('MNDNR General Data & Software License Agreement', third_party)
+        self.assertIn('Planning and safety disclaimer', legal_page)
+        self.assertIn('not a navigational map', legal_page)
+        for public_page in (map_template, generated_map, search_page):
+            self.assertIn('href="legal.html"', public_page)
+            self.assertIn('Planning aid only—not for navigation.', public_page)
 
 
 if __name__ == '__main__':
