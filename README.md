@@ -59,6 +59,20 @@ python Scripts/compare_stealing_fish.py ../Stealing-fish
 node tests/test_lake_popup.js
 ```
 
+## Copyright, data sources and use
+
+Copyright © 2026 Peter Gerrits and project contributors. Original application
+code, interface design, routing and processing logic, documentation, and other
+original project material are protected; no open-source license is granted.
+Public-agency facts, third-party data, basemaps, and software remain subject to
+their own terms and are not claimed as project-owned material.
+
+See [COPYRIGHT.md](COPYRIGHT.md) for the scope of the project notice,
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for required acknowledgments,
+and [Data/SOURCES.md](Data/SOURCES.md) for detailed provenance and rebuild notes.
+The public site is a planning aid and is not a replacement for official maps,
+current conditions, permits, or local guidance.
+
 ## Local files and worktrees
 
 This cleanup was performed on the GitHub repository, not the Windows working
