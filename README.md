@@ -31,6 +31,10 @@ The route planner offers A* and Dijkstra over the same mapped-distance cost.
 A* is the default goal-directed option; the result reports graph nodes searched
 and browser time so the two algorithms can be compared on the same trip.
 
+The checked-in `maps/` directory is the static website artifact. Its root page
+links to the map, lake search, current coverage, known limitations, and legal
+notices. See `deploy/README.md` for a hardened Caddy deployment example.
+
 ## Project layout
 
 | Location | Purpose |
@@ -59,17 +63,6 @@ before rebuilding with `python APP.py`.
 python -m unittest discover -s tests -v
 python Scripts/validate_lake_bundles.py
 python Scripts/compare_stealing_fish.py ../Stealing-fish
-node tests/test_lake_popup.js
+npm test
+npm run audit:prod
 ```
-
-## Local files and worktrees
-
-This cleanup was performed on the GitHub repository, not the Windows working
-folder. Untracked Windows files have not been inspected or moved. Similar names
-are not proof of identical content; compare hashes and references before archiving.
-
-Data/BWCA-map-test is a known linked Git worktree on the user's computer.
-Do not move or delete it as an ordinary directory. Inspect `git worktree list`
-and its status first. A future relocation should use `git worktree move` after
-saving its changes. Keep the original project and its local datasets until that
-review is complete.

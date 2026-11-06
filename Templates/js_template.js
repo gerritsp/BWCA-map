@@ -147,7 +147,7 @@ const LAKES_URL = "__LAKES_URL__";
                 : PORTAGE_STYLE,
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
-            const label = p.name || "(unnamed)";
+            const label = escapeHTML(p.name || "(unnamed)");
             const rods = p.length_rods == null ? "N/A" : `${p.length_rods.toFixed(1)} rods`;
             const snappedNote = (p.start_snapped || p.end_snapped)
                 ? '<span style="color:#7c3aed;font-size:11px;">Endpoint adjusted &mdash; not surveyed</span><br>'
@@ -156,14 +156,14 @@ const LAKES_URL = "__LAKES_URL__";
                 ? '<span style="color:#c2410c;font-size:11px;"><b>Routing review needed:</b> at least one landing is not connected to mapped water.</span><br>'
                 : "";
             bindFeatureInfo(layer,
-                `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
+                `<b>Portage #${escapeHTML(p.portage_number ?? "N/A")}</b> (USFS ID ${escapeHTML(p.usfs_id ?? "N/A")})<br>` +
                 `${label} &mdash; ${rods}<br>` +
-                `${p.lake_a} &rarr; ${p.lake_b}<br>` +
+                `${escapeHTML(p.lake_a || "N/A")} &rarr; ${escapeHTML(p.lake_b || "N/A")}<br>` +
                 snappedNote +
                 routingNote +
                 `<span style="font-size:11px; color:#555;">` +
-                `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
-                `unique_guid_b=${p.unique_guid_b ?? "N/A"}</span>`
+                `unique_guid_a=${escapeHTML(p.unique_guid_a ?? "N/A")} &middot; ` +
+                `unique_guid_b=${escapeHTML(p.unique_guid_b ?? "N/A")}</span>`
             );
         }
     }).addTo(map);
@@ -175,7 +175,7 @@ const LAKES_URL = "__LAKES_URL__";
         interactive: false,
         onEachFeature: function (feature, layer) {
             const p = feature.properties || {};
-            const label = p.incident_name || p.name || "Burn area";
+            const label = escapeHTML(p.incident_name || p.name || "Burn area");
             const year = p.last_updated ? new Date(p.last_updated).getFullYear() : null;
             layer.bindTooltip(year ? `${label} (${year})` : label);
         }
@@ -209,7 +209,7 @@ const LAKES_URL = "__LAKES_URL__";
         }),
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
-            layer.bindTooltip(`${p.name || "Unnamed stream"} &mdash; ${p.strm_type}`);
+            layer.bindTooltip(`${escapeHTML(p.name || "Unnamed stream")} &mdash; ${escapeHTML(p.strm_type || "Unknown type")}`);
         }
     }).addTo(map);
 
@@ -227,10 +227,10 @@ const LAKES_URL = "__LAKES_URL__";
             const p = feature.properties;
             const dist = p.distance_to_lake == null ? "N/A" : `${p.distance_to_lake.toFixed(1)} m`;
             bindFeatureInfo(layer,
-                `<b>Campsite:</b> ${p.camp_id}<br>` +
-                `<b>Lake:</b> ${p.lake_name}<br>` +
-                `<b>Status:</b> ${p.status}<br>` +
-                `<b>District:</b> ${p.district}<br>` +
+                `<b>Campsite:</b> ${escapeHTML(p.camp_id ?? "N/A")}<br>` +
+                `<b>Lake:</b> ${escapeHTML(p.lake_name || "N/A")}<br>` +
+                `<b>Status:</b> ${escapeHTML(p.status || "N/A")}<br>` +
+                `<b>District:</b> ${escapeHTML(p.district || "N/A")}<br>` +
                 `<b>Distance to matched lake:</b> ${dist}`
             );
         }
@@ -253,7 +253,7 @@ const LAKES_URL = "__LAKES_URL__";
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
             const locationNote = p.location_count > 1
-                ? `<br><span style="font-size:11px; color:#555;">Official location ${p.location_index} of ${p.location_count}</span>`
+                ? `<br><span style="font-size:11px; color:#555;">Official location ${escapeHTML(p.location_index)} of ${escapeHTML(p.location_count)}</span>`
                 : "";
             const attachment = (p.attachments || [])[0];
             let routingNote = "No routing attachment";

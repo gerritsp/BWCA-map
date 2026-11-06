@@ -1,1 +1,15 @@
-{"name":"bwca-map","private":true,"version":"1.0.0","dependencies":{"@turf/turf":"6.5.0"}}
+{
+  "name": "bwca-map",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "vendor": "node Scripts/sync_vendor_assets.js",
+    "test": "node tests/test_lake_popup.js && node tests/test_route_algorithms.js",
+    "audit:prod": "npm audit --omit=dev"
+  },
+  "dependencies": {
+    "@turf/turf": "6.5.0",
+    "leaflet": "1.9.4",
+    "leaflet.markercluster": "1.5.3"
+  }
+}

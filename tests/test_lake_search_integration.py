@@ -1,4 +1,6 @@
 import ast
+import base64
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -82,7 +84,17 @@ class SearchIntegrationTests(unittest.TestCase):
         base = f'http://127.0.0.1:{server.server_port}/'
         try:
             access = load_access_index()
-            assets = ['lake_search.html', 'legal.html', 'lake_search_index.json', 'lake_access_index.json', 'fisheries/species.json', *access.get('shards', [])] + ['bwca_graph_map' + suffix for suffix in ('.html', '.js', '_engine.js', '_lakes.json', '_campsites.json', '_portages.json', '_rivers.json', '_entry_points.json', '_boundary.json', '_fires.json', '_paddle_edges.json')]
+            assets = [
+                'index.html', 'lake_search.html', 'limitations.html', 'legal.html',
+                'lake_search_index.json', 'lake_access_index.json',
+                'fisheries/species.json', *access.get('shards', []),
+                'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js',
+                'vendor/leaflet/images/marker-icon.png',
+                'vendor/leaflet.markercluster/MarkerCluster.css',
+                'vendor/leaflet.markercluster/MarkerCluster.Default.css',
+                'vendor/leaflet.markercluster/leaflet.markercluster.js',
+                'vendor/turf/turf.min.js',
+            ] + ['bwca_graph_map' + suffix for suffix in ('.html', '.js', '_engine.js', '_lakes.json', '_campsites.json', '_portages.json', '_rivers.json', '_entry_points.json', '_boundary.json', '_fires.json', '_paddle_edges.json')]
             for asset in assets:
                 with urlopen(base + asset) as response:
                     self.assertEqual(response.status, 200)
@@ -293,6 +305,8 @@ class SearchIntegrationTests(unittest.TestCase):
         map_template = (ROOT / 'Templates/html_template.html').read_text(encoding='utf-8')
         generated_map = (ROOT / 'maps/bwca_graph_map.html').read_text(encoding='utf-8')
         search_page = (ROOT / 'maps/lake_search.html').read_text(encoding='utf-8')
+        landing_page = (ROOT / 'maps/index.html').read_text(encoding='utf-8')
+        limitations_page = (ROOT / 'maps/limitations.html').read_text(encoding='utf-8')
 
         self.assertIn('Copyright © 2026 Peter Gerrits', copyright_notice)
         self.assertIn('does **not** claim ownership of facts', copyright_notice)
@@ -300,9 +314,58 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertIn('MNDNR General Data & Software License Agreement', third_party)
         self.assertIn('Planning and safety disclaimer', legal_page)
         self.assertIn('not a navigational map', legal_page)
-        for public_page in (map_template, generated_map, search_page):
+        self.assertIn('Public beta', landing_page)
+        self.assertIn('Known gaps', limitations_page)
+        for public_page in (map_template, generated_map, search_page,
+                            landing_page, limitations_page):
             self.assertIn('href="legal.html"', public_page)
             self.assertIn('Planning aid only—not for navigation.', public_page)
+
+    def test_public_release_security_contract(self):
+        map_template = (ROOT / 'Templates/html_template.html').read_text(encoding='utf-8')
+        generated_map = (ROOT / 'maps/bwca_graph_map.html').read_text(encoding='utf-8')
+        map_javascript = (ROOT / 'Templates/js_template.js').read_text(encoding='utf-8')
+        search_page = (ROOT / 'maps/lake_search.html').read_text(encoding='utf-8')
+        caddy = (ROOT / 'deploy/Caddyfile.example').read_text(encoding='utf-8')
+
+        for page in (map_template, generated_map):
+            self.assertNotIn('unpkg.com', page)
+            self.assertIn('vendor/leaflet/leaflet.js', page)
+            self.assertIn('vendor/turf/turf.min.js', page)
+
+        self.assertIn('escapeHTML(p.portage_number', map_javascript)
+        self.assertIn('escapeHTML(p.lake_a', map_javascript)
+        self.assertIn('escapeHTML(p.camp_id', map_javascript)
+        self.assertIn('escapeHTML(p.strm_type', map_javascript)
+        self.assertIn('escapeHTML(p.location_index)', map_javascript)
+        self.assertNotIn('${p.camp_id}', map_javascript)
+        self.assertNotIn('${p.lake_a}', map_javascript)
+        self.assertNotIn('${p.strm_type}', map_javascript)
+        self.assertIn('${esc(fmt(r.ac))}', search_page)
+        self.assertIn('${esc(r.cs)}', search_page)
+
+        inline_script = re.search(r'<script>(.*?)</script>', search_page, re.DOTALL)
+        self.assertIsNotNone(inline_script)
+        digest = base64.b64encode(hashlib.sha256(
+            inline_script.group(1).encode('utf-8')).digest()).decode('ascii')
+        self.assertIn(f"'sha256-{digest}'", caddy)
+        self.assertIn("default-src 'self'", caddy)
+        self.assertIn('X-Content-Type-Options "nosniff"', caddy)
+        self.assertIn('X-Frame-Options "DENY"', caddy)
+
+        for relative in (
+            'maps/vendor/leaflet/leaflet.css',
+            'maps/vendor/leaflet/leaflet.js',
+            'maps/vendor/leaflet.markercluster/leaflet.markercluster.js',
+            'maps/vendor/turf/turf.min.js',
+            'requirements-lock.txt',
+            '.github/workflows/validate.yml',
+            'SECURITY.md',
+        ):
+            self.assertTrue((ROOT / relative).is_file(), relative)
+
+        gitignore = (ROOT / '.gitignore').read_text(encoding='utf-8')
+        self.assertIn('.idea/', gitignore)
 
 
 if __name__ == '__main__':

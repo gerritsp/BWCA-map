@@ -1,0 +1,21 @@
+# Replace bwca.example.com and the root path before deploying.
+bwca.example.com {
+    root * /srv/www/bwca
+    encode zstd gzip
+
+    header {
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-8nb5EuRC9yNabNOoEa6y4Wh6CBXUpJOtJQe0lWcnKPE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org https://basemap.nationalmap.gov; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'"
+        Cross-Origin-Opener-Policy "same-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        -Server
+    }
+
+    @html path / /index.html /*.html
+    header @html Cache-Control "no-cache"
+
+    file_server
+}
