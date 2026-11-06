@@ -27,12 +27,154 @@
     const MIN_STRETCH_METERS = 0.5;
     const MAX_LAKE_VERTICES = 24;
     const SIMPLIFY_TOLERANCE_DEG = 0.00015;
+    const EARTH_RADIUS_METERS = 6371008.8;
+    const HEURISTIC_EDGE_EPSILON_METERS = 0.001;
+
+    function greatCircleMeters(coordA, coordB) {
+        if (!Array.isArray(coordA) || !Array.isArray(coordB)) return Infinity;
+        const toRadians = value => value * Math.PI / 180;
+        const lonA = toRadians(coordA[0]), latA = toRadians(coordA[1]);
+        const lonB = toRadians(coordB[0]), latB = toRadians(coordB[1]);
+        const deltaLat = latB - latA, deltaLon = lonB - lonA;
+        const a = Math.sin(deltaLat / 2) ** 2 +
+            Math.cos(latA) * Math.cos(latB) * Math.sin(deltaLon / 2) ** 2;
+        return EARTH_RADIUS_METERS * 2 * Math.asin(Math.min(1, Math.sqrt(a)));
+    }
+
+    function sphereVector(coord) {
+        const lon = coord[0] * Math.PI / 180;
+        const lat = coord[1] * Math.PI / 180;
+        const cosLat = Math.cos(lat);
+        return [cosLat * Math.cos(lon), cosLat * Math.sin(lon), Math.sin(lat)];
+    }
+
+    function chordLowerBoundMeters(vectorA, vectorB) {
+        // A 3-D chord never exceeds its spherical arc, so this remains an
+        // admissible lower bound without doing per-node spherical trigonometry.
+        return EARTH_RADIUS_METERS * Math.hypot(
+            vectorA[0] - vectorB[0],
+            vectorA[1] - vectorB[1],
+            vectorA[2] - vectorB[2]
+        );
+    }
+
+    class MinPriorityQueue {
+        constructor() {
+            this.items = [];
+            this.sequence = 0;
+        }
+        get length() { return this.items.length; }
+        push(priority, cost, node) {
+            const item = { priority, cost, node, sequence: this.sequence++ };
+            this.items.push(item);
+            let index = this.items.length - 1;
+            while (index > 0) {
+                const parent = Math.floor((index - 1) / 2);
+                if (!this.less(item, this.items[parent])) break;
+                this.items[index] = this.items[parent];
+                index = parent;
+            }
+            this.items[index] = item;
+        }
+        pop() {
+            if (!this.items.length) return null;
+            const first = this.items[0];
+            const last = this.items.pop();
+            if (this.items.length) {
+                let index = 0;
+                while (true) {
+                    const left = index * 2 + 1, right = left + 1;
+                    if (left >= this.items.length) break;
+                    let child = left;
+                    if (right < this.items.length && this.less(this.items[right], this.items[left])) child = right;
+                    if (!this.less(this.items[child], last)) break;
+                    this.items[index] = this.items[child];
+                    index = child;
+                }
+                this.items[index] = last;
+            }
+            return first;
+        }
+        less(a, b) {
+            return a.priority < b.priority ||
+                (a.priority === b.priority && a.sequence < b.sequence);
+        }
+    }
+
+    function shortestPath(engine, startNode, endNode, options = {}) {
+        const algorithm = options.algorithm || "dijkstra";
+        if (!new Set(["dijkstra", "astar"]).has(algorithm)) {
+            throw new Error(`Unknown routing algorithm: ${algorithm}`);
+        }
+        if (!engine.nodes.has(startNode) || !engine.nodes.has(endNode)) return null;
+
+        const paddlePenalty = options.paddlePenalty ?? 1;
+        const avoidBurnAreas = Boolean(options.avoidBurnAreas);
+        const geographicFloor = Boolean(options.geographicFloor);
+        const goalNode = engine.nodes.get(endNode);
+        const goalVector = goalNode.vector || sphereVector(goalNode.coord);
+        const heuristicScale = algorithm === "astar"
+            ? (geographicFloor ? 1 : engine.heuristicScale()) : 0;
+        const heuristic = nodeId => {
+            if (!heuristicScale) return 0;
+            const node = engine.nodes.get(nodeId);
+            const vector = node.vector || sphereVector(node.coord);
+            return chordLowerBoundMeters(vector, goalVector) * heuristicScale;
+        };
+
+        const cost = new Map([[startNode, 0]]);
+        const trueDistance = new Map([[startNode, 0]]);
+        const previous = new Map();
+        const queue = new MinPriorityQueue();
+        queue.push(heuristic(startNode), 0, startNode);
+        let expanded = 0;
+
+        while (queue.length) {
+            const current = queue.pop();
+            if (current.cost !== cost.get(current.node)) continue;
+            expanded++;
+            if (current.node === endNode) break;
+
+            for (const edge of engine.adjacency.get(current.node) || []) {
+                if (avoidBurnAreas && edge.crossesBurn) continue;
+                const routeDistance = geographicFloor
+                    ? Math.max(edge.weight, edge.directDistance || 0) : edge.weight;
+                const edgeCost = routeDistance * (edge.kind === "paddle" ? paddlePenalty : 1);
+                if (!Number.isFinite(edgeCost) || edgeCost < 0) continue;
+                const alternate = current.cost + edgeCost;
+                if (alternate < (cost.get(edge.to) ?? Infinity)) {
+                    cost.set(edge.to, alternate);
+                    trueDistance.set(edge.to, trueDistance.get(current.node) + routeDistance);
+                    previous.set(edge.to, current.node);
+                    queue.push(alternate + heuristic(edge.to), alternate, edge.to);
+                }
+            }
+        }
+
+        if (!cost.has(endNode)) return null;
+        const path = [endNode];
+        let current = endNode;
+        while (current !== startNode) {
+            current = previous.get(current);
+            if (current === undefined) return null;
+            path.push(current);
+        }
+        path.reverse();
+        return {
+            algorithm,
+            cost: cost.get(endNode),
+            distance: trueDistance.get(endNode),
+            expanded,
+            path,
+        };
+    }
 
     function createGraphEngine(turf, lakes, rivers, fires) {
         const lakesById = new Map(lakes.features.map((f) => [f.properties.unique_guid, f]));
         const nodes = new Map();
         const adjacency = new Map();
         const accessPointsByLake = new Map();
+        let safeHeuristicScale = 1;
 
         const simplifiedLakeCache = new Map();
         function simplifiedLake(lakeId) {
@@ -145,7 +287,7 @@
 
         function addNode(nodeId, lakeId, coord) {
             if (nodes.has(nodeId)) return;
-            nodes.set(nodeId, { lakeId, coord });
+            nodes.set(nodeId, { lakeId, coord, vector: sphereVector(coord) });
             adjacency.set(nodeId, []);
             wirePaddleEdges(nodeId, lakeId, coord);
             if (!accessPointsByLake.has(lakeId)) accessPointsByLake.set(lakeId, []);
@@ -201,8 +343,21 @@
             const crossesBurn = (precomputedCrossesBurn === undefined || precomputedCrossesBurn === null)
                 ? edgeCrossesBurn(geometry)
                 : precomputedCrossesBurn;
-            adjacency.get(a).push({ to: b, weight, kind, geometry, crossesBurn });
-            adjacency.get(b).push({ to: a, weight, kind, geometry, crossesBurn });
+            const nodeA = nodes.get(a), nodeB = nodes.get(b);
+            if (nodeA && !nodeA.vector) nodeA.vector = sphereVector(nodeA.coord);
+            if (nodeB && !nodeB.vector) nodeB.vector = sphereVector(nodeB.coord);
+            // Unit-sphere chord distance is a true lower bound and metric. It
+            // lets A* stay optimal even when a reported portage length is
+            // shorter than the displacement between its mapped endpoints.
+            const directDistance = nodeA && nodeB
+                ? chordLowerBoundMeters(nodeA.vector, nodeB.vector) : Infinity;
+            if (Number.isFinite(directDistance) && directDistance > HEURISTIC_EDGE_EPSILON_METERS) {
+                const ratio = Number.isFinite(weight) && weight >= 0 ? weight / directDistance : 0;
+                safeHeuristicScale = Math.min(safeHeuristicScale, ratio);
+            }
+            const edge = { weight, kind, geometry, crossesBurn, directDistance };
+            adjacency.get(a).push({ to: b, ...edge });
+            adjacency.get(b).push({ to: a, ...edge });
         }
 
         // ---- River-snap routing (click-time only) ----
@@ -289,6 +444,7 @@
             simplifiedLake, preparedLake, lineStaysInLake, lakeBoundaryPoints,
             buildLakeVertexGraph, wirePaddleEdges, addNode, removeNode, addEdge,
             wireRiverSnapEdges, clearRiverSnapEdges, edgeCrossesBurn,
+            heuristicScale: () => safeHeuristicScale,
         };
     }
 
@@ -310,7 +466,7 @@
 
     function loadPrecomputed(engine, data) {
         for (const [id, lakeId, coord] of data.nodes) {
-            engine.nodes.set(id, { lakeId, coord });
+            engine.nodes.set(id, { lakeId, coord, vector: sphereVector(coord) });
             engine.adjacency.set(id, []);
             if (!engine.accessPointsByLake.has(lakeId)) engine.accessPointsByLake.set(lakeId, []);
             engine.accessPointsByLake.get(lakeId).push(id);
@@ -325,5 +481,8 @@
         }
     }
 
-    return { createGraphEngine, ROD_TO_METERS, dumpPrecomputed, loadPrecomputed };
+    return {
+        createGraphEngine, ROD_TO_METERS, dumpPrecomputed, loadPrecomputed,
+        shortestPath, greatCircleMeters,
+    };
 });
