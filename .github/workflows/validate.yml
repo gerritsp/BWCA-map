@@ -35,7 +35,18 @@ jobs:
       - name: Build static site
         run: python APP.py
       - name: Verify committed generated site is current
-        run: git diff --exit-code -- maps
+        shell: bash
+        run: |
+          changed="$(git diff --name-only -- maps)"
+          if [[ -n "$changed" ]]; then
+            while IFS= read -r path; do
+              expected="$(git show "HEAD:$path" | sha256sum | cut -d' ' -f1)"
+              actual="$(sha256sum "$path" | cut -d' ' -f1)"
+              echo "::error file=$path::Generated file differs (expected $expected, actual $actual)"
+            done <<< "$changed"
+            git diff --stat -- maps
+            exit 1
+          fi
       - name: Run Python integration tests
         run: python -m unittest discover -s tests -v
       - name: Validate lake bundles
