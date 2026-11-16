@@ -84,6 +84,25 @@ def _load(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def _load_geojson(path):
+    path = Path(path)
+    data = _load(path)
+    shards = data.get("shards") or []
+    if not shards:
+        return data
+    features = []
+    for shard in shards:
+        if Path(shard).name != shard:
+            raise ValueError(f"Invalid GeoJSON shard path: {shard}")
+        features.extend(_load(path.parent / shard).get("features", []))
+    expected = data.get("feature_count")
+    if expected is not None and len(features) != expected:
+        raise ValueError(
+            f"Expected {expected} features in {path}, loaded {len(features)}"
+        )
+    return {"type": data.get("type", "FeatureCollection"), "features": features}
+
+
 def _write_atomic(path, value):
     path = Path(path)
     with tempfile.NamedTemporaryFile(
@@ -297,7 +316,7 @@ def repair_routing_graph(stem_path):
     if prior_repair.get("repair_version") == REPAIR_VERSION:
         print(f"Routing graph already repaired: {graph_path}")
         return prior_repair
-    lakes = _load(stem.with_name(stem.name + "_lakes.json"))
+    lakes = _load_geojson(stem.with_name(stem.name + "_lakes.json"))
     portages = _load(stem.with_name(stem.name + "_portages.json"))
     rivers = _load(stem.with_name(stem.name + "_rivers.json"))
     fires = _load(stem.with_name(stem.name + "_fires.json"))
