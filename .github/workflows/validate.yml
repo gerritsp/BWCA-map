@@ -35,6 +35,8 @@ jobs:
       - name: Build static site
         run: python APP.py
       - name: Verify committed generated site is current
+        id: generated-drift
+        continue-on-error: true
         shell: bash
         run: |
           changed="$(git diff --name-only -- maps)"
@@ -47,6 +49,18 @@ jobs:
             git diff --stat -- maps
             exit 1
           fi
+      - name: Upload generated drift for diagnosis
+        if: steps.generated-drift.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-drift-${{ github.sha }}
+          path: |
+            maps/bwca_graph_map_paddle_edges.json
+            maps/bwca_graph_map_entry_points.json
+          retention-days: 1
+      - name: Reject stale generated site
+        if: steps.generated-drift.outcome == 'failure'
+        run: exit 1
       - name: Run Python integration tests
         run: python -m unittest discover -s tests -v
       - name: Validate lake bundles
