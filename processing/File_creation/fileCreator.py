@@ -1,13 +1,16 @@
 import geopandas as gpd
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
 lakes = gpd.read_parquet(
-    "../../Data/processed/bwca_lakes.parquet",
+    ROOT / "Data/processed/bwca_lakes.parquet",
 )
 boundary = gpd.read_file(
-    "../../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
+    ROOT / "Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
     layer="boundary_waters_canoe_area_wilderness"
 )
 raw_campesites = gpd.read_file(
-    "../../Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
+    ROOT / "Data/Campsites/USFS R09 SNF BWCA Wilderness Campsites Public fgdb.gdb",
     layer="Campsites"
 )
 

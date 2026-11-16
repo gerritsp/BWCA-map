@@ -1,20 +1,28 @@
 import geopandas as gpd
 import pyogrio
-import os
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+HYDROGRAPHY = ROOT / "Data/Lakes/water_dnr_hydrography_uncompressed.gdb"
+BOUNDARY = (
+    ROOT / "Data/Boundaries/bdry_boundary_waters_canoe_area/"
+    "bdry_boundary_waters_canoe_area.gdb"
+)
 layers = pyogrio.list_layers(
-    r"../../Data/Lakes/water_dnr_hydrography_uncompressed.gdb"
+    HYDROGRAPHY
 )
 hydro = gpd.read_file(
-    "../../Data/Lakes/water_dnr_hydrography_uncompressed.gdb",
+    HYDROGRAPHY,
     layer="dnr_rivers_and_streams"
 )
 boundary = gpd.read_file(
-    "../../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
+    BOUNDARY,
     layer="boundary_waters_canoe_area_wilderness"
 )
-streams = gpd.read_file(hydro, layer="dnr_rivers_and_streams")
+streams = hydro
 boundary = boundary.to_crs(streams.crs)
-bwca_streams = gpd.clip(streams, boundary)
+wild = boundary.geometry.union_all()
+bwca_streams = streams[streams.intersects(wild.buffer(2000))].copy()
 print(len(bwca_streams))  # should be a small fraction of 133
 # print(layers)
 # print(gdf.geometry.iloc[0])

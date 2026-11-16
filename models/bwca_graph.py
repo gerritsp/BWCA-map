@@ -5,8 +5,10 @@ from models.Campsite import Campsite
 from models.Lake import Lake
 import pandas as pd
 from models.Portage import Portage
-from models.EntryPoint import EntryPoint
 from models.RiverSegment import RiverSegment
+
+
+ROUTABLE_RIVER_TYPES = {"Centerline (River)", "Connector (River)"}
 
 
 class bwca_graph:
@@ -14,10 +16,8 @@ class bwca_graph:
     def __init__(self):
 
         self.lakes = {}
-        self.lakes_by_name = {} # name -> Lake
         self.campsites = {}
         self.portages = {}
-        self.entry_points = {}
         self.rivers = {}
 
     @staticmethod
@@ -27,7 +27,6 @@ class bwca_graph:
 
         return str(name).strip().lower()
 
-    lakes = {}
     def load_lakes(self,filename):
         lake_df = gpd.read_parquet(filename)
 
@@ -43,11 +42,6 @@ class bwca_graph:
 
             lake.dowlknum = normalize_dow(row.get("dowlknum"))
             self.lakes[lake.unique_guid] = lake
-            normalized = self.normalize_name(lake.name)
-
-            if normalized is not None:
-                self.lakes_by_name[normalized] = lake
-                self.lakes_by_name[normalized + " lake"] = lake
 
     def load_campsites(self, filename):
         camp_df = gpd.read_parquet(filename)
@@ -96,30 +90,22 @@ class bwca_graph:
             # portage_num is the processed layer's unique per-feature key.
             self.portages[portage.portage_num] = portage
 
-    def load_entry_points(self, filename):
-        entry_points_df = gpd.read_parquet(filename)
-        for _, row in entry_points_df.iterrows():
-            entry = EntryPoint(
-                id = row["id"],
-                code=row["code"],
-                name = row["name"],
-                fw_id=row["fw_id"],
-                lat=row["latitude"],
-                lon=row["longitude"],
-                lake_unid=row["lake_unid"],
-                geometry=row.geometry
-            )
-            self.entry_points[entry.code] = entry
-
     def load_rivers(self, filename):
         river_df = gpd.read_parquet(filename)
 
         for _, row in river_df.iterrows():
+            name = row["name"] if isinstance(row["name"], str) else None
+            # Do not trust old processed snapshots that marked every stream as
+            # routable.  Only mapped river centerlines/connectors and the one
+            # manually reviewed Peter River exception are part of the route
+            # graph. Named exceptions belong in the processed source after
+            # field review rather than being silently enabled at load time.
+            routable = row["strm_type"] in ROUTABLE_RIVER_TYPES
             segment = RiverSegment(
                 river_id=row["river_id"],
-                name=row["name"],
+                name=name,
                 strm_type=row["strm_type"],
-                routable=row["routable"],
+                routable=routable,
                 node_a=row["node_a"],
                 node_b=row["node_b"],
                 length_m=row["length_m"],
@@ -159,17 +145,6 @@ class bwca_graph:
 
 
 
-    def connect_entry_points(self):
-
-        for entry in self.entry_points.values():
-
-            lake = self.lakes.get(entry.lake_unid)
-
-            if lake:
-                entry.lake = lake
-
-                lake.entry_points.append(entry)
-
     def connect_rivers(self):
         for segment in self.rivers.values():
             lake_a = self.lakes.get(segment.unid_a)
@@ -204,18 +179,8 @@ class bwca_graph:
 
         self.connect_campsites()
         self.connect_portages()
-        self.connect_entry_points()
         self.connect_rivers()  # new
         self.connect_river_adjacency()  # new
-
-
-
-
-    def find_lake_by_id(self, fw_id):
-        return self.lakes.get(fw_id)
-
-    def find_lake_by_name(self, name):
-        return self.lakes_by_name.get(self.normalize_name(name))
     def find_campsite(self, campsite_id):
         return self.campsites.get(campsite_id)
     def get_num_campsites(self, lake):

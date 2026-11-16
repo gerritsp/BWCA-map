@@ -3,4 +3,6 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+.idea/
+Thumbs.db
 maps/.bwca_graph_map_lakes.json.*

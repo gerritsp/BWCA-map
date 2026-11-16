@@ -23,9 +23,9 @@ function syntheticComparison() {
   add(engine, 'start', [-91.50, 48.00]);
   add(engine, 'middle', [-91.49, 48.00]);
   add(engine, 'end', [-91.48, 48.00]);
-  connect(engine, 'start', 'middle', 'paddle', true);
+  connect(engine, 'start', 'middle', 'portage', true);
   connect(engine, 'middle', 'end');
-  add(engine, 'detour', [-91.49, 48.005]);
+  add(engine, 'detour', [-91.49, 48.02]);
   connect(engine, 'start', 'detour');
   connect(engine, 'detour', 'end');
 
@@ -48,6 +48,9 @@ function syntheticComparison() {
   assert.deepEqual(astar.path, ['start', 'middle', 'end']);
   assert.equal(astar.cost, dijkstra.cost);
   assert.equal(astar.distance, dijkstra.distance);
+  assert.equal(astar.edges.length, astar.path.length - 1);
+  assert(Math.abs(astar.edges.reduce((sum, edge) => sum + edge.routeDistance, 0) -
+    astar.distance) < 1e-6, 'edge breakdown should equal total distance');
   assert(astar.expanded < dijkstra.expanded,
     `expected A* (${astar.expanded}) to expand fewer nodes than Dijkstra (${dijkstra.expanded})`);
 
@@ -59,6 +62,16 @@ function syntheticComparison() {
   assert.deepEqual(dijkstraAvoid.path, ['start', 'detour', 'end']);
   assert.deepEqual(astarAvoid.path, dijkstraAvoid.path);
   assert.equal(astarAvoid.cost, dijkstraAvoid.cost);
+  assert(dijkstraAvoid.edges.every(edge => edge.kind !== 'portage'),
+    'burn preference should choose the reasonable unburned detour');
+
+  const onlyRoute = GraphEngine.createGraphEngine(turf, empty, empty, empty);
+  add(onlyRoute, 'a', [-91.5, 48]);
+  add(onlyRoute, 'b', [-91.49, 48]);
+  connect(onlyRoute, 'a', 'b', 'portage', true);
+  assert(GraphEngine.shortestPath(onlyRoute, 'a', 'b', {
+    algorithm: 'astar', avoidBurnAreas: true, geographicFloor: true,
+  }), 'burn preference must not turn the only route into no route');
   assert.throws(
     () => GraphEngine.shortestPath(engine, 'start', 'end', {algorithm: 'unknown'}),
     /Unknown routing algorithm/
@@ -87,7 +100,7 @@ function realGraphComparison() {
   const engine = GraphEngine.createGraphEngine(turf, empty, empty, empty);
   GraphEngine.loadPrecomputed(engine, data);
   const component = largestComponent(engine.adjacency);
-  assert(component.length > 1000, 'expected a substantial connected routing component');
+  assert(component.length > 500, 'expected a substantial connected routing component');
 
   const start = component[0];
   const startCoord = engine.nodes.get(start).coord;

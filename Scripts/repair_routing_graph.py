@@ -28,16 +28,23 @@ from shapely.ops import nearest_points, substring, unary_union
 from shapely.strtree import STRtree
 from pyproj import Transformer
 
-from Scripts.river_topology import (
-    RIVER_JUNCTION_TOLERANCE_M,
-    find_river_junctions,
-)
+try:
+    from Scripts.river_topology import (
+        RIVER_JUNCTION_TOLERANCE_M,
+        find_river_junctions,
+    )
+except ModuleNotFoundError:  # direct `python Scripts/repair_routing_graph.py`
+    from river_topology import (  # type: ignore[no-redef]
+        RIVER_JUNCTION_TOLERANCE_M,
+        find_river_junctions,
+    )
 
 
 WGS84 = "EPSG:4326"
 SOURCE_CRS = "EPSG:26915"
 LAKE_TOLERANCE_M = 25.0
-NAV_SIMPLIFY_M = 5.0
+NAV_SIMPLIFY_M = 15.0
+REPAIR_VERSION = 2
 
 TO_UTM = Transformer.from_crs(WGS84, SOURCE_CRS, always_xy=True).transform
 TO_WGS84 = Transformer.from_crs(SOURCE_CRS, WGS84, always_xy=True).transform
@@ -198,6 +205,78 @@ def _smooth(coords, polygon):
     return result
 
 
+def _lake_paths(access_nodes, polygon):
+    """Return true in-water paths for every reachable pair in one lake part.
+
+    Straight, fully visible pairs avoid triangulation.  Pairs blocked by an
+    island or peninsula share one constrained 15 m navigation mesh, while the
+    final smoothed line is validated against the original full-resolution
+    polygon (not the simplified navigation copy).
+    """
+    if len(access_nodes) < 2:
+        return {}
+
+    full_safe = polygon.buffer(0.5)
+    landing_safe = polygon.buffer(LAKE_TOLERANCE_M + 0.5)
+    snapped = [
+        point if polygon.covers(point) else nearest_points(point, polygon)[1]
+        for _, point in access_nodes
+    ]
+    result = {}
+    blocked = []
+    for left in range(len(access_nodes)):
+        for right in range(left + 1, len(access_nodes)):
+            interior = _line([snapped[left].coords[0], snapped[right].coords[0]])
+            if full_safe.covers(interior):
+                route = _line([
+                    access_nodes[left][1].coords[0],
+                    snapped[left].coords[0],
+                    snapped[right].coords[0],
+                    access_nodes[right][1].coords[0],
+                ])
+                if landing_safe.covers(route):
+                    result[(left, right)] = route
+                    continue
+            blocked.append((left, right))
+
+    if not blocked:
+        return result
+
+    nav_polygon, triangles, centers, adjacency = _triangle_graph(polygon)
+    if not triangles:
+        return result
+    tree = STRtree(triangles)
+    located = [
+        _nearest_triangle(point, nav_polygon, triangles, centers, tree)
+        for point in snapped
+    ]
+    previous_by_source = {}
+    for left in sorted({left for left, _ in blocked}):
+        previous_by_source[left] = _shortest_paths(
+            adjacency, located[left][0]
+        )
+
+    for left, right in blocked:
+        distances, previous = previous_by_source[left]
+        left_triangle, left_snap = located[left]
+        right_triangle, right_snap = located[right]
+        if right_triangle not in distances:
+            continue
+        triangle_path = _path(previous, left_triangle, right_triangle)
+        inside_coords = [left_snap.coords[0]]
+        inside_coords.extend(centers[index].coords[0] for index in triangle_path)
+        inside_coords.append(right_snap.coords[0])
+        inside_coords = _smooth(inside_coords, polygon)
+        route = _line([
+            access_nodes[left][1].coords[0],
+            *inside_coords,
+            access_nodes[right][1].coords[0],
+        ])
+        if landing_safe.covers(route):
+            result[(left, right)] = route
+    return result
+
+
 def _burn_checker(fires):
     geometries = [
         _to_utm(shape(feature["geometry"]))
@@ -214,6 +293,10 @@ def repair_routing_graph(stem_path):
     stem = Path(stem_path)
     graph_path = stem.with_name(stem.name + "_paddle_edges.json")
     graph = _load(graph_path)
+    prior_repair = graph.get("topology_repair") or {}
+    if prior_repair.get("repair_version") == REPAIR_VERSION:
+        print(f"Routing graph already repaired: {graph_path}")
+        return prior_repair
     lakes = _load(stem.with_name(stem.name + "_lakes.json"))
     portages = _load(stem.with_name(stem.name + "_portages.json"))
     rivers = _load(stem.with_name(stem.name + "_rivers.json"))
@@ -221,17 +304,23 @@ def repair_routing_graph(stem_path):
 
     nodes = {node[0]: node for node in graph.get("nodes", [])}
     edges = graph.setdefault("edges", [])
-    prior_repair = graph.get("topology_repair") or {}
     edge_keys = {
         (tuple(sorted((edge[0], edge[1]))), edge[3])
         for edge in edges
         if len(edge) >= 4
     }
     union = UnionFind()
+    in_lake = UnionFind()
     for node_id in nodes:
         union.add(node_id)
+        in_lake.add(node_id)
     for edge in edges:
         union.union(edge[0], edge[1])
+        if len(edge) >= 4 and edge[3] == "paddle":
+            left_lake = nodes.get(edge[0], [None, None])[1]
+            right_lake = nodes.get(edge[1], [None, None])[1]
+            if left_lake and left_lake == right_lake:
+                in_lake.union(edge[0], edge[1])
 
     crosses_burn = _burn_checker(fires)
 
@@ -243,6 +332,7 @@ def repair_routing_graph(stem_path):
         graph["nodes"].append(node)
         nodes[node_id] = node
         union.add(node_id)
+        in_lake.add(node_id)
 
     def add_edge(left, right, geometry, kind):
         if left not in nodes or right not in nodes:
@@ -252,16 +342,23 @@ def repair_routing_graph(stem_path):
             union.union(left, right)
             return False
         geometry = _line(geometry.coords)
+        serialized_geometry = (
+            None
+            if kind == "paddle" and len(geometry.coords) == 2
+            else mapping(_to_wgs84(geometry))
+        )
         edges.append([
             left,
             right,
             float(geometry.length),
             kind,
-            mapping(_to_wgs84(geometry)),
-            crosses_burn(geometry),
+            serialized_geometry,
+            crosses_burn(geometry) if kind in {"portage", "approach"} else False,
         ])
         edge_keys.add(key)
         union.union(left, right)
+        if kind == "paddle" and nodes[left][1] and nodes[left][1] == nodes[right][1]:
+            in_lake.union(left, right)
         return True
 
     river_by_id = {
@@ -376,79 +473,55 @@ def repair_routing_graph(stem_path):
         if distances[part_index] <= LAKE_TOLERANCE_M + 0.01:
             groups[(lake_id, part_index)].append((node_id, point))
 
+    # Add one exact water route for every pair of graph access nodes on a lake
+    # part.  A minimum spanning tree alone is connected but can send a 2 km
+    # crossing through dozens of other lakes.  We still record the size of the
+    # minimum connecting subset as a topology metric.
+    lake_pair_edges = 0
     lake_bridges = 0
     repaired_parts = 0
     for (lake_id, part_index), access_nodes in groups.items():
-        component_nodes = {}
-        for node_id, point in access_nodes:
-            component_nodes.setdefault(union.find(node_id), (node_id, point))
-        representatives = list(component_nodes.values())
-        if len(representatives) <= 1:
+        if len(access_nodes) < 2:
             continue
-
         lake = lake_geometries[lake_id]
         part = list(lake.geoms)[part_index] if lake.geom_type == "MultiPolygon" else lake
-        nav_polygon, triangles, centers, adjacency = _triangle_graph(part)
-        if not triangles:
-            continue
-        tree = STRtree(triangles)
-        located = []
-        for node_id, point in representatives:
-            triangle, snapped = _nearest_triangle(
-                point, nav_polygon, triangles, centers, tree
-            )
-            located.append((node_id, point, triangle, snapped))
-
-        candidate_edges = []
-        previous_by_source = {}
-        for left, (_, _, source_triangle, _) in enumerate(located):
-            distances, previous = _shortest_paths(adjacency, source_triangle)
-            previous_by_source[left] = previous
-            for right in range(left + 1, len(located)):
-                target_triangle = located[right][2]
-                if target_triangle in distances:
-                    candidate_edges.append((distances[target_triangle], left, right))
+        paths = _lake_paths(access_nodes, part)
+        lake_pair_edges += len(paths)
+        candidate_edges = [
+            (route.length, left, right, route)
+            for (left, right), route in paths.items()
+        ]
 
         component_union = UnionFind()
-        for index in range(len(located)):
+        for index in range(len(access_nodes)):
             component_union.add(index)
-        selected = []
-        for _, left, right in sorted(candidate_edges):
+        selected = 0
+        for _, left, right, route in sorted(candidate_edges):
             if component_union.union(left, right):
-                selected.append((left, right))
-        if len(selected) != len(located) - 1:
+                selected += 1
+        if selected != len(access_nodes) - 1:
             continue
-
-        for left, right in selected:
-            left_node, left_point, left_triangle, left_snap = located[left]
-            right_node, right_point, right_triangle, right_snap = located[right]
-            triangle_path = _path(
-                previous_by_source[left], left_triangle, right_triangle
-            )
-            inside_coords = [left_snap.coords[0]]
-            inside_coords.extend(centers[index].coords[0] for index in triangle_path)
-            inside_coords.append(right_snap.coords[0])
-            inside_coords = _smooth(inside_coords, nav_polygon)
-            coords = [left_point.coords[0], *inside_coords, right_point.coords[0]]
-            bridge = _line(coords)
-            if not part.buffer(LAKE_TOLERANCE_M + 0.5).covers(bridge):
-                continue
-            if add_edge(left_node, right_node, bridge, "paddle"):
-                lake_bridges += 1
+        lake_bridges += selected
         repaired_parts += 1
 
+        for (left, right), route in paths.items():
+            add_edge(access_nodes[left][0], access_nodes[right][0], route, "paddle")
+
     graph["topology_repair"] = {
-        "lake_bridge_edges": int(prior_repair.get("lake_bridge_edges", 0)) + lake_bridges,
-        "repaired_lake_parts": int(prior_repair.get("repaired_lake_parts", 0)) + repaired_parts,
+        "lake_pair_edges": lake_pair_edges,
+        "lake_bridge_edges": lake_bridges,
+        "repaired_lake_parts": repaired_parts,
         "river_portage_attachments": river_attachments,
         "river_junction_attachments": river_junctions,
         "river_junction_tolerance_m": RIVER_JUNCTION_TOLERANCE_M,
         "lake_tolerance_m": LAKE_TOLERANCE_M,
+        "repair_version": REPAIR_VERSION,
     }
     _write_atomic(graph_path, graph)
     print(
         f"Repaired {graph_path}: {river_attachments} portage/river attachments, "
-        f"{river_junctions} river junctions, {lake_bridges} lake bridge edges "
+        f"{river_junctions} river junctions, {lake_pair_edges} lake pair routes, "
+        f"{lake_bridges} lake bridge edges "
         f"across {repaired_parts} polygon parts"
     )
     return graph["topology_repair"]

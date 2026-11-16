@@ -83,6 +83,17 @@ Serve `maps/` over HTTP; search links use encoded polygon GUIDs in the map hash.
 The search index refreshes campsite counts from the same processed campsite file
 on every application build.
 
+### Whole-feature water geometry
+
+The checked-in `Data/processed/bwca_lakes.parquet` came from
+`Data/Lakes/test.gpkg`, which is not tracked and was already cut at the BWCA
+boundary. That missing source means the 26 currently disconnected entry
+geometries cannot be reconstructed from this repository alone. Future refreshes
+must select complete lake, river and portage features that intersect a 2 km
+buffer around the wilderness; they must not clip geometry at the legal line.
+The preparation scripts resolve paths from the repository root and retain an
+`in_wilderness` display flag for whole lake polygons.
+
 `bwca_graph_map_entry_points.json` deliberately preserves the Forest Service
 point separately from its inferred routing attachment. A marker is never moved
 to the wilderness boundary merely to make it routable. Attachments use a nearby
@@ -110,9 +121,12 @@ precomputed paddle dump; this is a no-op after a normal `APP.py` rebuild.
 Routing attachments are geometry-checked rather than trusting the processed
 nearest-lake columns. A portage landing is assigned to its recorded lake only
 when it is within 25 m of that polygon; otherwise it may attach to a mapped
-routable river within 25 m, or it remains review-only. The static graph adds
-only the minimum water-contained bridge edges needed to connect access points
-on the same actual lake polygon part. It does not bridge separate islands or
+routable river within 25 m, or it remains review-only. The static graph creates
+a true in-water route for every pair of portage landings on the same actual
+lake polygon part, plus the minimum additional water-contained bridges needed
+to attach river nodes and other access points. A 15 m simplified polygon is
+used only for internal constrained triangulation; every final path is validated
+against the full lake polygon. It does not bridge separate polygon parts or
 invent a connection across land. The repair is idempotent and every generated
 edge is checked for valid node references.
 
@@ -121,17 +135,17 @@ routable river segment's interior. This resolves exact mapped confluences that
 were visually continuous but had different endpoint node IDs; it does not join
 merely nearby waterways. The current snapshot contains 1,013 such junctions.
 
-The project intentionally made DNR `Stream (Perennial)` segments routable in
-commit `73b7bfd` to connect recorded portages. That is a project routing policy,
-not proof that every mapped stream is canoeable in current field conditions.
-Users still need current maps, water levels and local guidance.
+Only DNR `Centerline (River)` and `Connector (River)` segments are routable.
+Perennial streams and artificial lake connector lines remain visible but are
+not treated as canoe routes. Users still need current maps, water levels and
+local guidance.
 
 Entry points 75 (Little Isabella River) and 84 (Snake River) retain their
 official markers. Exact confluence repair connects both rivers to the Isabella
 River network; their initial access distances include the visible approach to
 the recorded portage. Entry 84 also uses the corrected official trail 5190.
 
-## Verified snapshot (2026-10-28)
+## Verified snapshot (2026-11-15)
 
 | Measure | Count |
 | --- | ---: |
@@ -144,16 +158,16 @@ the recorded portage. Entry 84 also uses the corrected official trail 5190.
 | Inventory records | 1,807 |
 | Official entry source features | 87 |
 | Published water-entry locations / permit codes | 71 / 69 |
-| Searchable entry permit codes | 69 |
+| Searchable entry permit codes | 11 |
 | Preserved portage segments | 905 |
-| Connected / review-only portages | 724 / 181 |
-| Lake / river / unresolved portage endpoints | 1,338 / 210 / 262 |
-| Exact river endpoint/interior junctions | 1,013 |
-| Lake bridge edges / repaired polygon parts | 33 / 25 |
+| Connected / review-only portages | 661 / 244 |
+| Lake / river / unresolved portage endpoints | 1,338 / 151 / 321 |
+| Routable river segments | 437 |
+| Exact river endpoint/interior junctions | 54 |
+| In-lake pair routes / minimum connecting subset | 4,772 / 1,303 |
 
 All expected snapshot counts matched. Source collection completed without failures.
-A second build from the response cache produced byte-identical bundles and indexes.
-The test suite includes every encoded bundle URL and all 15 application assets,
+The test suite includes every encoded bundle URL and all public application assets,
 identifier cleaning, observation deduplication, source-cache refresh, exact search
 correspondence, campsite counts, official entry coordinates and routing
 attachments, entry-point access states, portage endpoint tolerances, lake-part

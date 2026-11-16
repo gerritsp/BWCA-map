@@ -1,5 +1,6 @@
 import json
 from collections import defaultdict
+from itertools import combinations
 from pathlib import Path
 import shutil
 import tempfile
@@ -18,8 +19,17 @@ TO_UTM = Transformer.from_crs(4326, 26915, always_xy=True).transform
 
 
 def load(suffix):
-    return json.loads((MAPS / f"bwca_graph_map_{suffix}.json").read_text(
+    data = json.loads((MAPS / f"bwca_graph_map_{suffix}.json").read_text(
         encoding="utf-8"))
+    if suffix == "lakes" and data.get("shards"):
+        features = []
+        for shard in data["shards"]:
+            features.extend(json.loads((MAPS / shard).read_text(
+                encoding="utf-8"))["features"])
+        if len(features) != data["feature_count"]:
+            raise AssertionError("lake layer shard count does not match its manifest")
+        data = {"type": data["type"], "features": features}
+    return data
 
 
 class Components:
@@ -29,6 +39,7 @@ class Components:
             adjacency[edge[0]].append(edge[1])
             adjacency[edge[1]].append(edge[0])
         self.component = {}
+        self.sizes = {}
         for node in nodes:
             if node in self.component:
                 continue
@@ -39,6 +50,8 @@ class Components:
                     if neighbor not in self.component:
                         self.component[neighbor] = node
                         queue.append(neighbor)
+            self.sizes[node] = len(queue)
+        self.largest = max(self.sizes, key=self.sizes.get) if self.sizes else None
 
 
 class RoutingConnectivityTests(unittest.TestCase):
@@ -47,6 +60,7 @@ class RoutingConnectivityTests(unittest.TestCase):
         cls.lakes = load("lakes")
         cls.portages = load("portages")
         cls.rivers = load("rivers")
+        cls.entries = load("entry_points")
         cls.graph = load("paddle_edges")
         cls.nodes = {node[0]: node for node in cls.graph["nodes"]}
         cls.components = Components(cls.nodes, cls.graph["edges"])
@@ -60,6 +74,87 @@ class RoutingConnectivityTests(unittest.TestCase):
             str(int(feature["properties"]["river_id"])): feature
             for feature in cls.rivers["features"]
         }
+
+    def test_review_portage_lengths_use_conservative_routing_distance(self):
+        mismatches = []
+        for feature in self.portages["features"]:
+            properties = feature["properties"]
+            recorded = float(properties["length_rods"]) * 5.0292
+            drawn = float(properties["drawn_length_m"])
+            routing = float(properties["routing_length_m"])
+            if properties["routing_length_ok"]:
+                self.assertAlmostEqual(routing, recorded, delta=0.11)
+            else:
+                mismatches.append(properties["portage_number"])
+                self.assertEqual(properties["routing_status"], "review")
+                self.assertAlmostEqual(routing, max(recorded, drawn), delta=0.11)
+        self.assertEqual(len(mismatches), 24)
+
+    def test_every_same_lake_portage_pair_has_direct_water_route(self):
+        groups = defaultdict(list)
+        for node_id, lake_id, coordinates in self.graph["nodes"]:
+            if not node_id.startswith("portage:") or not lake_id:
+                continue
+            geometry = self.lake_geometry.get(lake_id)
+            if geometry is None:
+                continue
+            point = shapely.transform(Point(coordinates), TO_UTM, interleaved=False)
+            parts = list(geometry.geoms) if geometry.geom_type == "MultiPolygon" else [geometry]
+            distances = [point.distance(part) for part in parts]
+            part_index = min(range(len(parts)), key=distances.__getitem__)
+            if distances[part_index] <= 25.01:
+                groups[(lake_id, part_index)].append((node_id, point))
+
+        paddle = {}
+        for edge in self.graph["edges"]:
+            if edge[3] != "paddle":
+                continue
+            key = tuple(sorted((edge[0], edge[1])))
+            paddle[key] = min(float(edge[2]), paddle.get(key, float("inf")))
+
+        checked = 0
+        for key, landings in groups.items():
+            for left, right in combinations(landings, 2):
+                pair = tuple(sorted((left[0], right[0])))
+                with self.subTest(lake_part=key, pair=pair):
+                    self.assertIn(pair, paddle)
+                checked += 1
+        self.assertEqual(checked, 1403)
+
+        # The audited Insula pair used to detour 74.5 km through 39 lakes.
+        # Its direct, water-contained edge is now about 3.1 km for a 2.1 km
+        # chord, so the route cannot leave the lake to reach the other landing.
+        insula_pair = tuple(sorted(("portage:570:b", "portage:757:b")))
+        insula_direct = self.nodes[insula_pair[0]][2], self.nodes[insula_pair[1]][2]
+        left = shapely.transform(Point(insula_direct[0]), TO_UTM, interleaved=False)
+        right = shapely.transform(Point(insula_direct[1]), TO_UTM, interleaved=False)
+        self.assertLessEqual(paddle[insula_pair] / left.distance(right), 3.0)
+
+    def test_connected_entries_reach_the_main_component(self):
+        lake_components = defaultdict(set)
+        for node_id, lake_id, _ in self.graph["nodes"]:
+            if lake_id:
+                lake_components[lake_id].add(self.components.component[node_id])
+
+        connected = 0
+        for feature in self.entries["features"]:
+            properties = feature["properties"]
+            if properties["routing_status"] != "connected":
+                continue
+            connected += 1
+            reachable = False
+            for attachment in properties.get("attachments", []):
+                if attachment.get("confidence") == "review":
+                    continue
+                node_id = attachment.get("node_id")
+                if (node_id in self.components.component and
+                        self.components.component[node_id] == self.components.largest):
+                    reachable = True
+                if self.components.largest in lake_components.get(
+                        attachment.get("lake_guid"), set()):
+                    reachable = True
+            self.assertTrue(reachable, properties.get("code"))
+        self.assertGreater(connected, 0)
 
     def test_portage_endpoints_use_only_geometry_supported_anchors(self):
         self.assertEqual(len(self.portages["features"]), 905)

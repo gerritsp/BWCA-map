@@ -1,8 +1,7 @@
-// Precomputes the routing graph's fixed paddle-edge mesh, including burn-area
-// intersection flags, at build time - see docs/graph_map_design.md and the
-// "Burn-area awareness" note in templates/graph_engine.js.
+// Precomputes the fixed portage/river base graph and land-edge burn flags.
+// Python adds exact in-lake paths afterward; see docs/graph_map_design.md.
 //
-// Usage: node scripts/build_paddle_edges.js <stem>
+// Usage: node Scripts/build_paddle_edges.js <stem>
 // Reads   <stem>_lakes.json, <stem>_portages.json, <stem>_rivers.json,
 //         <stem>_fires.json
 // Writes  <stem>_paddle_edges.json
@@ -22,7 +21,7 @@ function readJSONIfExists(path) {
 function main() {
     const stem = process.argv[2];
     if (!stem) {
-        console.error("usage: node scripts/build_paddle_edges.js <stem>");
+        console.error("usage: node Scripts/build_paddle_edges.js <stem>");
         process.exit(1);
     }
     const lakes = readJSON(`${stem}_lakes.json`);
@@ -37,7 +36,13 @@ function main() {
     // polygons anyway.
     const fires = readJSONIfExists(`${stem}_fires.json`);
 
-    const engine = GraphEngine.createGraphEngine(turf, lakes, rivers, fires);
+    // Fixed builds contain only official portage/river nodes and edges here.
+    // repair_routing_graph.py adds exact in-water landing paths afterward;
+    // the small shoreline mesh is reserved for an otherwise-isolated live
+    // click in the browser.
+    const engine = GraphEngine.createGraphEngine(
+        turf, lakes, rivers, fires, {buildMode: true}
+    );
     const { addNode, addEdge } = engine;
     const ROD_TO_METERS = GraphEngine.ROD_TO_METERS;
 
@@ -52,7 +57,9 @@ function main() {
             ? p.routing_lake_guid_b : p.unique_guid_b;
         addNode(nodeA, lakeA, coords[0]);
         addNode(nodeB, lakeB, coords[coords.length - 1]);
-        addEdge(nodeA, nodeB, p.length_rods * ROD_TO_METERS, "portage", feature.geometry);
+        const routeLength = Number.isFinite(p.routing_length_m)
+            ? p.routing_length_m : p.length_rods * ROD_TO_METERS;
+        addEdge(nodeA, nodeB, routeLength, "portage", feature.geometry);
     }
 
     for (const feature of rivers.features) {

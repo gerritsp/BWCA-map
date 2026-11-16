@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import geopandas as gpd
+import shapely
 from shapely.geometry import Point
 
 from models.bwca_graph import bwca_graph
@@ -12,10 +13,9 @@ from Scripts.build_lake_access_index import build_access_index, write_access_ind
 from Scripts.repair_routing_graph import repair_routing_graph
 from Scripts.river_topology import river_component_labels
 
-# Data/processed/*.parquet is written in NAD83 / UTM zone 15N (see CLAUDE.md's
-# CRS gotcha) - the graph's Lake/Campsite objects carry that geometry as-is,
-# with no CRS attached to the dataclass itself, so this has to match whatever
-# fileCreator.py/portageCreator.py actually wrote.
+# Data/processed/*.parquet is written in NAD83 / UTM zone 15N. The graph's
+# Lake/Campsite objects carry that geometry as-is, with no CRS attached to the
+# dataclass itself, so all browser serialization starts from this CRS.
 SOURCE_CRS = "EPSG:26915"
 PORTAGE_LAKE_TOLERANCE_M = 25.0
 MIN_PORTAGE_GEOMETRY_M = 0.5
@@ -25,12 +25,22 @@ BOUNDARY_PATH = (
 )
 BOUNDARY_LAYER = "boundary_waters_canoe_area_wilderness"
 PORTAGE_CORRECTIONS_PATH = "Data/portage_geometry_corrections.geojson"
+OUTPUT_PRECISION_DEGREES = 0.000001
 
 REPO_ROOT = Path(__file__).resolve().parent
 TEMPLATES_DIR = REPO_ROOT / "Templates"
 HTML_TEMPLATE = (TEMPLATES_DIR / "html_template.html").read_text(encoding="utf-8")
 JS_TEMPLATE = (TEMPLATES_DIR / "js_template.js").read_text(encoding="utf-8")
 ENGINE_TEMPLATE = (TEMPLATES_DIR / "graph_engine.js").read_text(encoding="utf-8")
+
+
+def _to_geojson(gdf):
+    """Serialize stable six-decimal WGS84 geometry for browser layers."""
+    result = gdf.to_crs(4326).copy()
+    result.geometry = shapely.set_precision(
+        result.geometry.array, OUTPUT_PRECISION_DEGREES
+    )
+    return json.loads(result.to_json())
 
 
 def build_graph():
@@ -110,7 +120,7 @@ def lakes_geojson(graph):
         geometry=[lake.geometry for lake in lakes],
         crs=SOURCE_CRS,
     )
-    return json.loads(gdf.to_crs(4326).to_json())
+    return _to_geojson(gdf)
 
 
 def campsites_geojson(graph):
@@ -126,7 +136,7 @@ def campsites_geojson(graph):
         geometry=[c.geometry for c in campsites],
         crs=SOURCE_CRS,
     )
-    return json.loads(gdf.to_crs(4326).to_json())
+    return _to_geojson(gdf)
 
 
 def _portage_endpoint_routes(graph, portages):
@@ -208,6 +218,16 @@ def _portage_endpoint_routes(graph, portages):
 def portages_geojson(graph):
     portages = list(graph.portages.values())
     endpoint_routes = _portage_endpoint_routes(graph, portages)
+    recorded_lengths = [float(p.length_rods) * 5.0292 for p in portages]
+    drawn_lengths = [float(p.geometry.length) for p in portages]
+    length_ok = [
+        drawn > 0 and 0.5 <= recorded / drawn <= 2.0
+        for recorded, drawn in zip(recorded_lengths, drawn_lengths)
+    ]
+    routing_lengths = [
+        recorded if ok else max(recorded, drawn)
+        for recorded, drawn, ok in zip(recorded_lengths, drawn_lengths, length_ok)
+    ]
     gdf = gpd.GeoDataFrame(
         {
             "portage_number": [p.portage_num for p in portages],
@@ -220,6 +240,9 @@ def portages_geojson(graph):
             "fw_id_a": [p.lake_a.fw_id if p.lake_a else None for p in portages],
             "fw_id_b": [p.lake_b.fw_id if p.lake_b else None for p in portages],
             "length_rods": [p.length_rods for p in portages],
+            "drawn_length_m": [round(value, 1) for value in drawn_lengths],
+            "routing_length_m": [round(value, 1) for value in routing_lengths],
+            "routing_length_ok": length_ok,
             "start_snapped": [bool(p.start_snapped) for p in portages],
             "end_snapped": [bool(p.end_snapped) for p in portages],
             "geometry_source": [p.geometry_source for p in portages],
@@ -238,15 +261,18 @@ def portages_geojson(graph):
                 for route in endpoint_routes
             ],
             "routing_status": [
-                "connected" if all(side["type"] != "unresolved" for side in route)
+                "connected" if (
+                    all(side["type"] != "unresolved" for side in route)
+                    and length_is_ok
+                )
                 else "review"
-                for route in endpoint_routes
+                for route, length_is_ok in zip(endpoint_routes, length_ok)
             ],
         },
         geometry=[p.geometry for p in portages],
         crs=SOURCE_CRS,
     )
-    return json.loads(gdf.to_crs(4326).to_json())
+    return _to_geojson(gdf)
 
 
 def rivers_geojson(graph):
@@ -279,7 +305,7 @@ def rivers_geojson(graph):
         geometry=[r.geometry for r in rivers],
         crs=SOURCE_CRS,
     )
-    return json.loads(gdf.to_crs(4326).to_json())
+    return _to_geojson(gdf)
 
 
 def fires_geojson(path="Data/processed/fires2026.parquet", simplify_tolerance=0.0003):
@@ -297,6 +323,9 @@ def fires_geojson(path="Data/processed/fires2026.parquet", simplify_tolerance=0.
     fires = fires.to_crs(4326)
     if simplify_tolerance:
         fires["geometry"] = fires.geometry.simplify(simplify_tolerance, preserve_topology=True)
+    fires.geometry = shapely.set_precision(
+        fires.geometry.array, OUTPUT_PRECISION_DEGREES
+    )
     return json.loads(fires.to_json())
 
 
@@ -313,19 +342,76 @@ def boundary_geojson(path=BOUNDARY_PATH, simplify_tolerance=0.0001):
         boundary["geometry"] = boundary.geometry.simplify(
             simplify_tolerance, preserve_topology=True
         )
+    boundary.geometry = shapely.set_precision(
+        boundary.geometry.array, OUTPUT_PRECISION_DEGREES
+    )
     return json.loads(boundary.to_json())
+
+
+def _mark_entry_reachability(entry_points, graph):
+    """Mark entries review-only unless a verified attachment reaches main."""
+    nodes = {node[0]: node for node in graph.get("nodes", [])}
+    adjacency = {node_id: [] for node_id in nodes}
+    for edge in graph.get("edges", []):
+        if edge[0] in adjacency and edge[1] in adjacency:
+            adjacency[edge[0]].append(edge[1])
+            adjacency[edge[1]].append(edge[0])
+
+    component = {}
+    sizes = {}
+    for node_id in nodes:
+        if node_id in component:
+            continue
+        queue = [node_id]
+        component[node_id] = node_id
+        for current in queue:
+            for neighbor in adjacency[current]:
+                if neighbor not in component:
+                    component[neighbor] = node_id
+                    queue.append(neighbor)
+        sizes[node_id] = len(queue)
+    main_component = max(sizes, key=sizes.get) if sizes else None
+    lake_components = {}
+    for node_id, lake_id, _ in nodes.values():
+        if lake_id:
+            lake_components.setdefault(lake_id, set()).add(component[node_id])
+
+    for feature in entry_points.get("features", []):
+        properties = feature.get("properties") or {}
+        attachments = properties.get("attachments") or []
+        verified = [
+            attachment for attachment in attachments
+            if attachment.get("confidence") != "review"
+        ]
+        reachable = False
+        for attachment in verified:
+            node_id = attachment.get("node_id")
+            if node_id in component and component[node_id] == main_component:
+                reachable = True
+                break
+            lake_id = attachment.get("lake_guid")
+            if main_component in lake_components.get(lake_id, set()):
+                reachable = True
+                break
+        if reachable:
+            properties["routing_status"] = "connected"
+            properties.pop("routing_issue", None)
+        else:
+            properties["routing_status"] = "review"
+            properties["routing_issue"] = (
+                "review_grade_attachment" if attachments and not verified
+                else "not_in_main_network"
+            )
+    return entry_points
 
 
 def build_paddle_edges(stem_path):
     """Runs scripts/build_paddle_edges.js to precompute the fixed portage/
-    river/lake-vertex paddle-edge mesh, replaying graph_engine.js's exact
-    client-side wiring logic once at build time instead of once per page
-    load - see docs/graph_map_design.md's "Paddle-edge precomputation"
-    section. Requires `npm install` to have been run (package.json pins
-    @turf/turf to the same major version the browser loads from CDN).
+    river base graph. repair_routing_graph.py adds exact lake paths afterward;
+    the browser's small vertex mesh is only a fallback for an isolated click.
+    See docs/graph_map_design.md. Requires `npm install` to have been run.
     Also reads <stem>_fires.json (written by render_map() before this is
-    called) so every precomputed edge gets a crossesBurn flag - see
-    graph_engine.js's burn-area awareness note."""
+    called) so land edges receive their build-time burn flag."""
     result = subprocess.run(
         ["node", "Scripts/build_paddle_edges.js", str(stem_path)],
         cwd=REPO_ROOT,
@@ -335,10 +421,61 @@ def build_paddle_edges(stem_path):
     if result.returncode != 0:
         sys.stderr.write(result.stderr)
         raise RuntimeError(
-            "scripts/build_paddle_edges.js failed - run `npm install` from the "
+            "Scripts/build_paddle_edges.js failed - run `npm install` from the "
             "repo root if @turf/turf isn't installed yet."
         )
     print(result.stdout.strip())
+
+
+LAKE_LAYER_SHARD_TARGET_BYTES = 7_500_000
+
+
+def write_sharded_geojson(data, manifest_path, target_bytes=LAKE_LAYER_SHARD_TARGET_BYTES):
+    """Write a GeoJSON manifest plus bounded feature shards.
+
+    Lake polygons are the only browser layer large enough to exceed common
+    repository/API upload limits.  Keeping each shard comfortably below those
+    limits also lets browsers download the layer with parallel requests.
+    """
+    prefix = '{"type":"FeatureCollection","features":['
+    suffix = "]}"
+    groups = []
+    current = []
+    current_bytes = len(prefix) + len(suffix)
+    for feature in data["features"]:
+        encoded = json.dumps(feature, separators=(",", ":"))
+        added_bytes = len(encoded.encode("utf-8")) + (1 if current else 0)
+        if current and current_bytes + added_bytes > target_bytes:
+            groups.append(current)
+            current = []
+            current_bytes = len(prefix) + len(suffix)
+            added_bytes = len(encoded.encode("utf-8"))
+        current.append(encoded)
+        current_bytes += added_bytes
+    if current:
+        groups.append(current)
+
+    shard_paths = [
+        manifest_path.with_name(f"{manifest_path.stem}_{index}{manifest_path.suffix}")
+        for index in range(1, len(groups) + 1)
+    ]
+    expected = set(shard_paths)
+    for stale_path in manifest_path.parent.glob(
+            f"{manifest_path.stem}_[0-9]*{manifest_path.suffix}"):
+        if stale_path not in expected:
+            stale_path.unlink()
+    for path, features in zip(shard_paths, groups):
+        path.write_text(prefix + ",".join(features) + suffix, encoding="utf-8")
+
+    manifest = {
+        "type": "FeatureCollection",
+        "features": [],
+        "feature_count": len(data["features"]),
+        "shards": [path.name for path in shard_paths],
+    }
+    manifest_path.write_text(
+        json.dumps(manifest, separators=(",", ":")), encoding="utf-8")
+    return [manifest_path, *shard_paths]
 
 
 def render_map(graph, out_path="maps/bwca_graph_map.html"):
@@ -380,9 +517,10 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
     written[1].write_text(js, encoding="utf-8")
     written[2].write_text(ENGINE_TEMPLATE, encoding="utf-8")
 
-    rendered_layers = {}
+    rendered_layers = {"lakes": lakes_geojson(graph)}
+    written.extend(write_sharded_geojson(
+        rendered_layers["lakes"], out_path.parent / lakes_filename))
     for layer_name, filename, data in (
-        ("lakes", lakes_filename, lakes_geojson(graph)),
         ("campsites", campsites_filename, campsites_geojson(graph)),
         ("portages", portages_filename, portages_geojson(graph)),
         ("rivers", rivers_filename, rivers_geojson(graph)),
@@ -405,6 +543,20 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
     written.append(entry_points_path)
     rendered_layers["entry_points"] = entry_points
 
+    # build_paddle_edges.js reads <stem>_fires.json too now - it must exist
+    # by this point, which it does since the loop above already wrote it.
+    build_paddle_edges(out_path.parent / out_path.stem)
+    repair_routing_graph(out_path.parent / out_path.stem)
+    graph_path = out_path.parent / paddle_edges_filename
+    written.append(graph_path)
+
+    # Entry status depends on the completed graph, not merely on whether the
+    # source attachment was emitted.
+    routing_graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    entry_points = _mark_entry_reachability(entry_points, routing_graph)
+    entry_points_path.write_text(json.dumps(entry_points), encoding="utf-8")
+    rendered_layers["entry_points"] = entry_points
+
     access_index = build_access_index(
         rendered_layers["portages"],
         rendered_layers["rivers"],
@@ -419,12 +571,6 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
     entry_points_path.write_text(json.dumps(entry_points), encoding="utf-8")
     access_index_path = out_path.parent / access_index_filename
     written.extend(write_access_index(access_index, access_index_path))
-
-    # build_paddle_edges.js reads <stem>_fires.json too now - it must exist
-    # by this point, which it does since the loop above already wrote it.
-    build_paddle_edges(out_path.parent / out_path.stem)
-    repair_routing_graph(out_path.parent / out_path.stem)
-    written.append(out_path.parent / paddle_edges_filename)
 
     print("Wrote " + ", ".join(str(p) for p in written))
 

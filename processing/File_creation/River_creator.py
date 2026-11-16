@@ -1,31 +1,37 @@
 import geopandas as gpd
 from shapely.geometry import Point
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
 
 MAX_MATCH_DISTANCE_M = 25
 
-ROUTABLE_TYPES = {"Centerline (River)", "Connector (River)", "Connector (Lake)"}
-KEEP_TYPES = ROUTABLE_TYPES | {"Stream (Perennial)"}
+ROUTABLE_TYPES = {"Centerline (River)", "Connector (River)"}
+KEEP_TYPES = ROUTABLE_TYPES | {"Connector (Lake)", "Stream (Perennial)"}
 
 rivers = gpd.read_file(
-    "../../Data/Lakes/water_dnr_hydrography_uncompressed.gdb",
+    ROOT / "Data/Lakes/water_dnr_hydrography_uncompressed.gdb",
     layer="dnr_rivers_and_streams"
 )
 boundary = gpd.read_file(
-    "../../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
+    ROOT / "Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
     layer="boundary_waters_canoe_area_wilderness"
 )
 boundary = boundary.to_crs(rivers.crs)
 
 rivers = rivers[rivers["Strm_type_desc"].isin(KEEP_TYPES)].copy()
 
-rivers = gpd.clip(rivers, boundary)
+# Preserve complete water features that touch the wilderness instead of
+# cutting them at the legal boundary.  The buffer includes access water just
+# outside an entry point; it can be tuned only after the source is refreshed.
+wild = boundary.geometry.union_all()
+rivers = rivers[rivers.intersects(wild.buffer(2000))].copy()
 rivers = rivers.explode(index_parts=False).reset_index(drop=True)
 rivers["river_id"] = rivers.index
 
 rivers["name"] = rivers["KITTLE_NAME"].str.strip().replace("", None)
 rivers["strm_type"] = rivers["Strm_type_desc"]
-# rivers["routable"] = rivers["strm_type"].isin(ROUTABLE_TYPES)
-rivers["routable"] = True
+rivers["routable"] = rivers["strm_type"].isin(ROUTABLE_TYPES)
 
 # Snap endpoints to a shared node key so segments meeting at a junction
 # (confluence, or a lake connector meeting a stream) resolve to the same
@@ -39,7 +45,7 @@ rivers["node_a"] = rivers.geometry.apply(lambda g: node_key(g.coords[0]))
 rivers["node_b"] = rivers.geometry.apply(lambda g: node_key(g.coords[-1]))
 rivers["length_m"] = rivers.geometry.length
 
-lakes = gpd.read_parquet("../../Data/Processed/bwca_lakes.parquet")
+lakes = gpd.read_parquet(ROOT / "Data/processed/bwca_lakes.parquet")
 lakes = lakes.to_crs(rivers.crs)
 lake_candidates = lakes[["fw_id","unique_guid", "geometry"]]
 
@@ -107,4 +113,4 @@ rivers = rivers[[
 # quirk - force a clean EPSG tag before writing.
 rivers = rivers.to_crs("EPSG:26915")  # NAD83 / UTM zone 15N
 
-rivers.to_parquet("../../Data/Processed/bwca_rivers_lines.parquet")
+rivers.to_parquet(ROOT / "Data/processed/bwca_rivers_lines.parquet")

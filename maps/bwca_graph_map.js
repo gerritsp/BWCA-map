@@ -56,7 +56,26 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     const FIRES_URL = "bwca_graph_map_fires.json";
     const PADDLE_EDGES_URL = "bwca_graph_map_paddle_edges.json";
 
-    function init(lakes, campsites, portages, rivers, entryPoints, boundary, fires, paddleEdges) {
+    async function fetchGeoJSON(url) {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
+        const manifest = await response.json();
+        if (!Array.isArray(manifest.shards) || !manifest.shards.length) return manifest;
+        const slash = url.lastIndexOf("/");
+        const base = slash >= 0 ? url.slice(0, slash + 1) : "";
+        const parts = await Promise.all(manifest.shards.map(async (shard) => {
+            const shardResponse = await fetch(base + shard);
+            if (!shardResponse.ok) throw new Error(`HTTP ${shardResponse.status} for ${shard}`);
+            return shardResponse.json();
+        }));
+        const features = parts.flatMap((part) => part.features || []);
+        if (manifest.feature_count !== undefined && features.length !== manifest.feature_count) {
+            throw new Error(`Expected ${manifest.feature_count} lake features, loaded ${features.length}`);
+        }
+        return {type: manifest.type || "FeatureCollection", features};
+    }
+
+    function init(lakes, campsites, portages, rivers, entryPoints, boundary, fires) {
     const map = L.map("map", { maxBoundsViscosity: 1.0 });
     const streetMap = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
@@ -147,23 +166,27 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
                 : PORTAGE_STYLE,
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
-            const label = p.name || "(unnamed)";
+            const label = escapeHTML(p.name || "(unnamed)");
             const rods = p.length_rods == null ? "N/A" : `${p.length_rods.toFixed(1)} rods`;
             const snappedNote = (p.start_snapped || p.end_snapped)
                 ? '<span style="color:#7c3aed;font-size:11px;">Endpoint adjusted &mdash; not surveyed</span><br>'
                 : "";
-            const routingNote = p.routing_status === "review"
-                ? '<span style="color:#c2410c;font-size:11px;"><b>Routing review needed:</b> at least one landing is not connected to mapped water.</span><br>'
-                : "";
+            let routingNote = "";
+            if (p.routing_length_ok === false) {
+                routingNote += '<span style="color:#c2410c;font-size:11px;"><b>Length review needed:</b> recorded rods and mapped trail geometry disagree; routing uses the longer value.</span><br>';
+            }
+            if (p.routing_type_a === "unresolved" || p.routing_type_b === "unresolved") {
+                routingNote += '<span style="color:#c2410c;font-size:11px;"><b>Routing review needed:</b> at least one landing is not connected to mapped water.</span><br>';
+            }
             bindFeatureInfo(layer,
-                `<b>Portage #${p.portage_number}</b> (USFS ID ${p.usfs_id})<br>` +
+                `<b>Portage #${escapeHTML(p.portage_number ?? "N/A")}</b> (USFS ID ${escapeHTML(p.usfs_id ?? "N/A")})<br>` +
                 `${label} &mdash; ${rods}<br>` +
-                `${p.lake_a} &rarr; ${p.lake_b}<br>` +
+                `${escapeHTML(p.lake_a || "N/A")} &rarr; ${escapeHTML(p.lake_b || "N/A")}<br>` +
                 snappedNote +
                 routingNote +
                 `<span style="font-size:11px; color:#555;">` +
-                `unique_guid_a=${p.unique_guid_a ?? "N/A"} &middot; ` +
-                `unique_guid_b=${p.unique_guid_b ?? "N/A"}</span>`
+                `unique_guid_a=${escapeHTML(p.unique_guid_a ?? "N/A")} &middot; ` +
+                `unique_guid_b=${escapeHTML(p.unique_guid_b ?? "N/A")}</span>`
             );
         }
     }).addTo(map);
@@ -172,12 +195,10 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     const FIRE_STYLE = { color: "#9a3412", weight: 1.5, fillColor: "#ea580c", fillOpacity: 0.28, dashArray: "4 3" };
     const firesLayer = L.geoJSON(fires, {
         style: FIRE_STYLE,
-        interactive: false,
         onEachFeature: function (feature, layer) {
             const p = feature.properties || {};
-            const label = p.incident_name || p.name || "Burn area";
-            const year = p.last_updated ? new Date(p.last_updated).getFullYear() : null;
-            layer.bindTooltip(year ? `${label} (${year})` : label);
+            const label = escapeHTML(p.incident_name || p.name || "Burn area");
+            layer.bindTooltip(label);
         }
     }).addTo(map);
 
@@ -209,7 +230,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         }),
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
-            layer.bindTooltip(`${p.name || "Unnamed stream"} &mdash; ${p.strm_type}`);
+            layer.bindTooltip(`${escapeHTML(p.name || "Unnamed stream")} &mdash; ${escapeHTML(p.strm_type || "Unknown type")}`);
         }
     }).addTo(map);
 
@@ -227,10 +248,10 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             const p = feature.properties;
             const dist = p.distance_to_lake == null ? "N/A" : `${p.distance_to_lake.toFixed(1)} m`;
             bindFeatureInfo(layer,
-                `<b>Campsite:</b> ${p.camp_id}<br>` +
-                `<b>Lake:</b> ${p.lake_name}<br>` +
-                `<b>Status:</b> ${p.status}<br>` +
-                `<b>District:</b> ${p.district}<br>` +
+                `<b>Campsite:</b> ${escapeHTML(p.camp_id ?? "N/A")}<br>` +
+                `<b>Lake:</b> ${escapeHTML(p.lake_name || "N/A")}<br>` +
+                `<b>Status:</b> ${escapeHTML(p.status || "N/A")}<br>` +
+                `<b>District:</b> ${escapeHTML(p.district || "N/A")}<br>` +
                 `<b>Distance to matched lake:</b> ${dist}`
             );
         }
@@ -253,7 +274,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
             const locationNote = p.location_count > 1
-                ? `<br><span style="font-size:11px; color:#555;">Official location ${p.location_index} of ${p.location_count}</span>`
+                ? `<br><span style="font-size:11px; color:#555;">Official location ${escapeHTML(p.location_index)} of ${escapeHTML(p.location_count)}</span>`
                 : "";
             const attachment = (p.attachments || [])[0];
             let routingNote = "No routing attachment";
@@ -313,41 +334,82 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     zoomToLakeFromHash();
     window.addEventListener("hashchange", zoomToLakeFromHash);
 
-    // ADDED: fires passed as the 4th arg so every edge in the precomputed
-    // dump (and any live click-time edge) carries a real crossesBurn flag.
     const engine = GraphEngine.createGraphEngine(turf, lakes, rivers, fires);
-    const { nodes, adjacency, addNode, removeNode, addEdge, wireRiverSnapEdges, clearRiverSnapEdges } = engine;
-    GraphEngine.loadPrecomputed(engine, paddleEdges);
+    const {
+        nodes, adjacency, addNode, removeNode, addEdge,
+        ensurePaddleAttachment, wireRiverSnapEdges, clearRiverSnapEdges
+    } = engine;
+    let graphLoaded = false;
+    let graphLoadPromise = null;
 
     // A checked-in precomputed dump can lag a corrected portage layer.  Fill
     // only absent portage nodes/edges here so a data-only portage fix cannot
     // leave an official entry isolated. A full APP.py rebuild makes this loop
     // a no-op because all segments are already in the dump.
-    for (const feature of portages.features) {
-        const p = feature.properties;
-        const coords = feature.geometry.coordinates;
-        const nodeA = `portage:${p.portage_number}:a`;
-        const nodeB = `portage:${p.portage_number}:b`;
-        const lakeA = Object.prototype.hasOwnProperty.call(p, "routing_lake_guid_a")
-            ? p.routing_lake_guid_a : p.unique_guid_a;
-        const lakeB = Object.prototype.hasOwnProperty.call(p, "routing_lake_guid_b")
-            ? p.routing_lake_guid_b : p.unique_guid_b;
-        if (!nodes.has(nodeA)) addNode(nodeA, lakeA, coords[0]);
-        if (!nodes.has(nodeB)) addNode(nodeB, lakeB, coords[coords.length - 1]);
-        const alreadyLoaded = (adjacency.get(nodeA) || []).some(
-            edge => edge.to === nodeB && edge.kind === "portage"
-        );
-        if (!alreadyLoaded) {
-            addEdge(
-                nodeA, nodeB, p.length_rods * GraphEngine.ROD_TO_METERS,
-                "portage", feature.geometry
+    function fillMissingPortages() {
+        for (const feature of portages.features) {
+            const p = feature.properties;
+            const coords = feature.geometry.coordinates;
+            const nodeA = `portage:${p.portage_number}:a`;
+            const nodeB = `portage:${p.portage_number}:b`;
+            const lakeA = Object.prototype.hasOwnProperty.call(p, "routing_lake_guid_a")
+                ? p.routing_lake_guid_a : p.unique_guid_a;
+            const lakeB = Object.prototype.hasOwnProperty.call(p, "routing_lake_guid_b")
+                ? p.routing_lake_guid_b : p.unique_guid_b;
+            if (!nodes.has(nodeA)) addNode(nodeA, lakeA, coords[0]);
+            if (!nodes.has(nodeB)) addNode(nodeB, lakeB, coords[coords.length - 1]);
+            const alreadyLoaded = (adjacency.get(nodeA) || []).some(
+                edge => edge.to === nodeB && edge.kind === "portage"
             );
+            if (!alreadyLoaded) {
+                addEdge(
+                    nodeA, nodeB,
+                    p.routing_length_m ?? p.length_rods * GraphEngine.ROD_TO_METERS,
+                    "portage", feature.geometry
+                );
+            }
         }
     }
 
+    function ensureGraphLoaded() {
+        if (graphLoaded) return Promise.resolve();
+        if (!graphLoadPromise) {
+            setStatus("Loading the route network…");
+            graphLoadPromise = fetch(PADDLE_EDGES_URL)
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    GraphEngine.loadPrecomputed(engine, data);
+                    fillMissingPortages();
+                    graphLoaded = true;
+                    setStatus("Click a point on a lake to start a route.");
+                })
+                .catch(error => {
+                    graphLoadPromise = null;
+                    setStatus("Could not load the route network. Try route mode again.");
+                    throw error;
+                });
+        }
+        return graphLoadPromise;
+    }
+
+    const lakeSearchRows = lakes.features.map(feature => ({
+        feature,
+        bbox: turf.bbox(feature),
+        boundary: null,
+    }));
+
+    function bboxContains(bbox, coord) {
+        return coord[0] >= bbox[0] && coord[0] <= bbox[2] &&
+            coord[1] >= bbox[1] && coord[1] <= bbox[3];
+    }
+
     function findLakeAtPoint(coord) {
-        for (const feature of lakes.features) {
-            if (turf.booleanPointInPolygon(coord, feature)) return feature;
+        for (const row of lakeSearchRows) {
+            if (!bboxContains(row.bbox, coord)) continue;
+            if (turf.booleanPointInPolygon(coord, row.feature)) return row.feature;
         }
         return null;
     }
@@ -356,12 +418,15 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         let best = null;
         let bestDist = Infinity;
         let bestCoord = coord;
-        for (const feature of lakes.features) {
-            const boundary = turf.polygonToLine(feature);
-            const nearest = turf.nearestPointOnLine(boundary, coord, { units: "meters" });
+        const nearbyBox = turf.bbox(turf.buffer(turf.point(coord), 0.2, {units: "kilometers"}));
+        for (const row of lakeSearchRows) {
+            if (!(row.bbox[0] <= nearbyBox[2] && row.bbox[2] >= nearbyBox[0] &&
+                    row.bbox[1] <= nearbyBox[3] && row.bbox[3] >= nearbyBox[1])) continue;
+            if (!row.boundary) row.boundary = turf.polygonToLine(row.feature);
+            const nearest = turf.nearestPointOnLine(row.boundary, coord, { units: "meters" });
             if (nearest.properties.dist < bestDist) {
                 bestDist = nearest.properties.dist;
-                best = feature;
+                best = row.feature;
                 bestCoord = nearest.geometry.coordinates;
             }
         }
@@ -401,21 +466,22 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
         const result = GraphEngine.shortestPath(engine, "start", "end", {
             algorithm,
             avoidBurnAreas,
-            paddlePenalty: 1,
+            carries: Number(document.getElementById("route-carries").value),
             geographicFloor: true,
         });
         const elapsedMs = performance.now() - started;
         if (routeLayer) map.removeLayer(routeLayer);
 
         if (!result) {
-            setStatus("No route found - these lakes aren't connected by any recorded portage or river.");
+            const components = GraphEngine.componentLabels(engine);
+            const disconnected = components.get("start") !== components.get("end");
+            setStatus(disconnected
+                ? "The current map data does not yet connect these areas. This is a data limitation, not a statement that travel is impossible."
+                : "No usable route was found with the current route preferences.");
             return;
         }
 
-        const segments = [];
-        for (let i = 0; i < result.path.length - 1; i++) {
-            segments.push(adjacency.get(result.path[i]).find((e) => e.to === result.path[i + 1]));
-        }
+        const segments = result.edges;
 
         const ROUTE_COLORS = { portage: "#7c2d12", paddle: "#1d4ed8", river: "#0891b2", approach: "#d97706" };
 
@@ -435,23 +501,27 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
 
         const rods = segments
             .filter((s) => s.kind === "portage")
-            .reduce((sum, s) => sum + s.weight / GraphEngine.ROD_TO_METERS, 0);
+            .reduce((sum, s) => sum + s.routeDistance / GraphEngine.ROD_TO_METERS, 0);
         const paddleKm = segments
             .filter((s) => s.kind === "paddle")
-            .reduce((sum, s) => sum + s.weight, 0) / 1000;
+            .reduce((sum, s) => sum + s.routeDistance, 0) / 1000;
         const riverKm = segments
             .filter((s) => s.kind === "river")
-            .reduce((sum, s) => sum + s.weight, 0) / 1000;
+            .reduce((sum, s) => sum + s.routeDistance, 0) / 1000;
         const approachKm = segments
             .filter((s) => s.kind === "approach")
-            .reduce((sum, s) => sum + s.weight, 0) / 1000;
+            .reduce((sum, s) => sum + s.routeDistance, 0) / 1000;
+        const hours = Math.floor(result.estimatedMinutes / 60);
+        const minutes = Math.round(result.estimatedMinutes % 60);
+        const timeText = hours ? `${hours} hr ${minutes} min` : `${minutes} min`;
 
         const algorithmName = algorithm === "astar" ? "A*" : "Dijkstra";
         setStatus(
             `${algorithmName} route: ${(result.distance / 1000).toFixed(2)} km total ` +
             `(${rods.toFixed(0)} rods of portaging, ${paddleKm.toFixed(2)} km paddling, ` +
             `${riverKm.toFixed(2)} km river` +
-            `${approachKm ? `, ${approachKm.toFixed(2)} km approximate approach` : ""}). ` +
+            `${approachKm ? `, ${approachKm.toFixed(2)} km approximate approach` : ""}); ` +
+            `estimated travel time ${timeText}. ` +
             `Searched ${result.expanded.toLocaleString()} graph nodes in ${elapsedMs.toFixed(1)} ms.`
         );
     }
@@ -468,9 +538,14 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
                     <option value="astar">A* (faster shortest route)</option>
                     <option value="dijkstra">Dijkstra (baseline)</option>
                 </select>
+                <label for="route-carries" style="display:block; margin-bottom:4px;">Portage carry</label>
+                <select id="route-carries" style="width:100%; margin-bottom:8px; padding:5px; border:1px solid #d1d5db; border-radius:4px; background:white;">
+                    <option value="1">Single carry</option>
+                    <option value="3">Double carry</option>
+                </select>
                 <label style="display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none;">
                     <input type="checkbox" id="avoid-burn-checkbox" style="accent-color:#ea580c; width:15px; height:15px;" />
-                    <span>Avoid burn areas</span>
+                    <span>Prefer unburned portages</span>
                 </label>
             </div>
             <button id="route-clear-btn" style="margin-top:8px; width:100%; padding:5px 0; border:1px solid #d1d5db; border-radius:4px; background:#f9fafb; cursor:pointer;">Clear route</button>
@@ -481,7 +556,10 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     document.getElementById("route-controls").appendChild(makeRouteControls());
     function setMode(next) {
         mode = next;
-        if (mode === "route") resetSelection();
+        if (mode === "route") {
+            resetSelection();
+            ensureGraphLoaded().catch(error => console.error("route graph load failed", error));
+        }
         document.getElementById("explore-mode").setAttribute("aria-pressed", String(mode === "explore"));
         document.getElementById("route-mode").setAttribute("aria-pressed", String(mode === "route"));
         document.getElementById("route-controls").hidden = mode !== "route";
@@ -491,6 +569,9 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     document.getElementById("route-mode").addEventListener("click", () => setMode("route"));
     document.getElementById("route-clear-btn").addEventListener("click", clearRoute);
     document.getElementById("route-algorithm").addEventListener("change", () => {
+        if (nodes.has("start") && nodes.has("end")) computeAndDrawRoute();
+    });
+    document.getElementById("route-carries").addEventListener("change", () => {
         if (nodes.has("start") && nodes.has("end")) computeAndDrawRoute();
     });
     // ADDED: toggling the checkbox re-runs the search immediately if a route is already showing
@@ -518,7 +599,13 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
 
         const role = nodes.has("start") ? "end" : "start";
         addNode(role, lakeFeature.properties.unique_guid, snappedCoord);
+        ensurePaddleAttachment(role);
         wireRiverSnapEdges(role, lakeFeature.properties.unique_guid, snappedCoord);
+        if (!(adjacency.get(role) || []).length) {
+            removeNode(role);
+            setStatus("Couldn't attach that point to this lake's route network. Try nearer a portage or the shore.");
+            return;
+        }
         const marker = L.marker([snappedCoord[1], snappedCoord[0]], {
             title: role === "start" ? "Start" : "End"
         }).addTo(map);
@@ -537,7 +624,9 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             setStatus("This entry still needs a reviewed connection to the mapped lake network.");
             return;
         }
-        const attachments = feature.properties.attachments || [];
+        const attachments = (feature.properties.attachments || []).filter(
+            attachment => attachment.confidence !== "review"
+        );
         if (!attachments.length) {
             setStatus("This official entry location still needs a reviewed routing attachment.");
             return;
@@ -556,6 +645,7 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             if (!targetNode && attachment.lake_guid && Array.isArray(targetCoord)) {
                 targetNode = `${role}:entry:${index}`;
                 addNode(targetNode, attachment.lake_guid, targetCoord);
+                ensurePaddleAttachment(targetNode);
                 wireRiverSnapEdges(targetNode, attachment.lake_guid, targetCoord);
                 entryAnchorNodes.add(targetNode);
             }
@@ -585,14 +675,19 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     }
 
     const handledClicks = new WeakSet();
-    function routeClick(e, entry = false) {
+    async function routeClick(e, entry = false) {
         if (mode !== "route") return;
         if (e.originalEvent) {
             if (handledClicks.has(e.originalEvent)) return;
             handledClicks.add(e.originalEvent);
         }
-        if (entry) handleEntryPointClick(e.layer.feature, e.latlng);
-        else handleRouteClick(e.latlng);
+        try {
+            await ensureGraphLoaded();
+            if (entry) handleEntryPointClick(e.layer.feature, e.latlng);
+            else handleRouteClick(e.latlng);
+        } catch (error) {
+            console.error("route graph unavailable", error);
+        }
     }
     map.on("click", e => routeClick(e));
     portagesLayer.on("click", e => routeClick(e));
@@ -602,17 +697,16 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
     }
 
     Promise.all([
-        fetch(LAKES_URL).then((r) => r.json()),
+        fetchGeoJSON(LAKES_URL),
         fetch(CAMPSITES_URL).then((r) => r.json()),
         fetch(PORTAGES_URL).then((r) => r.json()),
         fetch(RIVERS_URL).then((r) => r.json()),
         fetch(ENTRY_POINTS_URL).then((r) => r.json()),
         fetch(BOUNDARY_URL).then((r) => r.json()),
         fetch(FIRES_URL).then((r) => r.json()),
-        fetch(PADDLE_EDGES_URL).then((r) => r.json()),
     ])
-        .then(([lakes, campsites, portages, rivers, entryPoints, boundary, fires, paddleEdges]) =>
-            init(lakes, campsites, portages, rivers, entryPoints, boundary, fires, paddleEdges))
+        .then(([lakes, campsites, portages, rivers, entryPoints, boundary, fires]) =>
+            init(lakes, campsites, portages, rivers, entryPoints, boundary, fires))
         .catch((err) => {
             console.error("Failed to load map data:", err);
             document.getElementById("map").textContent = `Could not load the map: ${err.message}. Check that the server is running and rebuild with APP.py if needed.`;

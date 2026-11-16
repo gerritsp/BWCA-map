@@ -61,7 +61,7 @@ class Portage:
 
     # Helper methods placed at class level (out of __init__)
     def get_length_miles(self) -> float:
-        return self.miles
+        return self.length_miles
 
     def connects_unknown(self) -> bool:
         return self.fw_id_a is None or self.fw_id_b is None

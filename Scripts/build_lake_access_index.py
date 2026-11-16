@@ -200,7 +200,11 @@ def build_access_index(portages, rivers, entry_points):
             entries_by_code[code]["location_count"],
             int(row.get("location_count") or 1),
         )
+        if row.get("routing_status") == "review":
+            continue
         for attachment in row.get("attachments") or []:
+            if attachment.get("confidence") == "review":
+                continue
             routing_type = attachment.get("routing_type")
             guid = attachment.get("lake_guid")
             if routing_type == "river":
@@ -301,6 +305,10 @@ def write_access_index(result, output: Path, target_bytes=SHARD_TARGET_BYTES):
         output.with_name(f"{output.stem}_{index}{output.suffix}")
         for index in range(1, len(groups) + 1)
     ]
+    expected_shards = set(shard_paths)
+    for stale_path in output.parent.glob(f"{output.stem}_[0-9]*{output.suffix}"):
+        if stale_path not in expected_shards:
+            stale_path.unlink()
     for path, starts in zip(shard_paths, groups):
         path.write_text(json.dumps({"starts": starts}, sort_keys=True,
                                    separators=(",", ":")) + "\n",

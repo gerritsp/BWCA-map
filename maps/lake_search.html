@@ -21,7 +21,7 @@ main{max-width:1180px;padding:24px}nav{display:flex;justify-content:space-betwee
 </style>
 </head>
 <body><main>
-<nav><a href="bwca_graph_map.html">← Back to the map</a><span>BWCA · LAKE EXPLORER</span></nav><div class="intro"><p class="eyebrow">Find your next quiet place</p><h1>A lake for every adventure.</h1><p>Explore the Boundary Waters by fish, size, depth, and clarity.</p></div>
+<nav><a href="bwca_graph_map.html">← Back to the map</a><span><a href="index.html">HOME</a> · BWCA LAKE EXPLORER</span></nav><div class="intro"><p class="eyebrow">Find your next quiet place</p><h1>A lake for every adventure.</h1><p>Explore the Boundary Waters by fish, size, depth, and clarity.</p></div>
 <div class="bar">
  <label>Name<input id="q" placeholder="e.g. Saganaga"></label>
  <label>Fish species<select id="sp"><option value="">Any</option></select></label>
@@ -50,7 +50,7 @@ main{max-width:1180px;padding:24px}nav{display:flex;justify-content:space-betwee
 <p class="sort-help">Select any column heading to sort. Numeric columns start largest to smallest; select again to reverse.</p>
 <div class="wrap"><table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
 <p style="color:var(--mut);font-size:12px">Fish data: Minnesota DNR LakeFinder surveys. Counts and percentages describe survey catches, not total lake populations. Largest fish is the biggest sampled, not a guarantee. Planning aid only.</p>
-<footer class="site-legal">© 2026 Peter Gerrits and contributors · <a href="legal.html">Data sources, copyright &amp; terms</a><br>Planning aid only—not for navigation.</footer>
+<footer class="site-legal">© 2026 Peter Gerrits and contributors · <a href="index.html">Home</a> · <a href="limitations.html">Coverage &amp; limitations</a> · <a href="legal.html">Data sources, copyright &amp; terms</a><br>Planning aid only—not for navigation.</footer>
 </main>
 <script>
 async function loadBundle(requestedGuid) {
@@ -162,7 +162,7 @@ function render(){
   const rows=filtered().sort((a,b)=>{const x=sortVal(a,sortKey),y=sortVal(b,sortKey);
     if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*sortDir;});
   $("count").textContent=rows.length+" of "+data.length+" lakes match";
-  $("body").innerHTML=rows.slice(0,300).map(r=>`<tr><td class="n"><a href="${MAP_PAGE}#lake=${encodeURIComponent(r.g)}">${esc(r.n)}</a></td><td>${fmt(r.ac)}</td><td>${fmt(r.md)}</td><td>${fmt(r.cl)}</td><td>${r.cs}</td><td>${esc(fishText(r))}</td><td class="trip-result" title="${esc(abundanceTitle(r))}">${esc(abundanceText(r))}</td><td class="trip-result">${esc(tripText(r))}</td></tr>`).join("");
+  $("body").innerHTML=rows.slice(0,300).map(r=>`<tr><td class="n"><a href="${MAP_PAGE}#lake=${encodeURIComponent(r.g)}">${esc(r.n)}</a></td><td>${esc(fmt(r.ac))}</td><td>${esc(fmt(r.md))}</td><td>${esc(fmt(r.cl))}</td><td>${esc(r.cs)}</td><td>${esc(fishText(r))}</td><td class="trip-result" title="${esc(abundanceTitle(r))}">${esc(abundanceText(r))}</td><td class="trip-result">${esc(tripText(r))}</td></tr>`).join("");
 }
 $("body").addEventListener("click", async event=>{
   const link=event.target.closest("a"); if(!link)return;

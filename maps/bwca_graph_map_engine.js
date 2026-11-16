@@ -1,14 +1,8 @@
-// Shared routing-graph construction logic - see graph_map_design.md for the
-// full build-time/runtime split. This version adds burn-area awareness:
-// every edge (portage, paddle, river) gets a `crossesBurn` boolean computed
-// via turf.booleanIntersects against the fires FeatureCollection. Like the
-// rest of this file's expensive geometry work, crossesBurn is computed ONCE
-// per edge and reused - for precomputed edges (portages/rivers/lake-vertex
-// mesh) that means computed once at build time and shipped as a flag in the
-// dump, not recomputed by every visitor's browser. Only click-time edges
-// (start/end wiring, river-snap edges) compute it live, since those are new
-// edges the precompute step couldn't have known about in advance - and that
-// live cost is tiny (a handful of edges per click, not the whole graph).
+// Shared routing-graph construction logic - see docs/graph_map_design.md for
+// the full build-time/runtime split. Portage and approach edges carry a
+// `crossesBurn` flag; open-water paddle and river edges do not. Fixed land
+// edges are checked at build time, while the few click-time approach edges are
+// checked in the browser.
 //
 // IDENTITY NOTE: lakes are keyed by `unique_guid`, not `fw_id` - see the
 // rest of this file's history. fw_id collides across real lakes and is
@@ -29,6 +23,14 @@
     const SIMPLIFY_TOLERANCE_DEG = 0.00015;
     const EARTH_RADIUS_METERS = 6371008.8;
     const HEURISTIC_EDGE_EPSILON_METERS = 0.001;
+    const SPEED_METERS_PER_MINUTE = Object.freeze({
+        paddle: 75,
+        river: 75,
+        approach: 60,
+        portage: 50,
+    });
+    const DEFAULT_PORTAGE_OVERHEAD_MINUTES = 5;
+    const DEFAULT_BURN_PENALTY = 3;
 
     function greatCircleMeters(coordA, coordB) {
         if (!Array.isArray(coordA) || !Array.isArray(coordB)) return Infinity;
@@ -108,18 +110,20 @@
         }
         if (!engine.nodes.has(startNode) || !engine.nodes.has(endNode)) return null;
 
-        const paddlePenalty = options.paddlePenalty ?? 1;
         const avoidBurnAreas = Boolean(options.avoidBurnAreas);
         const geographicFloor = Boolean(options.geographicFloor);
+        const speeds = { ...SPEED_METERS_PER_MINUTE, ...(options.speeds || {}) };
+        const fastestSpeed = Math.max(...Object.values(speeds));
+        const carries = options.carries ?? 1;
+        const portageOverhead = options.portageOverheadMin ?? DEFAULT_PORTAGE_OVERHEAD_MINUTES;
+        const burnPenalty = options.burnPenalty ?? DEFAULT_BURN_PENALTY;
         const goalNode = engine.nodes.get(endNode);
         const goalVector = goalNode.vector || sphereVector(goalNode.coord);
-        const heuristicScale = algorithm === "astar"
-            ? (geographicFloor ? 1 : engine.heuristicScale()) : 0;
         const heuristic = nodeId => {
-            if (!heuristicScale) return 0;
+            if (algorithm !== "astar") return 0;
             const node = engine.nodes.get(nodeId);
             const vector = node.vector || sphereVector(node.coord);
-            return chordLowerBoundMeters(vector, goalVector) * heuristicScale;
+            return chordLowerBoundMeters(vector, goalVector) / fastestSpeed;
         };
 
         const cost = new Map([[startNode, 0]]);
@@ -136,44 +140,54 @@
             if (current.node === endNode) break;
 
             for (const edge of engine.adjacency.get(current.node) || []) {
-                if (avoidBurnAreas && edge.crossesBurn) continue;
                 const routeDistance = geographicFloor
                     ? Math.max(edge.weight, edge.directDistance || 0) : edge.weight;
-                const edgeCost = routeDistance * (edge.kind === "paddle" ? paddlePenalty : 1);
+                const speed = speeds[edge.kind] || speeds.paddle;
+                let edgeCost = routeDistance / speed;
+                if (edge.kind === "portage") {
+                    edgeCost = edgeCost * carries + portageOverhead;
+                }
+                if (avoidBurnAreas && edge.crossesBurn) edgeCost *= burnPenalty;
                 if (!Number.isFinite(edgeCost) || edgeCost < 0) continue;
                 const alternate = current.cost + edgeCost;
                 if (alternate < (cost.get(edge.to) ?? Infinity)) {
                     cost.set(edge.to, alternate);
                     trueDistance.set(edge.to, trueDistance.get(current.node) + routeDistance);
-                    previous.set(edge.to, current.node);
+                    previous.set(edge.to, { node: current.node, edge, routeDistance });
                     queue.push(alternate + heuristic(edge.to), alternate, edge.to);
                 }
             }
         }
 
         if (!cost.has(endNode)) return null;
-        const path = [endNode];
+        const path = [endNode], edges = [];
         let current = endNode;
         while (current !== startNode) {
-            current = previous.get(current);
-            if (current === undefined) return null;
+            const step = previous.get(current);
+            if (!step) return null;
+            edges.push({ ...step.edge, routeDistance: step.routeDistance });
+            current = step.node;
             path.push(current);
         }
         path.reverse();
+        edges.reverse();
         return {
             algorithm,
             cost: cost.get(endNode),
+            estimatedMinutes: cost.get(endNode),
             distance: trueDistance.get(endNode),
             expanded,
             path,
+            edges,
         };
     }
 
-    function createGraphEngine(turf, lakes, rivers, fires) {
+    function createGraphEngine(turf, lakes, rivers, fires, options = {}) {
         const lakesById = new Map(lakes.features.map((f) => [f.properties.unique_guid, f]));
         const nodes = new Map();
         const adjacency = new Map();
         const accessPointsByLake = new Map();
+        const buildMode = Boolean(options.buildMode);
         let safeHeuristicScale = 1;
 
         const simplifiedLakeCache = new Map();
@@ -273,9 +287,6 @@
         function wirePaddleEdges(nodeId, lakeId, coord) {
             if (!lakesById.get(lakeId)) return;
             const accessPoints = accessPointsByLake.get(lakeId) || [];
-            if (accessPoints.length >= 1 && !vertexGraphBuilt.has(lakeId)) {
-                buildLakeVertexGraph(lakeId);
-            }
             for (const otherId of accessPoints) {
                 const otherCoord = nodes.get(otherId).coord;
                 if (lineStaysInLake(coord, otherCoord, lakeId)) {
@@ -289,9 +300,16 @@
             if (nodes.has(nodeId)) return;
             nodes.set(nodeId, { lakeId, coord, vector: sphereVector(coord) });
             adjacency.set(nodeId, []);
-            wirePaddleEdges(nodeId, lakeId, coord);
+            if (!buildMode) wirePaddleEdges(nodeId, lakeId, coord);
             if (!accessPointsByLake.has(lakeId)) accessPointsByLake.set(lakeId, []);
             accessPointsByLake.get(lakeId).push(nodeId);
+        }
+
+        function ensurePaddleAttachment(nodeId) {
+            const node = nodes.get(nodeId);
+            if (!node || !node.lakeId || (adjacency.get(nodeId) || []).length) return;
+            buildLakeVertexGraph(node.lakeId);
+            wirePaddleEdges(nodeId, node.lakeId, node.coord);
         }
 
         function removeNode(nodeId) {
@@ -315,7 +333,8 @@
         const burnFeatures = fires && fires.features ? fires.features : [];
         const burnBBoxes = burnFeatures.map((burn) => turf.bbox(burn));
 
-        function edgeCrossesBurn(geometry) {
+        function edgeCrossesBurn(geometry, kind) {
+            if (kind !== "portage" && kind !== "approach") return false;
             if (burnFeatures.length === 0) return false;
             let line;
             try {
@@ -340,9 +359,12 @@
         // a brand-new edge (click-time wiring, or the build-time script's
         // first-ever pass over the data) and it'll be computed fresh.
         function addEdge(a, b, weight, kind, geometry, precomputedCrossesBurn) {
-            const crossesBurn = (precomputedCrossesBurn === undefined || precomputedCrossesBurn === null)
-                ? edgeCrossesBurn(geometry)
-                : precomputedCrossesBurn;
+            const isLandEdge = kind === "portage" || kind === "approach";
+            const crossesBurn = isLandEdge && (
+                (precomputedCrossesBurn === undefined || precomputedCrossesBurn === null)
+                    ? edgeCrossesBurn(geometry, kind)
+                    : Boolean(precomputedCrossesBurn)
+            );
             const nodeA = nodes.get(a), nodeB = nodes.get(b);
             if (nodeA && !nodeA.vector) nodeA.vector = sphereVector(nodeA.coord);
             if (nodeB && !nodeB.vector) nodeB.vector = sphereVector(nodeB.coord);
@@ -442,7 +464,8 @@
         return {
             lakesById, nodes, adjacency, accessPointsByLake, vertexGraphBuilt,
             simplifiedLake, preparedLake, lineStaysInLake, lakeBoundaryPoints,
-            buildLakeVertexGraph, wirePaddleEdges, addNode, removeNode, addEdge,
+            buildLakeVertexGraph, wirePaddleEdges, ensurePaddleAttachment,
+            addNode, removeNode, addEdge,
             wireRiverSnapEdges, clearRiverSnapEdges, edgeCrossesBurn,
             heuristicScale: () => safeHeuristicScale,
         };
@@ -457,7 +480,12 @@
         for (const [a, edgeList] of engine.adjacency.entries()) {
             for (const edge of edgeList) {
                 if (a < edge.to) {
-                    edges.push([a, edge.to, edge.weight, edge.kind, edge.geometry, edge.crossesBurn]);
+                    let geometry = edge.geometry;
+                    if (edge.kind === "paddle" && geometry && geometry.type === "LineString" &&
+                            geometry.coordinates && geometry.coordinates.length === 2) {
+                        geometry = null;
+                    }
+                    edges.push([a, edge.to, edge.weight, edge.kind, geometry, edge.crossesBurn]);
                 }
             }
         }
@@ -474,15 +502,37 @@
         for (const [a, b, weight, kind, geometry, crossesBurn] of data.edges) {
             // pass the stored crossesBurn through - addEdge skips recomputing
             // it when a value is already provided (see addEdge above).
-            engine.addEdge(a, b, weight, kind, geometry, crossesBurn);
+            const resolvedGeometry = geometry || {
+                type: "LineString",
+                coordinates: [engine.nodes.get(a).coord, engine.nodes.get(b).coord],
+            };
+            engine.addEdge(a, b, weight, kind, resolvedGeometry, crossesBurn);
         }
-        for (const lakeId of data.vertexGraphLakes) {
+        for (const lakeId of data.vertexGraphLakes || []) {
             engine.vertexGraphBuilt.add(lakeId);
         }
     }
 
+    function componentLabels(engine) {
+        const labels = new Map();
+        for (const nodeId of engine.nodes.keys()) {
+            if (labels.has(nodeId)) continue;
+            labels.set(nodeId, nodeId);
+            const queue = [nodeId];
+            for (let index = 0; index < queue.length; index++) {
+                for (const edge of engine.adjacency.get(queue[index]) || []) {
+                    if (labels.has(edge.to)) continue;
+                    labels.set(edge.to, nodeId);
+                    queue.push(edge.to);
+                }
+            }
+        }
+        return labels;
+    }
+
     return {
-        createGraphEngine, ROD_TO_METERS, dumpPrecomputed, loadPrecomputed,
+        createGraphEngine, ROD_TO_METERS, SPEED_METERS_PER_MINUTE,
+        dumpPrecomputed, loadPrecomputed, componentLabels,
         shortestPath, greatCircleMeters,
     };
 });

@@ -5,24 +5,27 @@ from shapely.geometry import LineString
 from models.Lake import Lake
 from shapely.geometry import Point
 import re
+from pathlib import Path
 
-layers = gpd.list_layers("../../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx")
+ROOT = Path(__file__).resolve().parents[2]
+
+layers = gpd.list_layers(ROOT / "Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx")
 
 # print(layers)
 wpts = gpd.read_file(
-    "../../Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx",
+    ROOT / "Data/thegpx_files_raw/Boundary Waters Canoe Area.gpx",
     layer="waypoints"
 )
 layers = pyogrio.list_layers(
-    "../../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb"
+    ROOT / "Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb"
 )
 
 
 boundary = gpd.read_file(
-    "../../Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
+    ROOT / "Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
     layer="boundary_waters_canoe_area_wilderness"
 )
-lakes = gpd.read_parquet("../../Data/processed/bwca_lakes.parquet")
+lakes = gpd.read_parquet(ROOT / "Data/processed/bwca_lakes.parquet")
 
 def parse_comment(comment):
     data = {}
@@ -157,7 +160,7 @@ portages_clean = gpd.GeoDataFrame(
     crs="EPSG:4326"
 )
 
-output_path = "../../Data/portages_raw/processed_portages_interim.parquet"
+output_path = ROOT / "Data/portages_raw/processed_portages_interim.parquet"
 
 portages_clean.to_parquet(output_path)
 

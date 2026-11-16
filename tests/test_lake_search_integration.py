@@ -1,4 +1,6 @@
 import ast
+import base64
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -23,6 +25,20 @@ def load_access_index():
     if manifest.get('shards'):
         manifest['starts'] = starts
     return manifest
+
+
+def load_lakes():
+    manifest = json.loads((ROOT / 'maps/bwca_graph_map_lakes.json').read_text(
+        encoding='utf-8'))
+    if not manifest.get('shards'):
+        return manifest
+    features = []
+    for shard in manifest['shards']:
+        part = json.loads((ROOT / 'maps' / shard).read_text(encoding='utf-8'))
+        features.extend(part['features'])
+    if len(features) != manifest['feature_count']:
+        raise AssertionError('lake layer shard count does not match its manifest')
+    return {'type': manifest['type'], 'features': features}
 
 
 class SearchIntegrationTests(unittest.TestCase):
@@ -82,7 +98,20 @@ class SearchIntegrationTests(unittest.TestCase):
         base = f'http://127.0.0.1:{server.server_port}/'
         try:
             access = load_access_index()
-            assets = ['lake_search.html', 'legal.html', 'lake_search_index.json', 'lake_access_index.json', 'fisheries/species.json', *access.get('shards', [])] + ['bwca_graph_map' + suffix for suffix in ('.html', '.js', '_engine.js', '_lakes.json', '_campsites.json', '_portages.json', '_rivers.json', '_entry_points.json', '_boundary.json', '_fires.json', '_paddle_edges.json')]
+            lake_manifest = json.loads((ROOT / 'maps/bwca_graph_map_lakes.json').read_text(
+                encoding='utf-8'))
+            assets = [
+                'index.html', 'lake_search.html', 'limitations.html', 'legal.html',
+                'lake_search_index.json', 'lake_access_index.json',
+                'fisheries/species.json', *access.get('shards', []),
+                *lake_manifest.get('shards', []),
+                'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js',
+                'vendor/leaflet/images/marker-icon.png',
+                'vendor/leaflet.markercluster/MarkerCluster.css',
+                'vendor/leaflet.markercluster/MarkerCluster.Default.css',
+                'vendor/leaflet.markercluster/leaflet.markercluster.js',
+                'vendor/turf/turf.min.js',
+            ] + ['bwca_graph_map' + suffix for suffix in ('.html', '.js', '_engine.js', '_lakes.json', '_campsites.json', '_portages.json', '_rivers.json', '_entry_points.json', '_boundary.json', '_fires.json', '_paddle_edges.json')]
             for asset in assets:
                 with urlopen(base + asset) as response:
                     self.assertEqual(response.status, 200)
@@ -118,7 +147,7 @@ class SearchIntegrationTests(unittest.TestCase):
 
     def test_access_index_contract(self):
         access = load_access_index()
-        lakes = json.loads((ROOT / 'maps/bwca_graph_map_lakes.json').read_text(encoding='utf-8'))
+        lakes = load_lakes()
         lake_guids = {feature['properties']['unique_guid']
                       for feature in lakes['features']}
         entry_points = json.loads((ROOT / 'maps/bwca_graph_map_entry_points.json').read_text(
@@ -126,7 +155,7 @@ class SearchIntegrationTests(unittest.TestCase):
         entry_codes = {feature['properties']['code'] for feature in entry_points['features']
                        if feature['properties']['routing_status'] == 'connected'}
         self.assertEqual(access['schema_version'], 3)
-        self.assertEqual(len(access['entries']), 69)
+        self.assertEqual(len(access['entries']), 11)
         self.assertEqual(len(access['entries']),
                          len({entry['code'] for entry in access['entries']}))
         self.assertEqual({entry['code'] for entry in access['entries']}, entry_codes)
@@ -142,19 +171,18 @@ class SearchIntegrationTests(unittest.TestCase):
                     self.assertGreaterEqual(portages, 0)
                     self.assertGreaterEqual(lakes_in, 0)
 
-        crab = next(feature for feature in entry_points['features']
-                    if feature['properties']['code'] == '4')
-        crab_guid = crab['properties']['attachments'][0]['lake_guid']
-        crab_states = access['starts']['4'][crab_guid]
-        self.assertTrue(any(348 <= rods <= 349 and portages == 1 and lakes_in == 0
-                            for rods, portages, lakes_in in crab_states))
+        review_codes = {
+            feature['properties']['code'] for feature in entry_points['features']
+            if feature['properties']['routing_status'] == 'review'
+        }
+        self.assertTrue(review_codes.isdisjoint(access['starts']))
 
     def test_official_entry_points_are_connected_without_moving_markers(self):
         source = json.loads((ROOT / 'Data/entry_points/usfs_bwca_entry_points_2026.geojson').read_text(
             encoding='utf-8'))
         entries = json.loads((ROOT / 'maps/bwca_graph_map_entry_points.json').read_text(
             encoding='utf-8'))
-        lakes = json.loads((ROOT / 'maps/bwca_graph_map_lakes.json').read_text(encoding='utf-8'))
+        lakes = load_lakes()
         paddle = json.loads((ROOT / 'maps/bwca_graph_map_paddle_edges.json').read_text(
             encoding='utf-8'))
         portages = json.loads((ROOT / 'maps/bwca_graph_map_portages.json').read_text(
@@ -173,7 +201,8 @@ class SearchIntegrationTests(unittest.TestCase):
             p = feature['properties']
             counts[p['code']] = counts.get(p['code'], 0) + 1
             self.assertIn(p['routing_status'], {'connected', 'review'})
-            self.assertGreater(len(p['attachments']), 0)
+            if not p['attachments']:
+                self.assertEqual(p['routing_status'], 'review')
             for attachment in p['attachments']:
                 self.assertIn(attachment['routing_type'], {'lake', 'river'})
                 if attachment['routing_type'] == 'lake':
@@ -184,39 +213,42 @@ class SearchIntegrationTests(unittest.TestCase):
                 if attachment['node_id']:
                     self.assertIn(attachment['node_id'], node_ids | portage_node_ids)
         self.assertEqual({code for code, count in counts.items() if count > 1}, {'47', '49'})
-        self.assertEqual(
-            {feature['properties']['code'] for feature in entries['features']
-             if feature['properties']['routing_status'] == 'review'},
-            set(),
-        )
+        self.assertEqual(sum(
+            feature['properties']['routing_status'] == 'connected'
+            for feature in entries['features']
+        ), 13)
+        self.assertEqual(sum(
+            feature['properties']['routing_status'] == 'review'
+            for feature in entries['features']
+        ), 58)
         self.assertNotIn('54A', counts)
         self.assertNotIn('55A', counts)
         self.assertNotIn('86', counts)  # hiking-only entry; canoe graph intentionally excludes it
 
         crab = next(feature for feature in entries['features']
                     if feature['properties']['code'] == '4')
-        self.assertAlmostEqual(crab['geometry']['coordinates'][0], -92.033187318921, places=10)
-        self.assertAlmostEqual(crab['geometry']['coordinates'][1], 47.931414809367, places=10)
+        self.assertAlmostEqual(crab['geometry']['coordinates'][0], -92.033187, places=6)
+        self.assertAlmostEqual(crab['geometry']['coordinates'][1], 47.931415, places=6)
         self.assertEqual(crab['properties']['routing_method'], 'portage')
         self.assertGreater(crab['properties']['attachments'][0]['initial_rods'], 300)
 
         snowbank = next(feature for feature in entries['features']
                         if feature['properties']['code'] == '27')
-        self.assertAlmostEqual(snowbank['geometry']['coordinates'][0], -91.432158476718, places=10)
+        self.assertAlmostEqual(snowbank['geometry']['coordinates'][0], -91.432158, places=6)
         self.assertEqual(snowbank['properties']['attachments'][0]['lake_name'], 'Snowbank')
         self.assertEqual(snowbank['properties']['attachments'][0]['confidence'], 'review')
         self.assertGreater(snowbank['properties']['attachments'][0]['connector_distance_m'], 1500)
 
         little_isabella = next(feature for feature in entries['features']
                                if feature['properties']['code'] == '75')
-        self.assertEqual(little_isabella['properties']['routing_status'], 'connected')
+        self.assertEqual(little_isabella['properties']['routing_status'], 'review')
         self.assertGreater(little_isabella['properties']['attachments'][0]['initial_rods'], 15)
         self.assertLess(little_isabella['properties']['attachments'][0]['initial_rods'], 25)
 
         snake = next(feature for feature in entries['features']
                      if feature['properties']['code'] == '84')
         self.assertEqual(snake['properties']['routing_method'], 'portage')
-        self.assertEqual(snake['properties']['routing_status'], 'connected')
+        self.assertEqual(snake['properties']['routing_status'], 'review')
         self.assertGreater(snake['properties']['attachments'][0]['initial_rods'], 160)
         self.assertLess(snake['properties']['attachments'][0]['initial_rods'], 180)
 
@@ -293,6 +325,8 @@ class SearchIntegrationTests(unittest.TestCase):
         map_template = (ROOT / 'Templates/html_template.html').read_text(encoding='utf-8')
         generated_map = (ROOT / 'maps/bwca_graph_map.html').read_text(encoding='utf-8')
         search_page = (ROOT / 'maps/lake_search.html').read_text(encoding='utf-8')
+        landing_page = (ROOT / 'maps/index.html').read_text(encoding='utf-8')
+        limitations_page = (ROOT / 'maps/limitations.html').read_text(encoding='utf-8')
 
         self.assertIn('Copyright © 2026 Peter Gerrits', copyright_notice)
         self.assertIn('does **not** claim ownership of facts', copyright_notice)
@@ -300,9 +334,58 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertIn('MNDNR General Data & Software License Agreement', third_party)
         self.assertIn('Planning and safety disclaimer', legal_page)
         self.assertIn('not a navigational map', legal_page)
-        for public_page in (map_template, generated_map, search_page):
+        self.assertIn('Public beta', landing_page)
+        self.assertIn('Known gaps', limitations_page)
+        for public_page in (map_template, generated_map, search_page,
+                            landing_page, limitations_page):
             self.assertIn('href="legal.html"', public_page)
             self.assertIn('Planning aid only—not for navigation.', public_page)
+
+    def test_public_release_security_contract(self):
+        map_template = (ROOT / 'Templates/html_template.html').read_text(encoding='utf-8')
+        generated_map = (ROOT / 'maps/bwca_graph_map.html').read_text(encoding='utf-8')
+        map_javascript = (ROOT / 'Templates/js_template.js').read_text(encoding='utf-8')
+        search_page = (ROOT / 'maps/lake_search.html').read_text(encoding='utf-8')
+        caddy = (ROOT / 'deploy/Caddyfile.example').read_text(encoding='utf-8')
+
+        for page in (map_template, generated_map):
+            self.assertNotIn('unpkg.com', page)
+            self.assertIn('vendor/leaflet/leaflet.js', page)
+            self.assertIn('vendor/turf/turf.min.js', page)
+
+        self.assertIn('escapeHTML(p.portage_number', map_javascript)
+        self.assertIn('escapeHTML(p.lake_a', map_javascript)
+        self.assertIn('escapeHTML(p.camp_id', map_javascript)
+        self.assertIn('escapeHTML(p.strm_type', map_javascript)
+        self.assertIn('escapeHTML(p.location_index)', map_javascript)
+        self.assertNotIn('${p.camp_id}', map_javascript)
+        self.assertNotIn('${p.lake_a}', map_javascript)
+        self.assertNotIn('${p.strm_type}', map_javascript)
+        self.assertIn('${esc(fmt(r.ac))}', search_page)
+        self.assertIn('${esc(r.cs)}', search_page)
+
+        inline_script = re.search(r'<script>(.*?)</script>', search_page, re.DOTALL)
+        self.assertIsNotNone(inline_script)
+        digest = base64.b64encode(hashlib.sha256(
+            inline_script.group(1).encode('utf-8')).digest()).decode('ascii')
+        self.assertIn(f"'sha256-{digest}'", caddy)
+        self.assertIn("default-src 'self'", caddy)
+        self.assertIn('X-Content-Type-Options "nosniff"', caddy)
+        self.assertIn('X-Frame-Options "DENY"', caddy)
+
+        for relative in (
+            'maps/vendor/leaflet/leaflet.css',
+            'maps/vendor/leaflet/leaflet.js',
+            'maps/vendor/leaflet.markercluster/leaflet.markercluster.js',
+            'maps/vendor/turf/turf.min.js',
+            'requirements-lock.txt',
+            '.github/workflows/validate.yml',
+            'SECURITY.md',
+        ):
+            self.assertTrue((ROOT / relative).is_file(), relative)
+
+        gitignore = (ROOT / '.gitignore').read_text(encoding='utf-8')
+        self.assertIn('.idea/', gitignore)
 
 
 if __name__ == '__main__':

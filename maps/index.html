@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Explore BWCA lakes, fisheries surveys, entry points, portages, and experimental canoe routes.">
+<title>BWCA · Trip Explorer</title>
+<style>
+:root{--ink:#193b35;--muted:#61736b;--paper:#f7f8f2;--line:#dbe3d8;--accent:#256653;--card:#fff;--warn:#9a5b12}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.65 system-ui,sans-serif}main{max-width:1040px;margin:auto;padding:28px 22px 64px}nav{display:flex;justify-content:space-between;gap:18px;align-items:center;padding-bottom:20px;border-bottom:1px solid var(--line)}nav strong{letter-spacing:.16em}nav div{display:flex;gap:18px;flex-wrap:wrap}a{color:var(--accent)}nav a{text-decoration:none;font-weight:650}.hero{padding:70px 0 48px;max-width:790px}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:10px;font-weight:800;color:var(--muted)}h1{font:56px/1.04 Georgia,serif;margin:14px 0 20px}h2{font:30px/1.2 Georgia,serif;margin:0 0 10px}.lead{font-size:19px;color:var(--muted);max-width:700px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}.button{display:inline-block;padding:12px 18px;border-radius:9px;text-decoration:none;font-weight:750;border:1px solid var(--accent)}.primary{background:var(--accent);color:white}.secondary{background:var(--card)}.notice{padding:18px 20px;margin:0 0 30px;border:1px solid #e8c98f;border-left:5px solid #c8862a;border-radius:12px;background:#fff9eb;color:#67431c}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{display:block;padding:24px;border:1px solid var(--line);border-radius:14px;background:var(--card);text-decoration:none;color:var(--ink)}.card span{display:block;margin-top:8px;color:var(--muted)}.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:40px 0}.fact{padding:18px;border-top:2px solid var(--line)}.fact strong{display:block;font:28px Georgia,serif}.fact span{color:var(--muted);font-size:12px}footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}@media(max-width:760px){main{padding:20px 16px 45px}.hero{padding:48px 0 34px}h1{font-size:42px}.grid{grid-template-columns:1fr}.facts{grid-template-columns:repeat(2,1fr)}nav{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body><main>
+<nav><strong>BWCA · TRIP EXPLORER</strong><div><a href="bwca_graph_map.html">Map</a><a href="lake_search.html">Lake search</a><a href="limitations.html">Limitations</a></div></nav>
+<section class="hero"><p class="eyebrow">Boundary Waters planning</p><h1>Find the water that calls you.</h1><p class="lead">Explore lakes, compare fisheries surveys, start from a permit entry point, and test routes across the mapped BWCA network.</p><div class="actions"><a class="button primary" href="bwca_graph_map.html">Open the interactive map</a><a class="button secondary" href="lake_search.html">Search 1,361 lakes</a></div></section>
+<div class="notice"><strong>Public beta.</strong> Some entry connections and river routes still need field or source review. This is a planning aid—not a navigational map. Verify permits, closures, water levels, portages, and routes with current official sources.</div>
+<section class="grid" aria-label="Site sections">
+ <a class="card" href="bwca_graph_map.html"><strong>Explore and route</strong><span>Compare A* and Dijkstra routes on the same mapped-distance graph.</span></a>
+ <a class="card" href="lake_search.html"><strong>Find a lake</strong><span>Filter by fish survey results, size, depth, clarity, campsites, and entry effort.</span></a>
+ <a class="card" href="limitations.html"><strong>Review coverage</strong><span>See exactly what is included, inferred, incomplete, or unsuitable for navigation.</span></a>
+</section>
+<section class="facts" aria-label="Current coverage">
+ <div class="fact"><strong>1,361</strong><span>searchable lake bundles</span></div>
+ <div class="fact"><strong>69</strong><span>permit entry codes</span></div>
+ <div class="fact"><strong>905</strong><span>mapped portage segments</span></div>
+ <div class="fact"><strong>2</strong><span>route algorithms</span></div>
+</section>
+<footer>© 2026 Peter Gerrits and contributors · <a href="legal.html">Data sources, copyright &amp; terms</a> · <a href="limitations.html">Coverage &amp; limitations</a><br>Planning aid only—not for navigation.</footer>
+</main></body>
+</html>
