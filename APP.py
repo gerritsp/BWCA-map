@@ -349,7 +349,14 @@ def boundary_geojson(path=BOUNDARY_PATH, simplify_tolerance=0.0001):
 
 
 def _mark_entry_reachability(entry_points, graph):
-    """Mark entries review-only unless a verified attachment reaches main."""
+    """Mark entries connected when an attachment reaches mapped lake routing.
+
+    The BWCA route graph legitimately has several disconnected regional
+    components.  Requiring every entry to reach the single largest component
+    hid otherwise usable entries from lake search.  Confidence and graph
+    reachability are separate: a long, review-grade connector can still lead
+    to a real mapped lake component and remains visibly flagged for review.
+    """
     nodes = {node[0]: node for node in graph.get("nodes", [])}
     adjacency = {node_id: [] for node_id in nodes}
     for edge in graph.get("edges", []):
@@ -358,7 +365,6 @@ def _mark_entry_reachability(entry_points, graph):
             adjacency[edge[1]].append(edge[0])
 
     component = {}
-    sizes = {}
     for node_id in nodes:
         if node_id in component:
             continue
@@ -369,38 +375,45 @@ def _mark_entry_reachability(entry_points, graph):
                 if neighbor not in component:
                     component[neighbor] = node_id
                     queue.append(neighbor)
-        sizes[node_id] = len(queue)
-    main_component = max(sizes, key=sizes.get) if sizes else None
     lake_components = {}
     for node_id, lake_id, _ in nodes.values():
         if lake_id:
             lake_components.setdefault(lake_id, set()).add(component[node_id])
+    components_with_lakes = {
+        component_id
+        for component_ids in lake_components.values()
+        for component_id in component_ids
+    }
 
     for feature in entry_points.get("features", []):
         properties = feature.get("properties") or {}
         attachments = properties.get("attachments") or []
-        verified = [
-            attachment for attachment in attachments
-            if attachment.get("confidence") != "review"
-        ]
-        reachable = False
-        for attachment in verified:
+        reachable = []
+        for attachment in attachments:
             node_id = attachment.get("node_id")
-            if node_id in component and component[node_id] == main_component:
-                reachable = True
-                break
+            if (node_id in component
+                    and component[node_id] in components_with_lakes):
+                reachable.append(attachment)
+                continue
             lake_id = attachment.get("lake_guid")
-            if main_component in lake_components.get(lake_id, set()):
-                reachable = True
-                break
+            # Lake attachments are created from the rendered lake layer.  A
+            # lake with no portage/river graph nodes is still a valid first
+            # destination for entry search, even though it cannot reach a
+            # larger regional component.
+            if isinstance(lake_id, str) and lake_id:
+                reachable.append(attachment)
         if reachable:
             properties["routing_status"] = "connected"
-            properties.pop("routing_issue", None)
+            if all(attachment.get("confidence") == "review"
+                   for attachment in reachable):
+                properties["routing_issue"] = "review_grade_attachment"
+            else:
+                properties.pop("routing_issue", None)
         else:
             properties["routing_status"] = "review"
             properties["routing_issue"] = (
-                "review_grade_attachment" if attachments and not verified
-                else "not_in_main_network"
+                "attachment_not_in_lake_network" if attachments
+                else "no_routing_attachment"
             )
     return entry_points
 

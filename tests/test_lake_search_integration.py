@@ -155,7 +155,7 @@ class SearchIntegrationTests(unittest.TestCase):
         entry_codes = {feature['properties']['code'] for feature in entry_points['features']
                        if feature['properties']['routing_status'] == 'connected'}
         self.assertEqual(access['schema_version'], 3)
-        self.assertEqual(len(access['entries']), 11)
+        self.assertEqual(len(access['entries']), 69)
         self.assertEqual(len(access['entries']),
                          len({entry['code'] for entry in access['entries']}))
         self.assertEqual({entry['code'] for entry in access['entries']}, entry_codes)
@@ -216,11 +216,11 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertEqual(sum(
             feature['properties']['routing_status'] == 'connected'
             for feature in entries['features']
-        ), 13)
+        ), 71)
         self.assertEqual(sum(
             feature['properties']['routing_status'] == 'review'
             for feature in entries['features']
-        ), 58)
+        ), 0)
         self.assertNotIn('54A', counts)
         self.assertNotIn('55A', counts)
         self.assertNotIn('86', counts)  # hiking-only entry; canoe graph intentionally excludes it
@@ -237,18 +237,20 @@ class SearchIntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(snowbank['geometry']['coordinates'][0], -91.432158, places=6)
         self.assertEqual(snowbank['properties']['attachments'][0]['lake_name'], 'Snowbank')
         self.assertEqual(snowbank['properties']['attachments'][0]['confidence'], 'review')
+        self.assertEqual(snowbank['properties']['routing_issue'],
+                         'review_grade_attachment')
         self.assertGreater(snowbank['properties']['attachments'][0]['connector_distance_m'], 1500)
 
         little_isabella = next(feature for feature in entries['features']
                                if feature['properties']['code'] == '75')
-        self.assertEqual(little_isabella['properties']['routing_status'], 'review')
+        self.assertEqual(little_isabella['properties']['routing_status'], 'connected')
         self.assertGreater(little_isabella['properties']['attachments'][0]['initial_rods'], 15)
         self.assertLess(little_isabella['properties']['attachments'][0]['initial_rods'], 25)
 
         snake = next(feature for feature in entries['features']
                      if feature['properties']['code'] == '84')
         self.assertEqual(snake['properties']['routing_method'], 'portage')
-        self.assertEqual(snake['properties']['routing_status'], 'review')
+        self.assertEqual(snake['properties']['routing_status'], 'connected')
         self.assertGreater(snake['properties']['attachments'][0]['initial_rods'], 160)
         self.assertLess(snake['properties']['attachments'][0]['initial_rods'], 180)
 

@@ -130,11 +130,16 @@ class RoutingConnectivityTests(unittest.TestCase):
         right = shapely.transform(Point(insula_direct[1]), TO_UTM, interleaved=False)
         self.assertLessEqual(paddle[insula_pair] / left.distance(right), 3.0)
 
-    def test_connected_entries_reach_the_main_component(self):
+    def test_connected_entries_reach_a_lake_component(self):
         lake_components = defaultdict(set)
         for node_id, lake_id, _ in self.graph["nodes"]:
             if lake_id:
                 lake_components[lake_id].add(self.components.component[node_id])
+        components_with_lakes = {
+            component
+            for components in lake_components.values()
+            for component in components
+        }
 
         connected = 0
         for feature in self.entries["features"]:
@@ -144,17 +149,14 @@ class RoutingConnectivityTests(unittest.TestCase):
             connected += 1
             reachable = False
             for attachment in properties.get("attachments", []):
-                if attachment.get("confidence") == "review":
-                    continue
                 node_id = attachment.get("node_id")
                 if (node_id in self.components.component and
-                        self.components.component[node_id] == self.components.largest):
+                        self.components.component[node_id] in components_with_lakes):
                     reachable = True
-                if self.components.largest in lake_components.get(
-                        attachment.get("lake_guid"), set()):
+                if attachment.get("lake_guid") in self.lake_geometry:
                     reachable = True
             self.assertTrue(reachable, properties.get("code"))
-        self.assertGreater(connected, 0)
+        self.assertEqual(connected, 71)
 
     def test_portage_endpoints_use_only_geometry_supported_anchors(self):
         self.assertEqual(len(self.portages["features"]), 905)

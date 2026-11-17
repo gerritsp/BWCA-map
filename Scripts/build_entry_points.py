@@ -360,6 +360,26 @@ def build_entry_points(lakes, portages, rivers, boundary, source_path=SOURCE_PAT
                     entry, point, river, river_distance, lake_names
                 )
 
+        # A small number of official creek landings fall in gaps in the local
+        # river layer.  Keep the official marker unchanged, but retain the
+        # explicit, named downstream lake as a review-grade routing fallback.
+        # The visible connector makes the data limitation clear instead of
+        # silently removing the permit entry from lake search.
+        if not attachments:
+            override_name = RIVER_SEARCH_LAKE_OVERRIDES.get(code)
+            override_lake = (
+                _named_lake(lake_gdf, override_name, point)
+                if override_name else None
+            )
+            if override_lake is not None:
+                method = "lake"
+                attachments = [_lake_attachment(
+                    entry,
+                    point,
+                    override_lake,
+                    float(point.distance(override_lake.geometry)),
+                )]
+
         public_point = gpd.GeoSeries([point], crs=SOURCE_CRS).to_crs(WGS84).iloc[0]
         records.append({
             "code": code,

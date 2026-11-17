@@ -203,8 +203,9 @@ def build_access_index(portages, rivers, entry_points):
         if row.get("routing_status") == "review":
             continue
         for attachment in row.get("attachments") or []:
-            if attachment.get("confidence") == "review":
-                continue
+            # Review-grade describes the inferred connector, not whether its
+            # mapped endpoint can participate in routing.  Keep it searchable
+            # while the map visibly identifies the connector for verification.
             routing_type = attachment.get("routing_type")
             guid = attachment.get("lake_guid")
             if routing_type == "river":
