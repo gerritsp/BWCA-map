@@ -10,6 +10,7 @@ from shapely.geometry import Point
 from models.bwca_graph import bwca_graph
 from Scripts.build_entry_points import build_entry_points
 from Scripts.build_lake_access_index import build_access_index, write_access_index
+from Scripts.canonicalize_output import round_floats
 from Scripts.repair_routing_graph import repair_routing_graph
 from Scripts.river_topology import river_component_labels
 
@@ -551,6 +552,7 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
         rendered_layers["rivers"],
         rendered_layers["boundary"],
     )
+    entry_points = round_floats(entry_points)
     entry_points_path = out_path.parent / entry_points_filename
     entry_points_path.write_text(json.dumps(entry_points), encoding="utf-8")
     written.append(entry_points_path)
