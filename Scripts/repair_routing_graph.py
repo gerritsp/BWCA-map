@@ -29,6 +29,11 @@ from shapely.strtree import STRtree
 from pyproj import Transformer
 
 try:
+    from Scripts.canonicalize_output import canonicalize_route_graph
+except ModuleNotFoundError:  # direct `python Scripts/repair_routing_graph.py`
+    from canonicalize_output import canonicalize_route_graph  # type: ignore[no-redef]
+
+try:
     from Scripts.river_topology import (
         RIVER_JUNCTION_TOLERANCE_M,
         find_river_junctions,
@@ -536,6 +541,7 @@ def repair_routing_graph(stem_path):
         "lake_tolerance_m": LAKE_TOLERANCE_M,
         "repair_version": REPAIR_VERSION,
     }
+    canonicalize_route_graph(graph)
     _write_atomic(graph_path, graph)
     print(
         f"Repaired {graph_path}: {river_attachments} portage/river attachments, "
