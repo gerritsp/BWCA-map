@@ -15,7 +15,7 @@ geopandas==1.2.0
     # via -r requirements-app.txt
 idna==3.20
     # via requests
-numpy==2.5.4
+numpy==2.5.5
     # via
     #   geopandas
     #   pandas
