@@ -25,7 +25,7 @@ packaging==26.3
     # via
     #   geopandas
     #   pyogrio
-pandas==2.3.3
+pandas==3.1.1
     # via
     #   -r requirements-data.txt
     #   geopandas
