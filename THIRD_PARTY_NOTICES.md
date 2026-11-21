@@ -34,7 +34,7 @@ procedures are maintained in [Data/SOURCES.md](Data/SOURCES.md).
 
 - [Leaflet 1.9.4](https://leafletjs.com/) — BSD 2-Clause License
 - [Leaflet.markercluster 1.5.3](https://github.com/Leaflet/Leaflet.markercluster) — MIT License
-- [Turf.js 6.5.0](https://turfjs.org/) — MIT License
+- [Turf.js 7.4.0](https://turfjs.org/) — MIT License
 
 Each dependency remains subject to its own copyright and license. This file is
 an attribution summary, not a replacement for the corresponding license text.

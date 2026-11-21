@@ -440,7 +440,7 @@
                     riverSnapBySegment.set(riverIdx, anchors);
                 }
                 const points = riverSnapBySegment.get(riverIdx);
-                points.push({ snapNodeId, location: nearest.properties.location, coord: snapCoord });
+                points.push({ snapNodeId, location: nearest.properties.totalDistance, coord: snapCoord });
                 points.sort((a, b) => a.location - b.location);
 
                 for (let i = 0; i < points.length - 1; i++) {

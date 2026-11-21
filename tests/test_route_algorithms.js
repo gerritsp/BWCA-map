@@ -18,6 +18,34 @@ function connect(engine, a, b, kind = 'paddle', crossesBurn = false) {
   );
 }
 
+function turfCompatibility() {
+  const line = turf.lineString([
+    [-91.50, 48.00],
+    [-91.45, 48.05],
+    [-91.40, 48.00],
+  ]);
+  const nearest = turf.nearestPointOnLine(line, [-91.46, 48.02], {units: 'meters'});
+  assert(Number.isFinite(nearest.properties.totalDistance),
+    'nearest point should expose totalDistance');
+  assert(Number.isFinite(nearest.properties.pointDistance),
+    'nearest point should expose pointDistance');
+
+  const lake = turf.polygon([[[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]]]);
+  assert.equal(turf.booleanPointInPolygon([1, 0], lake), true,
+    'lake-boundary points should count as inside');
+
+  const fires = turf.featureCollection([
+    turf.polygon([[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]),
+  ]);
+  const engine = GraphEngine.createGraphEngine(turf, empty, empty, fires);
+  const touching = turf.lineString([[-1, 0], [0, 0]]).geometry;
+  const separate = turf.lineString([[-1, -1], [-0.5, -0.5]]).geometry;
+  assert.equal(engine.edgeCrossesBurn(touching, 'portage'), true,
+    'a portage touching a burn boundary should be treated conservatively');
+  assert.equal(engine.edgeCrossesBurn(separate, 'portage'), false,
+    'a separate portage should not be marked as crossing a burn area');
+}
+
 function syntheticComparison() {
   const engine = GraphEngine.createGraphEngine(turf, empty, empty, empty);
   add(engine, 'start', [-91.50, 48.00]);
@@ -127,3 +155,4 @@ function realGraphComparison() {
 
 syntheticComparison();
 realGraphComparison();
+turfCompatibility();
