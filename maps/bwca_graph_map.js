@@ -426,8 +426,8 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
                     row.bbox[1] <= nearbyBox[3] && row.bbox[3] >= nearbyBox[1])) continue;
             if (!row.boundary) row.boundary = turf.polygonToLine(row.feature);
             const nearest = turf.nearestPointOnLine(row.boundary, coord, { units: "meters" });
-            if (nearest.properties.dist < bestDist) {
-                bestDist = nearest.properties.dist;
+            if (nearest.properties.pointDistance < bestDist) {
+                bestDist = nearest.properties.pointDistance;
                 best = row.feature;
                 bestCoord = nearest.geometry.coordinates;
             }

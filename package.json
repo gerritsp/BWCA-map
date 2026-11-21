@@ -8,7 +8,7 @@
     "audit:prod": "npm audit --omit=dev"
   },
   "dependencies": {
-    "@turf/turf": "6.5.0",
+    "@turf/turf": "7.4.0",
     "leaflet": "1.9.4",
     "leaflet.markercluster": "1.5.3"
   }
