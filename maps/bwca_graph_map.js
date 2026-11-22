@@ -290,6 +290,8 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             }
             if (p.routing_status === "review") {
                 routingNote += '<br><span style="color:#c2410c;"><b>Review needed:</b> no verified route from this attachment to a mapped lake.</span>';
+            } else if (p.routing_status === "regional") {
+                routingNote += "<br>Routes from this entry stay within its regional network.";
             } else if (p.routing_issue === "review_grade_attachment") {
                 routingNote += '<br><span style="color:#c2410c;"><b>Review recommended:</b> this inferred connector is usable for planning but should be verified.</span>';
             }
@@ -626,7 +628,9 @@ const LAKES_URL = "bwca_graph_map_lakes.json";
             setStatus("This entry still needs a reviewed connection to the mapped lake network.");
             return;
         }
-        const attachments = feature.properties.attachments || [];
+        const candidates = feature.properties.attachments || [];
+        const preferred = candidates.filter(a => a.confidence !== "review");
+        const attachments = preferred.length ? preferred : candidates;
         const usesReviewAttachment = attachments.some(
             attachment => attachment.confidence === "review"
         );

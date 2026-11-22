@@ -2,10 +2,12 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from collections import Counter
 
 import geopandas as gpd
 import shapely
-from shapely.geometry import Point
+from shapely.geometry import LineString, Point
+from pyproj import Transformer
 
 from models.bwca_graph import bwca_graph
 from Scripts.build_entry_points import build_entry_points
@@ -48,6 +50,7 @@ def build_graph():
     graph = bwca_graph()
 
     graph.load_lakes(REPO_ROOT / "Data/processed/bwca_lakes.parquet")
+    graph.load_lakes(REPO_ROOT / "Data/processed/whole_lake_shorelines.parquet")
     for dataset, load, connect in (
         ("bwca_campsites_river", graph.load_campsites, graph.connect_campsites),
         ("portages_final_snapped", graph.load_portages, graph.connect_portages),
@@ -58,6 +61,7 @@ def build_graph():
             load(path)
             if dataset == "portages_final_snapped":
                 _apply_portage_geometry_corrections(graph)
+                _align_portage_landings(graph)
             connect()
         else:
             print(f"Optional layer unavailable: {dataset}")
@@ -105,6 +109,36 @@ def _apply_portage_geometry_corrections(graph):
         portage.start_snapped = False
         portage.end_snapped = False
         portage.geometry_source = "usfs_trail_correction"
+
+
+def _align_portage_landings(graph):
+    """Recheck source landings against complete polygons before linking the graph."""
+    lakes = list(graph.lakes.values())
+    geometries = [lake.geometry for lake in lakes]
+    tree = shapely.STRtree(geometries)
+    project = Transformer.from_crs(4326, SOURCE_CRS, always_xy=True).transform
+
+    for portage in graph.portages.values():
+        coords = list(portage.geometry.coords)
+        for side, index in (("start", 0), ("end", -1)):
+            guid = getattr(portage, side + "_unid")
+            assigned = graph.lakes.get(guid)
+            point = Point(coords[index])
+            if getattr(portage, side + "_snapped"):
+                # Old snaps used clipped shorelines. Recover the original endpoint
+                # when the complete polygon contains the surveyed position.
+                original = Point(project(getattr(portage, side + "_lon"),
+                                         getattr(portage, side + "_lat")))
+                if tree.query(original, predicate="intersects").size:
+                    point = original
+                    coords[index] = point.coords[0]
+                    setattr(portage, side + "_snapped", False)
+            if assigned and point.distance(assigned.geometry) <= PORTAGE_LAKE_TOLERANCE_M:
+                continue
+            matches = tree.query_nearest(point, max_distance=PORTAGE_LAKE_TOLERANCE_M)
+            if len(matches) == 1:
+                setattr(portage, side + "_unid", lakes[matches[0]].unique_guid)
+        portage.geometry = LineString(coords)
 
 
 def lakes_geojson(graph):
@@ -350,14 +384,7 @@ def boundary_geojson(path=BOUNDARY_PATH, simplify_tolerance=0.0001):
 
 
 def _mark_entry_reachability(entry_points, graph):
-    """Mark entries connected when an attachment reaches mapped lake routing.
-
-    The BWCA route graph legitimately has several disconnected regional
-    components.  Requiring every entry to reach the single largest component
-    hid otherwise usable entries from lake search.  Confidence and graph
-    reachability are separate: a long, review-grade connector can still lead
-    to a real mapped lake component and remains visibly flagged for review.
-    """
+    """Distinguish main-network, regional and unverified access points."""
     nodes = {node[0]: node for node in graph.get("nodes", [])}
     adjacency = {node_id: [] for node_id in nodes}
     for edge in graph.get("edges", []):
@@ -380,42 +407,28 @@ def _mark_entry_reachability(entry_points, graph):
     for node_id, lake_id, _ in nodes.values():
         if lake_id:
             lake_components.setdefault(lake_id, set()).add(component[node_id])
-    components_with_lakes = {
-        component_id
-        for component_ids in lake_components.values()
-        for component_id in component_ids
-    }
+    sizes = Counter(component.values())
+    main = max(sizes, key=sizes.get) if sizes else None
+    components_with_lakes = set().union(*lake_components.values())
 
     for feature in entry_points.get("features", []):
-        properties = feature.get("properties") or {}
-        attachments = properties.get("attachments") or []
-        reachable = []
-        for attachment in attachments:
+        properties = feature["properties"]
+        reachable = set()
+        for attachment in properties.get("attachments", []):
             node_id = attachment.get("node_id")
-            if (node_id in component
-                    and component[node_id] in components_with_lakes):
-                reachable.append(attachment)
-                continue
-            lake_id = attachment.get("lake_guid")
-            # Lake attachments are created from the rendered lake layer.  A
-            # lake with no portage/river graph nodes is still a valid first
-            # destination for entry search, even though it cannot reach a
-            # larger regional component.
-            if isinstance(lake_id, str) and lake_id:
-                reachable.append(attachment)
-        if reachable:
-            properties["routing_status"] = "connected"
-            if all(attachment.get("confidence") == "review"
-                   for attachment in reachable):
-                properties["routing_issue"] = "review_grade_attachment"
+            if node_id is not None:
+                memberships = {component.get(node_id)}
             else:
-                properties.pop("routing_issue", None)
+                memberships = lake_components.get(attachment.get("lake_guid"), set())
+            reachable.update(memberships & components_with_lakes)
+        if main is not None and main in reachable:
+            properties["routing_status"] = "connected"
+        elif reachable:
+            properties["routing_status"] = "regional"
+            properties["routing_issue"] = "outside_main_network"
         else:
             properties["routing_status"] = "review"
-            properties["routing_issue"] = (
-                "attachment_not_in_lake_network" if attachments
-                else "no_routing_attachment"
-            )
+            properties["routing_issue"] = "no_verified_lake_route"
     return entry_points
 
 
@@ -577,13 +590,6 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
         rendered_layers["rivers"],
         rendered_layers["entry_points"],
     )
-    searchable_entry_codes = {entry["code"] for entry in access_index["entries"]}
-    for feature in entry_points["features"]:
-        properties = feature["properties"]
-        if properties["code"] not in searchable_entry_codes:
-            properties["routing_status"] = "review"
-            properties["routing_issue"] = "no_verified_lake_route"
-    entry_points_path.write_text(json.dumps(entry_points), encoding="utf-8")
     access_index_path = out_path.parent / access_index_filename
     written.extend(write_access_index(access_index, access_index_path))
 

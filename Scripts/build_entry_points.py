@@ -233,7 +233,7 @@ def _portage_attachment(entry, point, portage, distance_m, lake_names):
     }
 
 
-def _river_attachments(entry, point, river, distance_m, lake_names, fallback_lake=None):
+def _river_attachments(entry, point, river, distance_m, lake_names):
     line = river.geometry
     location = line.project(point)
     projected = line.interpolate(location)
@@ -245,8 +245,6 @@ def _river_attachments(entry, point, river, distance_m, lake_names, fallback_lak
     seen = set()
     for side, node_id, lake_guid, segment, along_m in sides:
         lake_guid = _json_value(lake_guid)
-        if not lake_guid and fallback_lake is not None:
-            lake_guid = fallback_lake.unique_guid
         if not node_id or node_id in seen:
             continue
         seen.add(node_id)
@@ -316,14 +314,6 @@ def build_entry_points(lakes, portages, rivers, boundary, source_path=SOURCE_PAT
             elif portage is not None and portage_distance <= 150:
                 method = "portage"
 
-        # Some official landings lie outside a deficient or clipped local
-        # shoreline.  A strong name match is safer than assigning a different,
-        # geometrically closer water body; the long connector remains visible
-        # and marked for review in the UI.
-        if method is None and lake is not None and lake_distance <= 2500:
-            if _name_score(entry["name"], lake.get("name")) >= 0.65:
-                method = "lake"
-
         if method == "lake":
             attachments = [_lake_attachment(entry, point, lake, lake_distance)]
         elif method == "portage":
@@ -335,9 +325,9 @@ def build_entry_points(lakes, portages, rivers, boundary, source_path=SOURCE_PAT
             override_name = RIVER_SEARCH_LAKE_OVERRIDES.get(code)
             override_lake = _named_lake(lake_gdf, override_name, point) if override_name else None
             attachments = _river_attachments(
-                entry, point, river, river_distance, lake_names, override_lake
+                entry, point, river, river_distance, lake_names
             )
-            if override_lake is not None:
+            if override_lake is not None and point.distance(override_lake.geometry) <= 250:
                 attachments.append(_lake_attachment(
                     entry,
                     point,
@@ -349,11 +339,11 @@ def build_entry_points(lakes, portages, rivers, boundary, source_path=SOURCE_PAT
         # not revive its old arbitrary nearest-lake assignment.  A strong
         # official-name match to a lake or river is a safer visible fallback;
         # the long connector remains marked "review" by _confidence().
-        if not attachments and lake is not None and lake_distance <= 2500:
+        if not attachments and lake is not None and lake_distance <= 250:
             if _name_score(entry["name"], lake.get("name")) >= 0.65:
                 method = "lake"
                 attachments = [_lake_attachment(entry, point, lake, lake_distance)]
-        if not attachments and river is not None and river_distance <= 1000:
+        if not attachments and river is not None and river_distance <= 250:
             if _name_score(entry["name"], river.get("name")) >= 0.65:
                 method = "river"
                 attachments = _river_attachments(
@@ -371,7 +361,7 @@ def build_entry_points(lakes, portages, rivers, boundary, source_path=SOURCE_PAT
                 _named_lake(lake_gdf, override_name, point)
                 if override_name else None
             )
-            if override_lake is not None:
+            if override_lake is not None and point.distance(override_lake.geometry) <= 250:
                 method = "lake"
                 attachments = [_lake_attachment(
                     entry,

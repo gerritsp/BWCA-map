@@ -624,6 +624,441 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "portage-19",
+      "properties": {
+        "portage_number": 19,
+        "usfs_id": 6060,
+        "trail_cn": "5213010436",
+        "trail_name": "OYSTER RIVER",
+        "start_lake_guid": "{813AEF88-AC8B-4BC4-9BB8-6BCB1C4191CA}",
+        "end_lake_guid": null,
+        "reason": "Unique local trail-number match with geometry consistent with recorded carry length.",
+        "retrieved": "2026-11-20"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -92.0832166,
+            48.210849
+          ],
+          [
+            -92.0830621,
+            48.2106453
+          ],
+          [
+            -92.0833935,
+            48.2102701
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "portage-117",
+      "properties": {
+        "portage_number": 117,
+        "usfs_id": 2155,
+        "trail_cn": "22707010602",
+        "trail_name": "MUSKEG LAKE-LONG ISLAND RIVER",
+        "start_lake_guid": "{B7DAB5DC-A944-4787-A87C-C49B4C84B585}",
+        "end_lake_guid": null,
+        "reason": "Unique local trail-number match with geometry consistent with recorded carry length.",
+        "retrieved": "2026-11-20"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -90.7248454,
+            48.0083864
+          ],
+          [
+            -90.7252819,
+            48.008467
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "portage-123",
+      "properties": {
+        "portage_number": 123,
+        "usfs_id": 5024,
+        "trail_cn": "5887010436",
+        "trail_name": "HATCHET LAKE-HATCHET RIVER",
+        "start_lake_guid": null,
+        "end_lake_guid": null,
+        "reason": "Unique local trail-number match with geometry consistent with recorded carry length.",
+        "retrieved": "2026-11-20"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -91.2596594,
+            48.0095881
+          ],
+          [
+            -91.2599377,
+            48.0094545
+          ],
+          [
+            -91.2599963,
+            48.0091584
+          ],
+          [
+            -91.2598889,
+            48.0088644
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "portage-166",
+      "properties": {
+        "portage_number": 166,
+        "usfs_id": 7088,
+        "trail_cn": "22722010602",
+        "trail_name": "CHASER LAKE-CHASER POND",
+        "start_lake_guid": "{BAEF72B0-903B-4A2E-A658-40F2789337CC}",
+        "end_lake_guid": null,
+        "reason": "Unique local trail-number match with geometry consistent with recorded carry length.",
+        "retrieved": "2026-11-20"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -90.9725075,
+            47.9647488
+          ],
+          [
+            -90.9728594,
+            47.9647865
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "portage-223",
+      "properties": {
+        "portage_number": 223,
+        "usfs_id": 7141,
+        "trail_cn": "22773010602",
+        "trail_name": "PERENT-PERENT",
+        "start_lake_guid": null,
+        "end_lake_guid": null,
+        "reason": "Unique local trail-number match with geometry consistent with recorded carry length.",
+        "retrieved": "2026-11-20"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -91.18737,
+            47.8040732
+          ],
+          [
+            -91.1866488,
+            47.8042643
+          ],
+          [
+            -91.1862422,
+            47.8043164
+          ],
+          [
+            -91.1860127,
+            47.8042408
+          ],
+          [
+            -91.1856259,
+            47.8041312
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "portage-236",
+      "properties": {
+        "portage_number": 236,
+        "usfs_id": 6012,
+        "trail_cn": "5080010436",
+        "trail_name": "SLIM-SEC 3 POND",
+        "start_lake_guid": null,
+        "end_lake_guid": "{47355D25-26AF-4ACE-9767-59BA4CE6624D}",
+        "reason": "Unique local trail-number match with geometry consistent with recorded carry length.",
+        "retrieved": "2026-11-20"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -92.2555821,
+            48.3079933
+          ],
+          [
+            -92.2556288,
+            48.307939
+          ],
+          [
+            -92.2556319,
+            48.30785
+          ],
+          [
+            -92.2555822,
+            48.3077925
+          ],
+          [
+            -92.2554539,
+            48.3076646
+          ],
+          [
+            -92.2554129,
+            48.3075657
+          ],
+          [
+            -92.255441,
+            48.3074914
+          ],
+          [
+            -92.2554182,
+            48.3074152
+          ],
+          [
+            -92.2554041,
+            48.3073668
+          ],
+          [
+            -92.2553994,
+            48.3073621
+          ],
+          [
+            -92.2554415,
+            48.3072987
+          ],
+          [
+            -92.2554568,
+            48.3072752
+          ],
+          [
+            -92.2554583,
+            48.307203
+          ],
+          [
+            -92.2555424,
+            48.3071011
+          ],
+          [
+            -92.2556118,
+            48.3069834
+          ],
+          [
+            -92.2557123,
+            48.3069725
+          ],
+          [
+            -92.2557824,
+            48.3069555
+          ],
+          [
+            -92.2558299,
+            48.306894
+          ],
+          [
+            -92.2558141,
+            48.306824
+          ],
+          [
+            -92.2557831,
+            48.3068052
+          ],
+          [
+            -92.255709,
+            48.3067058
+          ],
+          [
+            -92.2556548,
+            48.3066796
+          ],
+          [
+            -92.2556303,
+            48.3066145
+          ],
+          [
+            -92.2556063,
+            48.3065323
+          ],
+          [
+            -92.2555638,
+            48.306492
+          ],
+          [
+            -92.2555643,
+            48.3064504
+          ],
+          [
+            -92.2555817,
+            48.3063827
+          ],
+          [
+            -92.2555763,
+            48.3063406
+          ],
+          [
+            -92.2556157,
+            48.3062776
+          ],
+          [
+            -92.2556379,
+            48.3061891
+          ],
+          [
+            -92.2555517,
+            48.3061129
+          ],
+          [
+            -92.2555152,
+            48.3060157
+          ],
+          [
+            -92.2554584,
+            48.3059314
+          ],
+          [
+            -92.2554848,
+            48.3058485
+          ],
+          [
+            -92.255467,
+            48.3057133
+          ],
+          [
+            -92.2554545,
+            48.3056949
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "portage-346",
+      "properties": {
+        "portage_number": 346,
+        "usfs_id": 2065,
+        "trail_cn": "22489010602",
+        "trail_name": "BINGSHICK-BINGSHICK RIVER",
+        "start_lake_guid": "{4F41F5E4-0FC0-48FB-B7F6-CD6021CC9D32}",
+        "end_lake_guid": null,
+        "reason": "Unique local trail-number match with geometry consistent with recorded carry length.",
+        "retrieved": "2026-11-20"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -90.8944233,
+            48.082744
+          ],
+          [
+            -90.8943987,
+            48.0826895
+          ],
+          [
+            -90.8943606,
+            48.0826348
+          ],
+          [
+            -90.8943367,
+            48.0825624
+          ],
+          [
+            -90.8942864,
+            48.0824805
+          ],
+          [
+            -90.8941943,
+            48.0824338
+          ],
+          [
+            -90.8941693,
+            48.0823884
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "portage-745",
+      "properties": {
+        "portage_number": 745,
+        "usfs_id": 7022,
+        "trail_cn": "22230010602",
+        "trail_name": "BOULDER LAKE-BOULDER POND",
+        "start_lake_guid": null,
+        "end_lake_guid": "{F7DD7A1B-CCEC-481F-A485-A4DCDD55A125}",
+        "reason": "Unique local trail-number match with geometry consistent with recorded carry length.",
+        "retrieved": "2026-11-20"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -91.1252976,
+            48.007169
+          ],
+          [
+            -91.1266005,
+            48.0064795
+          ],
+          [
+            -91.1268028,
+            48.0061004
+          ],
+          [
+            -91.1268686,
+            48.0057415
+          ],
+          [
+            -91.1267987,
+            48.0053355
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "portage-885",
+      "properties": {
+        "portage_number": 885,
+        "usfs_id": 5036,
+        "trail_cn": "5797010436",
+        "trail_name": "CACABIC-ALICE",
+        "start_lake_guid": "{EDAC0FA2-1B65-4302-916C-152B673875FA}",
+        "end_lake_guid": null,
+        "reason": "Unique local trail-number match with geometry consistent with recorded carry length.",
+        "retrieved": "2026-11-20"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -91.2133018,
+            47.9712497
+          ],
+          [
+            -91.2135848,
+            47.9709121
+          ]
+        ]
+      }
     }
   ]
 }

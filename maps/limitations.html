@@ -18,15 +18,15 @@
 <h2>Current checked-in coverage</h2>
 <table>
  <tr><th>Lake search</th><td>1,361 fisheries bundles, including 1,332 lakes with Minnesota DNR DOW identifiers.</td></tr>
- <tr><th>Entry points</th><td>69 permit entry codes are represented by 71 water-entry locations. Only 11 codes currently pass the verified main-network check used by lake-search filters; the other locations remain visible and marked for review. Multiple official locations exist for entries 47 and 49.</td></tr>
- <tr><th>Portages</th><td>905 mapped portage segments. There are 661 connected segments and 244 review-only segments; endpoint, water-connection, and length concerns are visually marked on the map.</td></tr>
+ <tr><th>Entry points</th><td>69 permit entry codes are represented by 71 water-entry locations. 13 locations reach the largest routing network, 52 have regional access, and 6 need review. Multiple official locations exist for entries 47 and 49.</td></tr>
+ <tr><th>Portages</th><td>905 mapped portage segments. There are 769 connected segments and 136 review-only segments; endpoint, water-connection, and length concerns are visually marked on the map.</td></tr>
  <tr><th>Routing</th><td>A* and Dijkstra use the same estimated-time cost and the same generated graph. The graph includes 4,772 in-lake pair routes. Algorithm agreement does not prove that the underlying geometry or field conditions are correct.</td></tr>
  <tr><th>Source snapshot</th><td>The current checked-in entry-point source snapshot is from 2026. Individual source datasets have their own dates and refresh procedures in the data provenance record.</td></tr>
 </table>
 
 <h2>Known gaps</h2>
 <ul>
- <li>The source lake file was already clipped at the wilderness boundary, and its original whole-lake source is missing. Fifty-eight entry locations therefore remain review-only until their full water and portage geometry can be reconstructed and verified.</li>
+ <li>Restored Minnesota DNR shorelines cover many boundary lakes. Some landings still lack a verified water connection. Orange dotted portages identify segments that need review.</li>
  <li>Some entry approaches are approximate and may attach to the nearest usable graph location rather than a field-verified landing.</li>
  <li>Some rivers and river-to-lake transitions remain disconnected or incomplete. Mapped perennial water is not proof of canoe navigability.</li>
  <li>Portage geometry, closures, landings, and trail conditions may differ from the checked-in data.</li>

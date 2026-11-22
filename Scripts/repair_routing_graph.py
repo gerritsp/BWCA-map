@@ -212,10 +212,9 @@ def _path(previous, source, target):
     return result
 
 
-def _smooth(coords, polygon):
+def _smooth(coords, safe):
     if len(coords) <= 2:
         return coords
-    safe = polygon.buffer(0.5)
     result = [coords[0]]
     index = 0
     while index < len(coords) - 1:
@@ -242,6 +241,8 @@ def _lake_paths(access_nodes, polygon):
 
     full_safe = polygon.buffer(0.5)
     landing_safe = polygon.buffer(LAKE_TOLERANCE_M + 0.5)
+    shapely.prepare(full_safe)
+    shapely.prepare(landing_safe)
     snapped = [
         point if polygon.covers(point) else nearest_points(point, polygon)[1]
         for _, point in access_nodes
@@ -290,7 +291,7 @@ def _lake_paths(access_nodes, polygon):
         inside_coords = [left_snap.coords[0]]
         inside_coords.extend(centers[index].coords[0] for index in triangle_path)
         inside_coords.append(right_snap.coords[0])
-        inside_coords = _smooth(inside_coords, polygon)
+        inside_coords = _smooth(inside_coords, full_safe)
         route = _line([
             access_nodes[left][1].coords[0],
             *inside_coords,
