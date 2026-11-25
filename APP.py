@@ -10,6 +10,7 @@ from shapely.geometry import LineString, Point
 from pyproj import Transformer
 
 from models.bwca_graph import bwca_graph
+from Scripts.portage_water_access import add_creek_approaches
 from Scripts.build_entry_points import build_entry_points
 from Scripts.build_lake_access_index import build_access_index, write_access_index
 from Scripts.canonicalize_output import round_floats
@@ -62,6 +63,8 @@ def build_graph():
             if dataset == "portages_final_snapped":
                 _apply_portage_geometry_corrections(graph)
                 _align_portage_landings(graph)
+            if dataset == "bwca_rivers_lines":
+                add_creek_approaches(graph)
             connect()
         else:
             print(f"Optional layer unavailable: {dataset}")
@@ -252,6 +255,7 @@ def _portage_endpoint_routes(graph, portages):
 
 def portages_geojson(graph):
     portages = list(graph.portages.values())
+    pending_review = set(json.loads((REPO_ROOT / "Data/portage_routing_review.json").read_text(encoding="utf-8"))["portage_numbers"])
     endpoint_routes = _portage_endpoint_routes(graph, portages)
     recorded_lengths = [float(p.length_rods) * 5.0292 for p in portages]
     drawn_lengths = [float(p.geometry.length) for p in portages]
@@ -298,16 +302,39 @@ def portages_geojson(graph):
             "routing_status": [
                 "connected" if (
                     all(side["type"] != "unresolved" for side in route)
+                    and portage.portage_num not in pending_review
                     and length_is_ok
                 )
                 else "review"
-                for route, length_is_ok in zip(endpoint_routes, length_ok)
+                for portage, route, length_is_ok in zip(portages, endpoint_routes, length_ok)
             ],
         },
         geometry=[p.geometry for p in portages],
         crs=SOURCE_CRS,
     )
-    return _to_geojson(gdf)
+    data = _to_geojson(gdf)
+    by_number = {f["properties"]["portage_number"]: f for f in data["features"]}
+    corrections = json.loads((REPO_ROOT / "Data/review_water_connections.geojson").read_text(
+        encoding="utf-8"))
+    for feature in corrections["features"]:
+        link = feature["properties"]
+        trail = by_number.get(link["portage_number"])
+        if trail is None or trail["properties"]["routing_status"] != "review":
+            continue
+        props = trail["properties"]
+        if props["routing_type_" + link["side"]] == "unresolved":
+            props.setdefault("review_water_connections", []).append({
+                "side": link["side"], "lake_guid": link["lake_guid"],
+                "coordinates": feature["geometry"]["coordinates"],
+            })
+    for link in json.loads((REPO_ROOT / "Data/review_portage_approaches.json").read_text(encoding="utf-8")):
+        trail = by_number.get(link["portage_number"])
+        if trail is None:
+            continue
+        props = trail["properties"]
+        if props["routing_status"] == "review" and props["routing_type_" + link["side"]] == "unresolved":
+            props["estimated_approach"] = link
+    return data
 
 
 def rivers_geojson(graph):
@@ -321,6 +348,15 @@ def rivers_geojson(graph):
         }
         for river in rivers if river.routable
     ]
+    water_crossings = set()
+    for river in rivers:
+        if river.strm_type != "Connector (Lake)" or not river.lake_a or not river.lake_b:
+            continue
+        if river.lake_a.unique_guid == river.lake_b.unique_guid:
+            continue
+        water = river.lake_a.geometry.union(river.lake_b.geometry)
+        if water.buffer(1).covers(river.geometry):
+            water_crossings.add(river.river_id)
     component_by_id = river_component_labels(routable_rows)
     gdf = gpd.GeoDataFrame(
         {
@@ -330,6 +366,7 @@ def rivers_geojson(graph):
             "routable": [bool(r.routable) for r in rivers],
             "node_a": [r.node_a for r in rivers],
             "node_b": [r.node_b for r in rivers],
+            "lake_crossing": [r.river_id in water_crossings for r in rivers],
             "routing_component": [component_by_id.get(r.river_id) for r in rivers],
             "unique_guid_a": [r.lake_a.unique_guid if r.lake_a else None for r in rivers],
             "unique_guid_b": [r.lake_b.unique_guid if r.lake_b else None for r in rivers],
@@ -388,6 +425,8 @@ def _mark_entry_reachability(entry_points, graph):
     nodes = {node[0]: node for node in graph.get("nodes", [])}
     adjacency = {node_id: [] for node_id in nodes}
     for edge in graph.get("edges", []):
+        if edge[3] == "approach" and any(":estimate" in node for node in edge[:2]):
+            continue
         if edge[0] in adjacency and edge[1] in adjacency:
             adjacency[edge[0]].append(edge[1])
             adjacency[edge[1]].append(edge[0])

@@ -64,6 +64,14 @@ function main() {
 
     for (const feature of rivers.features) {
         const p = feature.properties;
+        if (p.lake_crossing) {
+            const coords = feature.geometry.coordinates;
+            const left = `lake-crossing:${p.river_id}:a`;
+            const right = `lake-crossing:${p.river_id}:b`;
+            addNode(left, p.unique_guid_a, coords[0]);
+            addNode(right, p.unique_guid_b, coords[coords.length - 1]);
+            addEdge(left, right, p.length_m, "paddle", feature.geometry);
+        }
         if (!p.routable) continue;
         const coords = feature.geometry.coordinates;
         addNode(p.node_a, p.unique_guid_a, coords[0]);

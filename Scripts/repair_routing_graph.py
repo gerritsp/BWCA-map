@@ -49,7 +49,7 @@ WGS84 = "EPSG:4326"
 SOURCE_CRS = "EPSG:26915"
 LAKE_TOLERANCE_M = 25.0
 NAV_SIMPLIFY_M = 15.0
-REPAIR_VERSION = 2
+REPAIR_VERSION = 4
 
 TO_UTM = Transformer.from_crs(WGS84, SOURCE_CRS, always_xy=True).transform
 TO_WGS84 = Transformer.from_crs(SOURCE_CRS, WGS84, always_xy=True).transform
@@ -386,6 +386,44 @@ def repair_routing_graph(stem_path):
             in_lake.union(left, right)
         return True
 
+    # Some source trails are split at dry junctions. Keep their review flags
+    # and link coincident endpoints without moving either surveyed segment.
+    landings = defaultdict(list)
+    for feature in portages.get("features", []):
+        properties = feature["properties"]
+        number = properties["portage_number"]
+        for side in ("a", "b"):
+            node_id = f"portage:{number}:{side}"
+            if node_id in nodes:
+                key = tuple(nodes[node_id][2])
+                landings[key].append((node_id, number, properties["routing_status"]))
+    for coord, members in landings.items():
+        for index, (left, first, status) in enumerate(members):
+            for right, second, other_status in members[index + 1:]:
+                if first != second and "review" in (status, other_status):
+                    point = _to_utm(Point(coord))
+                    add_edge(left, right, _line([point.coords[0]] * 2), "approach")
+
+    # Short detached fragments share their Forest Service trail number with
+    # the adjacent full carry. Connect only the closest pair of landings.
+    trails = {f["properties"]["portage_number"]: f["properties"]
+              for f in portages.get("features", [])}
+    for fragment, full in ((836, 835), (871, 874), (896, 897)):
+        if fragment not in trails or full not in trails:
+            continue
+        if (trails[fragment]["routing_status"] != "review"
+                or trails[fragment]["usfs_id"] != trails[full]["usfs_id"]):
+            continue
+        candidates = []
+        for a in ("a", "b"):
+            for b in ("a", "b"):
+                left, right = f"portage:{fragment}:{a}", f"portage:{full}:{b}"
+                start, end = (_to_utm(Point(nodes[n][2])) for n in (left, right))
+                candidates.append((start.distance(end), left, right, start, end))
+        distance, left, right, start, end = min(candidates)
+        if distance <= LAKE_TOLERANCE_M:
+            add_edge(left, right, _line([start.coords[0], end.coords[0]]), "approach")
+
     river_by_id = {
         _id_key(feature.get("properties", {}).get("river_id")): feature
         for feature in rivers.get("features", [])
@@ -486,6 +524,62 @@ def repair_routing_graph(stem_path):
         })
     lake_geometries = {row["lake_id"]: row["geometry"] for row in lake_rows}
 
+    for feature in portages.get("features", []):
+        props = feature["properties"]
+        estimate = props.get("estimated_approach")
+        if estimate and props["routing_status"] == "review":
+            source = f"portage:{props['portage_number']}:{estimate['side']}"
+            anchor = source + ":estimate"
+            start = _to_utm(Point(nodes[source][2]))
+            guid = estimate.get("lake_guid")
+            if guid:
+                target = nearest_points(start, lake_geometries[guid])[1]
+            else:
+                river = river_by_id[_id_key(estimate["river_id"])]
+                line = _to_utm(shape(river["geometry"]))
+                location = line.project(start)
+                target = line.interpolate(location)
+            if start.distance(target) > estimate["max_gap_m"]:
+                raise ValueError(f"Estimated approach exceeds reviewed gap: {source}")
+            add_node(anchor, guid, target)
+            add_edge(source, anchor, _line([start.coords[0], target.coords[0]]), "approach")
+            if not guid:
+                rp = river["properties"]
+                sides = [estimate["outlet_side"]] if "outlet_side" in estimate else ["a", "b"]
+                for side in sides:
+                    distance = 0 if side == "a" else line.length
+                    end = rp["node_" + side]
+                    if not rp["routable"]:
+                        # Only the explicitly reviewed reach to the lake is a planning estimate.
+                        end = anchor + ":outlet"
+                        add_node(end, rp["unique_guid_" + side], line.interpolate(distance))
+                    add_edge(anchor, end, substring(line, location, distance),
+                             "river" if rp["routable"] else "approach")
+        for link in props.get("review_water_connections", []):
+            lake_id = link["lake_guid"]
+            portage_node = f"portage:{props['portage_number']}:{link['side']}"
+            shore = portage_node + ":shore"
+            water = portage_node + ":water"
+            start, landing, target = [_to_utm(Point(c)) for c in link["coordinates"]]
+            if lake_id not in lake_geometries or target.distance(lake_geometries[lake_id]) > 1:
+                raise ValueError(f"Water connection misses the target lake: {portage_node}")
+            if (start.distance(_to_utm(Point(nodes[portage_node][2]))) > 1
+                    or start.distance(landing) > LAKE_TOLERANCE_M):
+                raise ValueError(f"Water connection misses the portage: {portage_node}")
+            add_node(shore, None, landing)
+            add_node(water, lake_id, target)
+            add_edge(portage_node, shore, _line([start.coords[0], landing.coords[0]]), "approach")
+            add_edge(shore, water, _line([landing.coords[0], target.coords[0]]), "paddle")
+
+    # Pin lake-entry clicks to their actual lake part at build time.
+    entries_path = stem.with_name(stem.name + "_entry_points.json")
+    entries = _load(entries_path) if entries_path.exists() else {}
+    for feature in entries.get("features", []):
+        for attachment in feature["properties"]["attachments"]:
+            if attachment["kind"] == "lake":
+                add_node(attachment["node_id"], attachment["lake_guid"],
+                         _to_utm(Point(attachment["route_coordinates"])))
+
     groups = defaultdict(list)
     for node_id, lake_id, coord in nodes.values():
         if not lake_id or node_id.startswith("vertex:") or lake_id not in lake_geometries:
@@ -506,10 +600,14 @@ def repair_routing_graph(stem_path):
     lake_bridges = 0
     repaired_parts = 0
     for (lake_id, part_index), access_nodes in groups.items():
-        if len(access_nodes) < 2:
-            continue
         lake = lake_geometries[lake_id]
         part = list(lake.geoms)[part_index] if lake.geom_type == "MultiPolygon" else lake
+        if len(access_nodes) == 1 or all(node.startswith("entry:") for node, _ in access_nodes):
+            # Even a lake with one landing supports paddling onto open water.
+            interior = part.representative_point()
+            interior_id = f"lake-interior:{lake_id}:{part_index}"
+            add_node(interior_id, lake_id, interior)
+            access_nodes.append((interior_id, interior))
         paths = _lake_paths(access_nodes, part)
         lake_pair_edges += len(paths)
         candidate_edges = [
@@ -524,8 +622,6 @@ def repair_routing_graph(stem_path):
         for _, left, right, route in sorted(candidate_edges):
             if component_union.union(left, right):
                 selected += 1
-        if selected != len(access_nodes) - 1:
-            continue
         lake_bridges += selected
         repaired_parts += 1
 

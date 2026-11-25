@@ -396,6 +396,9 @@ def build_entry_points(lakes, portages, rivers, boundary, source_path=SOURCE_PAT
         record["code"] = code
         record["location_index"] = seen[code]
         record["location_count"] = totals[code]
+        for attachment in record["attachments"]:
+            if attachment["kind"] == "lake":
+                attachment["node_id"] = f"entry:{code}:{seen[code]}:lake"
         features.append({
             "type": "Feature",
             "id": f"{code}:{seen[code]}",

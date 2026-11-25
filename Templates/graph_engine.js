@@ -140,6 +140,8 @@
             if (current.node === endNode) break;
 
             for (const edge of engine.adjacency.get(current.node) || []) {
+                if (!options.allowEstimatedApproaches && edge.kind === "approach" &&
+                    (current.node.includes(":estimate") || edge.to.includes(":estimate"))) continue;
                 const routeDistance = geographicFloor
                     ? Math.max(edge.weight, edge.directDistance || 0) : edge.weight;
                 const speed = speeds[edge.kind] || speeds.paddle;
@@ -312,6 +314,19 @@
             wirePaddleEdges(nodeId, node.lakeId, node.coord);
         }
 
+        function attachPortageLanding(role, feature, clickCoord) {
+            const point = turf.nearestPointOnLine(feature, clickCoord, {units: "meters"});
+            const length = turf.length(feature, {units: "meters"});
+            const side = point.properties.totalDistance <= length / 2 ? "a" : "b";
+            const id = `portage:${feature.properties.portage_number}:${side}`;
+            const landing = nodes.get(id);
+            if (!landing) return null;
+            addNode(role, null, landing.coord);
+            addEdge(role, id, 0, "approach",
+                turf.lineString([landing.coord, landing.coord]).geometry, false);
+            return landing.coord;
+        }
+
         function removeNode(nodeId) {
             if (!nodes.has(nodeId)) return;
             const node = nodes.get(nodeId);
@@ -464,7 +479,7 @@
         return {
             lakesById, nodes, adjacency, accessPointsByLake, vertexGraphBuilt,
             simplifiedLake, preparedLake, lineStaysInLake, lakeBoundaryPoints,
-            buildLakeVertexGraph, wirePaddleEdges, ensurePaddleAttachment,
+            buildLakeVertexGraph, wirePaddleEdges, ensurePaddleAttachment, attachPortageLanding,
             addNode, removeNode, addEdge,
             wireRiverSnapEdges, clearRiverSnapEdges, edgeCrossesBurn,
             heuristicScale: () => safeHeuristicScale,

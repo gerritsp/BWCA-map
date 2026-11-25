@@ -141,19 +141,27 @@ edge is checked for valid node references.
 River topology also joins an endpoint when it lies within 0.1 m of another
 routable river segment's interior. This resolves exact mapped confluences that
 were visually continuous but had different endpoint node IDs; it does not join
-merely nearby waterways. The updated snapshot contains 61 such junctions.
+merely nearby waterways. The updated snapshot contains 62 such junctions.
 
-Only DNR `Centerline (River)` and `Connector (River)` segments are routable.
-Perennial streams and artificial lake connector lines remain visible but are
-not treated as canoe routes. Users still need current maps, water levels and
-local guidance.
+The default graph includes DNR river centerlines, river connectors, selected
+entry creeks, and creek approaches split at mapped carries. Lake crossings
+must follow a mapped connector contained in the two lake polygons (1 m tolerance).
+The NHD shoreline matches for portages 200, 627 and 847 are recorded in
+`Data/review_water_connections.geojson` with the source feature identifiers.
+Additional Forest Service geometry corrections cover portages 572, 693 and 710.
+
+Six estimated approaches in `Data/review_portage_approaches.json` are available
+through an opt-in route preference. Each names the target water and caps the
+landing offset. Portages 887 and 888 share a trail junction and depend on
+the same unverified outlet reach to Wood Lake. The portages listed in
+`Data/portage_routing_review.json` retain their review flag until reviewed.
 
 Entry points 75 (Little Isabella River) and 84 (Snake River) retain their
 official markers. Exact confluence repair connects both rivers to the Isabella
 River network; their initial access distances include the visible approach to
 the recorded portage. Entry 84 also uses the corrected official trail 5190.
 
-## Verified snapshot (2026-11-20)
+## Verified snapshot (2026-11-25)
 
 | Measure | Count |
 | --- | ---: |
@@ -166,13 +174,13 @@ the recorded portage. Entry 84 also uses the corrected official trail 5190.
 | Inventory records | 1,807 |
 | Official entry source features | 87 |
 | Published water-entry locations / permit codes | 71 / 69 |
-| Searchable entry permit codes | 63 |
+| Searchable entry permit codes | 69 |
 | Preserved portage segments | 905 |
-| Connected / review-only portages | 769 / 136 |
-| Lake / river / unresolved portage endpoints | 1,524 / 144 / 142 |
-| Routable river segments | 463 |
-| Exact river endpoint/interior junctions | 61 |
-| In-lake pair routes / minimum connecting subset | 5,523 / 1,480 |
+| Portages without / with routing review flags | 769 / 136 |
+| Lake / river / unresolved portage endpoints | 1,525 / 164 / 121 |
+| Routable river segments | 482 |
+| Exact river endpoint/interior junctions | 62 |
+| In-lake pair routes / minimum connecting subset | 6,166 / 1,770 |
 
 All expected snapshot counts matched. Source collection completed without failures.
 The test suite includes every encoded bundle URL and all public application assets,

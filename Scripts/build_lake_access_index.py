@@ -103,6 +103,10 @@ def build_access_index(portages, rivers, entry_points):
         adjacency[a].append((b, float(rods), portage_count, lakes_ab))
         adjacency[b].append((a, float(rods), portage_count, lakes_ba))
 
+    for row in _feature_properties(rivers):
+        if row.get("lake_crossing"):
+            add_edge(lake_node(row["unique_guid_a"]), lake_node(row["unique_guid_b"]), 0, 0)
+
     river_rows = [row for row in _feature_properties(rivers) if row.get("routable")]
     river_components = Components()
     river_by_id = {}
@@ -170,6 +174,9 @@ def build_access_index(portages, rivers, entry_points):
             return lake_node(guid) if isinstance(guid, str) and guid else None
         if routing_type == "river":
             return river_anchor(row.get(f"routing_river_id_{side}"))
+        for link in row.get("review_water_connections", []):
+            if link["side"] == side:
+                return lake_node(link["lake_guid"])
         return None
 
     for row in _feature_properties(portages):
