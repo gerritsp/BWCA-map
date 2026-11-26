@@ -150,6 +150,12 @@ The NHD shoreline matches for portages 200, 627 and 847 are recorded in
 `Data/review_water_connections.geojson` with the source feature identifiers.
 Additional Forest Service geometry corrections cover portages 572, 693 and 710.
 
+The 109 m DNR reach joining Thomas and Fraser lakes follows the documented
+paddle channel through the narrows. Its two endpoint keys select this reach
+independently of other segments named Splash Lake Outlet.
+[Paddler's account from Thomas Lake](https://bwca.com/index.cfm?fid=31&fuseaction=bwca_routes.trip_report&trid=7128)
+and [account from Fraser Lake](https://bwca.com/index.cfm?fid=31&fuseaction=bwca_routes.trip_report&trid=243).
+
 Six estimated approaches in `Data/review_portage_approaches.json` are available
 through an opt-in route preference. Each names the target water and caps the
 landing offset. Portages 887 and 888 share a trail junction and depend on
@@ -178,9 +184,9 @@ the recorded portage. Entry 84 also uses the corrected official trail 5190.
 | Preserved portage segments | 905 |
 | Portages without / with routing review flags | 769 / 136 |
 | Lake / river / unresolved portage endpoints | 1,525 / 164 / 121 |
-| Routable river segments | 482 |
+| Routable river segments | 483 |
 | Exact river endpoint/interior junctions | 62 |
-| In-lake pair routes / minimum connecting subset | 6,166 / 1,770 |
+| In-lake pair routes / minimum connecting subset | 6,175 / 1,772 |
 
 All expected snapshot counts matched. Source collection completed without failures.
 The test suite includes every encoded bundle URL and all public application assets,

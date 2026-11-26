@@ -290,6 +290,7 @@
             if (!lakesById.get(lakeId)) return;
             const accessPoints = accessPointsByLake.get(lakeId) || [];
             for (const otherId of accessPoints) {
+                if (otherId === nodeId) continue;
                 const otherCoord = nodes.get(otherId).coord;
                 if (lineStaysInLake(coord, otherCoord, lakeId)) {
                     const distance = turf.distance(coord, otherCoord, { units: "meters" });
@@ -307,11 +308,122 @@
             accessPointsByLake.get(lakeId).push(nodeId);
         }
 
+        // Triangulate only the polygon part that was clicked. Shared triangle sides
+        // are portals through open water; holes and separate parts have no portals.
+        const lakeMeshes = new Map();
+        const fixedLakeNodes = new Set();
+        function navigationMesh(key, polygon) {
+            if (lakeMeshes.has(key)) return lakeMeshes.get(key);
+            const triangles = turf.tesselate(polygon).features;
+            const neighbors = triangles.map(() => []);
+            const owners = new Map();
+            triangles.forEach((triangle, index) => {
+                const ring = triangle.geometry.coordinates[0];
+                for (let i = 0; i < 3; i++) {
+                    const a = ring[i], b = ring[i + 1];
+                    const side = [a.join(","), b.join(",")].sort().join("|");
+                    if (!owners.has(side)) {
+                        owners.set(side, index);
+                        continue;
+                    }
+                    const other = owners.get(side);
+                    const portal = {a, b, midpoint: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]};
+                    neighbors[index].push({other, portal});
+                    neighbors[other].push({other: index, portal});
+                }
+            });
+            const mesh = {triangles, neighbors};
+            lakeMeshes.set(key, mesh);
+            return mesh;
+        }
+
+        // A shortcut stays in the mesh if it crosses the intervening portals in
+        // order. Between crossings the segment lies inside one convex triangle.
+        function crossesPortals(path, portals, from, to) {
+            const [x, y] = path[from];
+            const dx = path[to][0] - x, dy = path[to][1] - y;
+            let prior = 0;
+            for (let i = from + 1; i < to; i++) {
+                const {a, b} = portals[i - 1];
+                const ex = b[0] - a[0], ey = b[1] - a[1];
+                const det = dx * ey - dy * ex;
+                if (!det) return false;
+                const ax = a[0] - x, ay = a[1] - y;
+                const along = (ax * ey - ay * ex) / det;
+                const across = (ax * dy - ay * dx) / det;
+                if (along < prior || along > 1 || across < 0 || across > 1) return false;
+                prior = along;
+            }
+            return true;
+        }
+
+        function attachThroughLake(nodeId, node, targets) {
+            const geometry = lakesById.get(node.lakeId).geometry;
+            const parts = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+            const part = parts.findIndex(rings => turf.booleanPointInPolygon(node.coord, turf.polygon(rings)));
+            if (part < 0) return false;
+            const polygon = turf.polygon(parts[part]);
+            const mesh = navigationMesh(node.lakeId + ":" + part, polygon);
+            const locate = coord => mesh.triangles.findIndex(t => turf.booleanPointInPolygon(coord, t));
+            const source = locate(node.coord);
+            if (source < 0) return false;
+
+            const previous = new Map([[source, null]]);
+            const queue = [source];
+            for (let i = 0; i < queue.length; i++) {
+                const here = queue[i];
+                for (const {other, portal} of mesh.neighbors[here]) {
+                    if (previous.has(other)) continue;
+                    previous.set(other, {here, portal});
+                    queue.push(other);
+                }
+            }
+            // Consider the closest landings first. A landing directly across a
+            // peninsula can have a longer water path than a more distant landing.
+            const candidates = targets.map(id => ({
+                id, coord: nodes.get(id).coord,
+                lowerBound: turf.distance(node.coord, nodes.get(id).coord, {units: "meters"}),
+            })).sort((a, b) => a.lowerBound - b.lowerBound);
+            let best = null;
+            for (const {id, coord, lowerBound} of candidates) {
+                if (best && lowerBound >= best.length) break;
+                const dest = locate(coord);
+                if (!previous.has(dest)) continue;
+                const portals = [];
+                for (let at = dest; at !== source;) {
+                    const {here, portal} = previous.get(at);
+                    portals.push(portal);
+                    at = here;
+                }
+                portals.reverse();
+                const path = [node.coord, ...portals.map(p => p.midpoint), coord];
+                const smooth = [path[0]];
+                for (let i = 0; i < path.length - 1;) {
+                    let j = i + 1;
+                    while (j + 1 < path.length && crossesPortals(path, portals, i, j + 1)) j++;
+                    smooth.push(path[j]);
+                    i = j;
+                }
+                const line = turf.lineString(smooth);
+                const length = turf.length(line, {units: "meters"});
+                if (!best || length < best.length) best = {id, length, geometry: line.geometry};
+            }
+            if (!best) return false;
+            addEdge(nodeId, best.id, best.length, "paddle", best.geometry);
+            return true;
+        }
+
         function ensurePaddleAttachment(nodeId) {
             const node = nodes.get(nodeId);
-            if (!node || !node.lakeId || (adjacency.get(nodeId) || []).length) return;
-            buildLakeVertexGraph(node.lakeId);
-            wirePaddleEdges(nodeId, node.lakeId, node.coord);
+            if (!node || !node.lakeId || !lakesById.has(node.lakeId)) return;
+            const edges = adjacency.get(nodeId) || [];
+            if (edges.some(edge => fixedLakeNodes.has(edge.to))) return;
+            const targets = (accessPointsByLake.get(node.lakeId) || []).filter(id => fixedLakeNodes.has(id));
+            if (targets.length && attachThroughLake(nodeId, node, targets)) return;
+            if (!edges.length) {
+                buildLakeVertexGraph(node.lakeId);
+                wirePaddleEdges(nodeId, node.lakeId, node.coord);
+            }
         }
 
         function attachPortageLanding(role, feature, clickCoord) {
@@ -477,7 +589,7 @@
         }
 
         return {
-            lakesById, nodes, adjacency, accessPointsByLake, vertexGraphBuilt,
+            lakesById, nodes, adjacency, accessPointsByLake, vertexGraphBuilt, fixedLakeNodes,
             simplifiedLake, preparedLake, lineStaysInLake, lakeBoundaryPoints,
             buildLakeVertexGraph, wirePaddleEdges, ensurePaddleAttachment, attachPortageLanding,
             addNode, removeNode, addEdge,
@@ -522,6 +634,11 @@
                 coordinates: [engine.nodes.get(a).coord, engine.nodes.get(b).coord],
             };
             engine.addEdge(a, b, weight, kind, resolvedGeometry, crossesBurn);
+        }
+        for (const [id, lakeId] of data.nodes) {
+            if (lakeId && !id.startsWith("vertex:") && engine.adjacency.get(id).length) {
+                engine.fixedLakeNodes.add(id);
+            }
         }
         for (const lakeId of data.vertexGraphLakes || []) {
             engine.vertexGraphBuilt.add(lakeId);

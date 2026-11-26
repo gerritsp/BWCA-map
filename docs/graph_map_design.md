@@ -24,9 +24,11 @@ The generated `*_paddle_edges.json` contains:
 Two-coordinate paddle geometry may be `null`; the browser reconstructs that
 line from its endpoint nodes. This keeps the static payload smaller. The route
 graph is fetched only after route mode is selected. A live lake click first
-connects to visible fixed access points. Only when that leaves the click
-isolated does the browser create a small, temporary shoreline mesh for that
-lake.
+connects to visible fixed access points. If none is visible, the browser
+triangulates the clicked polygon part with its islands excluded. It connects
+the click to a fixed access point through shared triangle sides, and caches
+the triangulation for later clicks. A shortcut must cross the intervening
+triangle sides in order.
 
 The lake display layer is written as a small `*_lakes.json` manifest plus
 bounded `*_lakes_N.json` GeoJSON shards. The browser loads those shards in

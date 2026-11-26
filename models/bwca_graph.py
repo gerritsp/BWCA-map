@@ -106,7 +106,10 @@ class bwca_graph:
         for _, row in river_df.iterrows():
             name = row["name"] if isinstance(row["name"], str) else None
             landing = ENTRY_CREEKS.get((name, row["node_a"]))
-            routable = row["strm_type"] in ROUTABLE_RIVER_TYPES or landing is not None
+            # Documented paddle passage between Thomas and Fraser (Data/SOURCES.md).
+            thomas_fraser = (row["node_a"], row["node_b"]) == (
+                "633285.6_5317345.3", "633333.6_5317442.0")
+            routable = row["strm_type"] in ROUTABLE_RIVER_TYPES or landing is not None or thomas_fraser
             segment = RiverSegment(
                 river_id=row["river_id"],
                 name=name,
