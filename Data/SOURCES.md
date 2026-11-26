@@ -201,3 +201,14 @@ scripts, selected Crow Lake (`16028700`), zoomed to level 14 and opened a matchi
 popup with fish observations, clarity and four MPCA assessments. A visual browser
 check could not run because the Chromium download returned an invalid archive.
 This limitation is distinct from the passing DOM and HTTP checks.
+
+## Trip directory
+
+The map joins the checked-in `maps/trip_directory.json` snapshot to existing campsite IDs and lake GUIDs. Its BWCA.com entries link to individual public campsite, point-report, and outfitter pages. Visitor narratives, ratings, photographs, and original report coordinates stay on BWCA.com.
+
+- Campsite links were matched in UTM zone 15N within 50 metres when the lake site number agreed, or within 12 metres when there was just one nearby candidate. Multiple candidates passing those rules and pages claimed by multiple project sites were excluded. A local Forest Service site number and a BWCA.com campsite number can differ.
+- Place reports were filtered to the public PlaceInterest category within the project boundary or 75 metres of its edge. A report was associated with the unique nearest named project lake within 100 metres. The marker for a lake report group sits on its lake polygon. Categories describe reports, including historical sightings.
+- Named landmarks use USGS GNIS landform and hydrographic layers 5 and 7. The directory retains falls, rapids, capes, summits, cliffs and pillars in the same boundary area. Each marker links to its GNIS record.
+- Outfitter pins represent published business addresses matched by the U.S. Census Geocoder. They are approximate street locations. The directory links to each business listing.
+
+Sources: [BWCA.com campsite lookup](https://bwca.com/index.cfm?fuseaction=maps.camplookup), [place reports](https://bwca.com/index.cfm?fuseaction=maps.list_member_locations&pointtype=PlaceInterest), [outfitter directory](https://bwca.com/index.cfm?fuseaction=outfitting.outfitters), [USGS Geographic Names](https://carto.nationalmap.gov/arcgis/rest/services/geonames/MapServer), [Census Geocoder](https://geocoding.geo.census.gov/geocoder/).

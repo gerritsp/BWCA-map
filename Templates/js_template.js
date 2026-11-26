@@ -75,7 +75,7 @@ const LAKES_URL = "__LAKES_URL__";
         return {type: manifest.type || "FeatureCollection", features};
     }
 
-    function init(lakes, campsites, portages, rivers, entryPoints, boundary, fires) {
+    function init(lakes, campsites, portages, rivers, entryPoints, boundary, fires, directory) {
     const map = L.map("map", { maxBoundsViscosity: 1.0 });
     const streetMap = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
@@ -120,6 +120,41 @@ const LAKES_URL = "__LAKES_URL__";
     function bindFeatureInfo(layer, html) {
         layer.on("click", () => { if (mode === "explore") { resetSelection(); showInfo(html); } });
     }
+    function bwcaLink(query, label) {
+        return `<a href="https://bwca.com/index.cfm?${escapeHTML(query)}" target="_blank" rel="noopener noreferrer">${escapeHTML(label)}</a>`;
+    }
+    function lakeReportLinks(place) {
+        if (!place) return "";
+        const items = place.reports.map(([id, category]) =>
+            `<li>${bwcaLink("fuseaction=maps.point_info&scode=N&pt_id=" + id, category + " · " + id)}</li>`
+        ).join("");
+        return `<h3>BWCA.com points of interest</h3><ul>${items}</ul>`;
+    }
+    const reportsByLake = new Map(directory.places.filter(p => p.guid).map(p => [p.guid, p]));
+    function placeLayer(places, color) {
+        const group = L.markerClusterGroup({disableClusteringAtZoom: 13});
+        for (const place of places) {
+            const [lon, lat] = place.coords;
+            const marker = L.circleMarker([lat, lon], {
+                radius: 6, color, fillColor: color, fillOpacity: 0.9, bubblingMouseEvents: false
+            });
+            let details;
+            if (place.business) {
+                details = `<p>${escapeHTML(place.address)}</p><p>Approximate street address</p>` +
+                    bwcaLink("fuseaction=outfitting.ofdetails&buslink=1&busid=" + place.business, "Outfitter details on BWCA.com");
+            } else if (place.guid) {
+                details = "<p>This marker groups reports on or near the lake. Open a report for its location.</p>" + lakeReportLinks(place);
+            } else {
+                details = `<p>${escapeHTML(place.kind)}</p><a href="https://edits.nationalmap.gov/apps/gaz-domestic/public/summary/${encodeURIComponent(place.gnis)}" target="_blank" rel="noopener noreferrer">USGS place record</a>`;
+            }
+            marker.bindTooltip(escapeHTML(place.name + (place.guid ? " · lake reports" : "")));
+            bindFeatureInfo(marker, `<h2>${escapeHTML(place.name)}</h2>` + details);
+            group.addLayer(marker);
+        }
+        return group;
+    }
+    const placesLayer = placeLayer(directory.places, "#73419a");
+    const outfittersLayer = placeLayer(directory.outfitters, "#ae5813");
     const lakeLayersByGuid = new Map();
     async function openLakeData(layer, guid) {
         resetSelection();
@@ -130,7 +165,7 @@ const LAKES_URL = "__LAKES_URL__";
         showInfo(`<h2>${name}</h2><p>Loading lake details…</p>`);
         try {
             const bundle = await fetchLakeBundle(guid);
-            if (request === selectionRequest) showInfo(lakeBundleHTML(bundle));
+            if (request === selectionRequest) showInfo(lakeBundleHTML(bundle) + lakeReportLinks(reportsByLake.get(guid)));
         } catch (error) {
             if (request === selectionRequest) showInfo(`<h2>${name}</h2><p>Could not load lake data. Select this lake again to retry.</p>`);
         }
@@ -248,13 +283,18 @@ const LAKES_URL = "__LAKES_URL__";
         },
         onEachFeature: function (feature, layer) {
             const p = feature.properties;
+            const sourceSite = directory.campsites[p.camp_id];
+            const [lon, lat] = feature.geometry.coordinates;
+            const report = sourceSite ? bwcaLink("fuseaction=maps.camp_info&entityid=" + sourceSite[0],
+                "BWCA.com campsite " + sourceSite[1] + " · details and reports") :
+                bwcaLink("fuseaction=maps.camplookup", "Search BWCA.com campsites");
             const dist = p.distance_to_lake == null ? "N/A" : `${p.distance_to_lake.toFixed(1)} m`;
             bindFeatureInfo(layer,
                 `<b>Campsite:</b> ${escapeHTML(p.camp_id ?? "N/A")}<br>` +
                 `<b>Lake:</b> ${escapeHTML(p.lake_name || "N/A")}<br>` +
                 `<b>Status:</b> ${escapeHTML(p.status || "N/A")}<br>` +
                 `<b>District:</b> ${escapeHTML(p.district || "N/A")}<br>` +
-                `<b>Distance to matched lake:</b> ${dist}`
+                `<b>Location:</b> ${lat.toFixed(5)}, ${lon.toFixed(5)}<br><b>Distance to matched lake:</b> ${dist}<br>${report}`
             );
         }
     }).addTo(campsitesLayer);
@@ -317,6 +357,8 @@ const LAKES_URL = "__LAKES_URL__";
         {
             "Lakes": lakesLayer,
             "Campsites": campsitesLayer,
+            "Points of interest": placesLayer,
+            "Outfitters": outfittersLayer,
             "Portages": portagesLayer,
             "Rivers & streams": riversLayer,
             "Entry points": entryPointsLayer,
@@ -749,9 +791,16 @@ const LAKES_URL = "__LAKES_URL__";
         fetch(ENTRY_POINTS_URL).then((r) => r.json()),
         fetch(BOUNDARY_URL).then((r) => r.json()),
         fetch(FIRES_URL).then((r) => r.json()),
+        fetch("trip_directory.json").then(r => {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+        }).catch(error => {
+            console.warn("Could not load trip directory", error);
+            return {places: [], campsites: {}, outfitters: []};
+        }),
     ])
-        .then(([lakes, campsites, portages, rivers, entryPoints, boundary, fires]) =>
-            init(lakes, campsites, portages, rivers, entryPoints, boundary, fires))
+        .then(([lakes, campsites, portages, rivers, entryPoints, boundary, fires, directory]) =>
+            init(lakes, campsites, portages, rivers, entryPoints, boundary, fires, directory))
         .catch((err) => {
             console.error("Failed to load map data:", err);
             document.getElementById("map").textContent = `Could not load the map: ${err.message}. Check that the server is running and rebuild with APP.py if needed.`;

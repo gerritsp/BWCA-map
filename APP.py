@@ -583,6 +583,12 @@ def render_map(graph, out_path="maps/bwca_graph_map.html"):
     written[1].write_text(js, encoding="utf-8")
     written[2].write_text(ENGINE_TEMPLATE, encoding="utf-8")
 
+    directory = REPO_ROOT / "maps" / "trip_directory.json"
+    directory_output = out_path.parent / directory.name
+    if directory_output != directory:
+        directory_output.write_bytes(directory.read_bytes())
+    written.append(directory_output)
+
     rendered_layers = {"lakes": lakes_geojson(graph)}
     written.extend(write_sharded_geojson(
         rendered_layers["lakes"], out_path.parent / lakes_filename))
