@@ -8,6 +8,7 @@ BWCA latitudes), while graph distances keep four decimal metres.
 
 from __future__ import annotations
 
+from itertools import groupby
 import math
 
 
@@ -40,5 +41,12 @@ def canonicalize_route_graph(graph):
         if len(edge) >= 3 and isinstance(edge[2], float):
             edge[2] = round_floats(edge[2], DISTANCE_DECIMALS)
         if len(edge) >= 5:
-            edge[4] = round_floats(edge[4], COORDINATE_DECIMALS)
+            geometry = round_floats(edge[4], COORDINATE_DECIMALS)
+            if isinstance(geometry, dict) and geometry.get("type") == "LineString":
+                coords = geometry["coordinates"]
+                if len(coords) >= 2:
+                    distinct = [point for point, _ in groupby(coords)]
+                    # A collapsed LineString still requires two positions.
+                    geometry["coordinates"] = distinct if len(distinct) > 1 else distinct * 2
+            edge[4] = geometry
     return graph

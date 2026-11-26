@@ -13,6 +13,16 @@ class OutputCanonicalizationTests(unittest.TestCase):
         runner = {"coordinates": [(-92.0, 47.932297000000004)]}
         self.assertEqual(round_floats(linux), round_floats(runner))
 
+    def test_adjacent_vertices_that_round_together_are_collapsed(self):
+        a, b = [-92.0, 48.0], [-91.0, 47.0]
+        for coords, expected in [
+            ([a, b, [-91.000000001, 47.0], a], [a, b, a]),
+            ([a, a, a], [a, a]),
+        ]:
+            graph = {"edges": [["a", "b", 1, "paddle", {"type": "LineString", "coordinates": coords}]]}
+            canonicalize_route_graph(graph)
+            self.assertEqual(graph["edges"][0][4]["coordinates"], expected)
+
     def test_graph_weights_and_geometry_are_canonical(self):
         left = {
             "nodes": [["a", "lake", [-92.0, 48.00000000000001]]],
