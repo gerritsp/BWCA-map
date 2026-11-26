@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "vendor": "node Scripts/sync_vendor_assets.js",
-    "test": "node tests/test_lake_popup.js && node tests/test_route_algorithms.js",
+    "test": "node tests/test_lake_popup.js && node tests/test_route_algorithms.js && node tests/test_route_coverage.js && node tests/test_lake_click_routes.js",
     "audit:prod": "npm audit --omit=dev"
   },
   "dependencies": {

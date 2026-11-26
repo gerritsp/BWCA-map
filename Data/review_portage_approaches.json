@@ -1,0 +1,8 @@
+[
+  {"portage_number":123,"side":"a","water":"Hatchet Lake","lake_guid":"{DECE0804-25DF-4B41-98B3-6C3906BF29ED}","max_gap_m":85,"basis":"USFS 5024 identifies Hatchet Lake and Hatchet River."},
+  {"portage_number":385,"side":"a","water":"One Island Lake","lake_guid":"{4B31C948-A5E6-4A39-A322-F23CB3828AC5}","max_gap_m":190,"basis":"The portage inventory identifies the One Island and Portage Lake carry."},
+  {"portage_number":814,"side":"a","water":"Maude Lake","lake_guid":"{51C030FF-AF3D-4C24-B680-396797FADE7E}","max_gap_m":55,"basis":"The Maude Lake trail and mapped landing are adjacent to this shore."},
+  {"portage_number":676,"side":"b","water":"Isabella River","river_id":1410,"max_gap_m":50,"basis":"USFS 7196 identifies the Isabella River carry."},
+  {"portage_number":819,"side":"a","water":"Royal River","river_id":6732,"max_gap_m":75,"basis":"Royal River centerlines in both DNR and NHD data pass this end of the trail."},
+  {"portage_number":887,"side":"b","water":"Hula Lake Outlet toward Wood Lake","river_id":2408,"outlet_side":"a","max_gap_m":32,"basis":"The Sourdough Creek trail approaches DNR Hula Lake Outlet (NHD Madden Creek). Passage to Wood Lake is unverified and water levels vary."}
+]

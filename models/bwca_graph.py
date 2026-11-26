@@ -11,6 +11,16 @@ from models.RiverSegment import RiverSegment
 ROUTABLE_RIVER_TYPES = {"Centerline (River)", "Connector (River)"}
 
 
+# Forest Service paddle entries 36 and 80 follow these DNR reaches.
+# Use endpoint keys to avoid enabling unrelated same-name streams.
+ENTRY_CREEKS = {
+    # Kawishiwi Lake outlet to Square Lake (DNR unnamed perennial reach).
+    (None, "641163.1_5302818.3"): "{285DAAF8-AFAD-43F8-8A5D-BFCC4A2B5D3B}",
+    ("Hog Creek", "641333.3_5295096.8"): "{DF2E17D7-5A32-49BD-AB00-B3292C589460}",
+    ("Larch Creek", "662065.5_5333128.9"): "{4A703264-A2CD-4879-A57A-40C63F25F745}",
+}
+
+
 class bwca_graph:
 
     def __init__(self):
@@ -95,12 +105,11 @@ class bwca_graph:
 
         for _, row in river_df.iterrows():
             name = row["name"] if isinstance(row["name"], str) else None
-            # Do not trust old processed snapshots that marked every stream as
-            # routable.  Only mapped river centerlines/connectors and the one
-            # manually reviewed Peter River exception are part of the route
-            # graph. Named exceptions belong in the processed source after
-            # field review rather than being silently enabled at load time.
-            routable = row["strm_type"] in ROUTABLE_RIVER_TYPES
+            landing = ENTRY_CREEKS.get((name, row["node_a"]))
+            # Documented paddle passage between Thomas and Fraser (Data/SOURCES.md).
+            thomas_fraser = (row["node_a"], row["node_b"]) == (
+                "633285.6_5317345.3", "633333.6_5317442.0")
+            routable = row["strm_type"] in ROUTABLE_RIVER_TYPES or landing is not None or thomas_fraser
             segment = RiverSegment(
                 river_id=row["river_id"],
                 name=name,
@@ -109,7 +118,7 @@ class bwca_graph:
                 node_a=row["node_a"],
                 node_b=row["node_b"],
                 length_m=row["length_m"],
-                unid_a=row["unid_a"],
+                unid_a=landing or row["unid_a"],
                 unid_b=row["unid_b"],
                 geometry=row.geometry
             )

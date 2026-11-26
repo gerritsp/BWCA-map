@@ -176,8 +176,10 @@ const LAKES_URL = "__LAKES_URL__";
                 routingNote += '<span style="color:#c2410c;font-size:11px;"><b>Length review needed:</b> recorded rods and mapped trail geometry disagree; routing uses the longer value.</span><br>';
             }
             if (p.routing_type_a === "unresolved" || p.routing_type_b === "unresolved") {
-                routingNote += '<span style="color:#c2410c;font-size:11px;"><b>Routing review needed:</b> at least one landing is not connected to mapped water.</span><br>';
+                routingNote += '<span style="color:#c2410c;font-size:11px;"><b>Routing review needed:</b> at least one landing lacks a confirmed water connection.</span><br>';
             }
+            if (!routingNote && p.routing_status === "review") routingNote = "<b>Routing review needed.</b><br>";
+            if (p.estimated_approach) routingNote += `Estimated access to ${escapeHTML(p.estimated_approach.water)}. ${escapeHTML(p.estimated_approach.basis)}<br>`;
             bindFeatureInfo(layer,
                 `<b>Portage #${escapeHTML(p.portage_number ?? "N/A")}</b> (USFS ID ${escapeHTML(p.usfs_id ?? "N/A")})<br>` +
                 `${label} &mdash; ${rods}<br>` +
@@ -290,6 +292,8 @@ const LAKES_URL = "__LAKES_URL__";
             }
             if (p.routing_status === "review") {
                 routingNote += '<br><span style="color:#c2410c;"><b>Review needed:</b> no verified route from this attachment to a mapped lake.</span>';
+            } else if (p.routing_status === "regional") {
+                routingNote += "<br>Routes from this entry stay within its regional network.";
             } else if (p.routing_issue === "review_grade_attachment") {
                 routingNote += '<br><span style="color:#c2410c;"><b>Review recommended:</b> this inferred connector is usable for planning but should be verified.</span>';
             }
@@ -462,12 +466,17 @@ const LAKES_URL = "__LAKES_URL__";
         setStatus("Click a point on a lake to start a route.");
     }
 
+    const reviewPortages = new Set(portages.features
+        .filter(f => f.properties.routing_status === "review")
+        .map(f => String(f.properties.portage_number)));
+
     function computeAndDrawRoute() {
         const algorithm = document.getElementById("route-algorithm").value;
         const started = performance.now();
         const result = GraphEngine.shortestPath(engine, "start", "end", {
             algorithm,
             avoidBurnAreas,
+            allowEstimatedApproaches: document.getElementById("estimated-approaches").checked,
             carries: Number(document.getElementById("route-carries").value),
             geographicFloor: true,
         });
@@ -479,7 +488,7 @@ const LAKES_URL = "__LAKES_URL__";
             const disconnected = components.get("start") !== components.get("end");
             setStatus(disconnected
                 ? "The current map data does not yet connect these areas. This is a data limitation, not a statement that travel is impossible."
-                : "No usable route was found with the current route preferences.");
+                : "This route requires an unverified connection. Enable estimated approaches to preview it.");
             return;
         }
 
@@ -517,6 +526,14 @@ const LAKES_URL = "__LAKES_URL__";
         const minutes = Math.round(result.estimatedMinutes % 60);
         const timeText = hours ? `${hours} hr ${minutes} min` : `${minutes} min`;
 
+        const reviewNumbers = new Set();
+        for (const id of result.path) {
+            const match = /^portage:(\d+):/.exec(id);
+            if (match && reviewPortages.has(match[1])) reviewNumbers.add(match[1]);
+        }
+        const reviewNote = reviewNumbers.size
+            ? ` Routing review needed for portage ${[...reviewNumbers].join(", ")}.` : "";
+
         const algorithmName = algorithm === "astar" ? "A*" : "Dijkstra";
         setStatus(
             `${algorithmName} route: ${(result.distance / 1000).toFixed(2)} km total ` +
@@ -524,7 +541,7 @@ const LAKES_URL = "__LAKES_URL__";
             `${riverKm.toFixed(2)} km river` +
             `${approachKm ? `, ${approachKm.toFixed(2)} km approximate approach` : ""}); ` +
             `estimated travel time ${timeText}. ` +
-            `Searched ${result.expanded.toLocaleString()} graph nodes in ${elapsedMs.toFixed(1)} ms.`
+            `Searched ${result.expanded.toLocaleString()} graph nodes in ${elapsedMs.toFixed(1)} ms.${reviewNote}${segments.some((edge, i) => edge.kind === "approach" && (result.path[i].includes(":estimate") || edge.to.includes(":estimate"))) ? " This route includes an unverified connection. Check landing access and water conditions." : ""}`
         );
     }
 
@@ -540,6 +557,7 @@ const LAKES_URL = "__LAKES_URL__";
                     <option value="astar">A* (faster shortest route)</option>
                     <option value="dijkstra">Dijkstra (baseline)</option>
                 </select>
+                <label style="display:block;margin-bottom:8px;"><input type="checkbox" id="estimated-approaches"> Include estimated approaches (unverified)</label>
                 <label for="route-carries" style="display:block; margin-bottom:4px;">Portage carry</label>
                 <select id="route-carries" style="width:100%; margin-bottom:8px; padding:5px; border:1px solid #d1d5db; border-radius:4px; background:white;">
                     <option value="1">Single carry</option>
@@ -571,6 +589,9 @@ const LAKES_URL = "__LAKES_URL__";
     document.getElementById("route-mode").addEventListener("click", () => setMode("route"));
     document.getElementById("route-clear-btn").addEventListener("click", clearRoute);
     document.getElementById("route-algorithm").addEventListener("change", () => {
+        if (nodes.has("start") && nodes.has("end")) computeAndDrawRoute();
+    });
+    document.getElementById("estimated-approaches").addEventListener("change", () => {
         if (nodes.has("start") && nodes.has("end")) computeAndDrawRoute();
     });
     document.getElementById("route-carries").addEventListener("change", () => {
@@ -626,7 +647,9 @@ const LAKES_URL = "__LAKES_URL__";
             setStatus("This entry still needs a reviewed connection to the mapped lake network.");
             return;
         }
-        const attachments = feature.properties.attachments || [];
+        const candidates = feature.properties.attachments || [];
+        const preferred = candidates.filter(a => a.confidence !== "review");
+        const attachments = preferred.length ? preferred : candidates;
         const usesReviewAttachment = attachments.some(
             attachment => attachment.confidence === "review"
         );
@@ -680,7 +703,7 @@ const LAKES_URL = "__LAKES_URL__";
     }
 
     const handledClicks = new WeakSet();
-    async function routeClick(e, entry = false) {
+    async function routeClick(e, layerType = "water") {
         if (mode !== "route") return;
         if (e.originalEvent) {
             if (handledClicks.has(e.originalEvent)) return;
@@ -688,17 +711,34 @@ const LAKES_URL = "__LAKES_URL__";
         }
         try {
             await ensureGraphLoaded();
-            if (entry) handleEntryPointClick(e.layer.feature, e.latlng);
+            if (layerType === "portage") {
+                if (nodes.has("start") && nodes.has("end")) clearRoute();
+                const role = nodes.has("start") ? "end" : "start";
+                const feature = e.layer.feature;
+                const coord = engine.attachPortageLanding(role, feature, [e.latlng.lng, e.latlng.lat]);
+                if (!coord) {
+                    setStatus("This portage landing is missing from the routing graph.");
+                    return;
+                }
+                const marker = L.marker([coord[1], coord[0]]).addTo(map);
+                if (role === "start") {
+                    markerStart = marker;
+                    setStatus(`Starting at the nearer landing of portage ${feature.properties.portage_number}. Click your destination.`);
+                } else {
+                    markerEnd = marker;
+                    computeAndDrawRoute();
+                }
+            } else if (layerType === "entry") handleEntryPointClick(e.layer.feature, e.latlng);
             else handleRouteClick(e.latlng);
         } catch (error) {
             console.error("route graph unavailable", error);
         }
     }
     map.on("click", e => routeClick(e));
-    portagesLayer.on("click", e => routeClick(e));
+    portagesLayer.on("click", e => routeClick(e, "portage"));
     campsitesLayer.on("click", e => routeClick(e));
     riversLayer.on("click", e => routeClick(e));
-    entryPointsLayer.on("click", e => routeClick(e, true));
+    entryPointsLayer.on("click", e => routeClick(e, "entry"));
     }
 
     Promise.all([

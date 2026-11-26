@@ -1,5 +1,7 @@
 import geopandas as gpd
 from shapely.geometry import Point
+import pandas as pd
+import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -9,17 +11,22 @@ MAX_MATCH_DISTANCE_M = 25
 ROUTABLE_TYPES = {"Centerline (River)", "Connector (River)"}
 KEEP_TYPES = ROUTABLE_TYPES | {"Connector (Lake)", "Stream (Perennial)"}
 
-rivers = gpd.read_file(
-    ROOT / "Data/Lakes/water_dnr_hydrography_uncompressed.gdb",
-    layer="dnr_rivers_and_streams"
-)
+parser = argparse.ArgumentParser(description="Build whole river features near the BWCA.")
+parser.add_argument("--source", type=Path,
+                    default=ROOT / "Data/Lakes/water_dnr_hydrography_uncompressed.gdb")
+args = parser.parse_args()
+if args.source.suffix == ".parquet":
+    rivers = gpd.read_parquet(args.source)
+else:
+    rivers = gpd.read_file(args.source, layer="dnr_rivers_and_streams")
+rivers.columns = rivers.columns.str.lower()
 boundary = gpd.read_file(
     ROOT / "Data/Boundaries/bdry_boundary_waters_canoe_area/bdry_boundary_waters_canoe_area.gdb",
     layer="boundary_waters_canoe_area_wilderness"
 )
 boundary = boundary.to_crs(rivers.crs)
 
-rivers = rivers[rivers["Strm_type_desc"].isin(KEEP_TYPES)].copy()
+rivers = rivers[rivers["strm_type_desc"].isin(KEEP_TYPES)].copy()
 
 # Preserve complete water features that touch the wilderness instead of
 # cutting them at the legal boundary.  The buffer includes access water just
@@ -29,8 +36,8 @@ rivers = rivers[rivers.intersects(wild.buffer(2000))].copy()
 rivers = rivers.explode(index_parts=False).reset_index(drop=True)
 rivers["river_id"] = rivers.index
 
-rivers["name"] = rivers["KITTLE_NAME"].str.strip().replace("", None)
-rivers["strm_type"] = rivers["Strm_type_desc"]
+rivers["name"] = rivers["kittle_name"].str.strip().replace("", None)
+rivers["strm_type"] = rivers["strm_type_desc"]
 rivers["routable"] = rivers["strm_type"].isin(ROUTABLE_TYPES)
 
 # Snap endpoints to a shared node key so segments meeting at a junction
@@ -46,6 +53,8 @@ rivers["node_b"] = rivers.geometry.apply(lambda g: node_key(g.coords[-1]))
 rivers["length_m"] = rivers.geometry.length
 
 lakes = gpd.read_parquet(ROOT / "Data/processed/bwca_lakes.parquet")
+whole_lakes = gpd.read_parquet(ROOT / "Data/processed/whole_lake_shorelines.parquet")
+lakes = pd.concat([lakes, whole_lakes]).drop_duplicates("unique_guid", keep="last")
 lakes = lakes.to_crs(rivers.crs)
 lake_candidates = lakes[["fw_id","unique_guid", "geometry"]]
 
@@ -58,7 +67,7 @@ lake_candidates = lakes[["fw_id","unique_guid", "geometry"]]
 # the same silent-overwrite failure mode as the fw_id/camp_id collisions
 # already documented in CLAUDE.md.
 connector_lake = rivers[rivers["strm_type"] == "Connector (Lake)"]
-candidate_nodes = list(set(connector_lake["node_a"]) | set(connector_lake["node_b"]))
+candidate_nodes = sorted(set(connector_lake["node_a"]) | set(connector_lake["node_b"]))
 node_coords = {}
 for _, row in connector_lake.iterrows():
     node_coords[row["node_a"]] = row.geometry.coords[0]
@@ -70,6 +79,7 @@ node_pts = gpd.GeoDataFrame(
     crs=rivers.crs,
 )
 node_match = gpd.sjoin_nearest(node_pts, lake_candidates, how="left", distance_col="dist")
+node_match = node_match.sort_values("unique_guid")
 node_match = node_match[~node_match.index.duplicated(keep="first")]
 node_match = node_match[node_match["dist"] <= MAX_MATCH_DISTANCE_M]
 

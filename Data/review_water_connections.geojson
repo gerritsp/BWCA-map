@@ -1,0 +1,89 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "portage_number": 200,
+        "side": "b",
+        "lake_guid": "{ACA5D8DA-1C73-4106-80EA-7AC3B08EA430}",
+        "nhd_globalid": "{2E10FF31-4CBB-11E1-BCF4-0021280458E6}",
+        "nhd_layer": 12,
+        "shore_gap_m": 6.91
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -92.32158,
+            47.913964
+          ],
+          [
+            -92.32155595321383,
+            47.91390400782231
+          ],
+          [
+            -92.32149781204869,
+            47.913727423719656
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "portage_number": 627,
+        "side": "b",
+        "lake_guid": "{33930351-1B59-4323-A026-11A4FDC58AA0}",
+        "nhd_globalid": "{8D883AF4-4CBE-11E1-BCF4-0021280458E6}",
+        "nhd_layer": 12,
+        "shore_gap_m": 13.47
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -91.250266,
+            47.898196
+          ],
+          [
+            -91.25019749674922,
+            47.898083940550734
+          ],
+          [
+            -91.24962553343336,
+            47.89540262404619
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "portage_number": 847,
+        "side": "b",
+        "lake_guid": "{D50B89A6-D3CF-4B4E-9A74-3978F1E03DF9}",
+        "nhd_globalid": "{D460A33E-4CB5-11E1-BCF4-0021280458E6}",
+        "nhd_layer": 12,
+        "shore_gap_m": 0.0
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -91.658474,
+            48.108437
+          ],
+          [
+            -91.658474,
+            48.108437
+          ],
+          [
+            -91.65799462051956,
+            48.10856886133969
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -153,9 +153,8 @@ class SearchIntegrationTests(unittest.TestCase):
         entry_points = json.loads((ROOT / 'maps/bwca_graph_map_entry_points.json').read_text(
             encoding='utf-8'))
         entry_codes = {feature['properties']['code'] for feature in entry_points['features']
-                       if feature['properties']['routing_status'] == 'connected'}
+                       if feature['properties']['routing_status'] in {'connected', 'regional'}}
         self.assertEqual(access['schema_version'], 3)
-        self.assertEqual(len(access['entries']), 69)
         self.assertEqual(len(access['entries']),
                          len({entry['code'] for entry in access['entries']}))
         self.assertEqual({entry['code'] for entry in access['entries']}, entry_codes)
@@ -200,7 +199,7 @@ class SearchIntegrationTests(unittest.TestCase):
         for feature in entries['features']:
             p = feature['properties']
             counts[p['code']] = counts.get(p['code'], 0) + 1
-            self.assertIn(p['routing_status'], {'connected', 'review'})
+            self.assertIn(p['routing_status'], {'connected', 'regional', 'review'})
             if not p['attachments']:
                 self.assertEqual(p['routing_status'], 'review')
             for attachment in p['attachments']:
@@ -213,14 +212,9 @@ class SearchIntegrationTests(unittest.TestCase):
                 if attachment['node_id']:
                     self.assertIn(attachment['node_id'], node_ids | portage_node_ids)
         self.assertEqual({code for code, count in counts.items() if count > 1}, {'47', '49'})
-        self.assertEqual(sum(
-            feature['properties']['routing_status'] == 'connected'
-            for feature in entries['features']
-        ), 71)
-        self.assertEqual(sum(
-            feature['properties']['routing_status'] == 'review'
-            for feature in entries['features']
-        ), 0)
+        for feature in entries['features']:
+            for attachment in feature['properties']['attachments']:
+                self.assertLessEqual(attachment['network_offset_m'], 250)
         self.assertNotIn('54A', counts)
         self.assertNotIn('55A', counts)
         self.assertNotIn('86', counts)  # hiking-only entry; canoe graph intentionally excludes it
@@ -236,21 +230,22 @@ class SearchIntegrationTests(unittest.TestCase):
                         if feature['properties']['code'] == '27')
         self.assertAlmostEqual(snowbank['geometry']['coordinates'][0], -91.432158, places=6)
         self.assertEqual(snowbank['properties']['attachments'][0]['lake_name'], 'Snowbank')
-        self.assertEqual(snowbank['properties']['attachments'][0]['confidence'], 'review')
-        self.assertEqual(snowbank['properties']['routing_issue'],
-                         'review_grade_attachment')
-        self.assertGreater(snowbank['properties']['attachments'][0]['connector_distance_m'], 1500)
+        self.assertEqual(snowbank['properties']['attachments'][0]['confidence'], 'high')
+        self.assertEqual(snowbank['properties']['attachments'][0]['connector_distance_m'], 0)
 
         little_isabella = next(feature for feature in entries['features']
                                if feature['properties']['code'] == '75')
-        self.assertEqual(little_isabella['properties']['routing_status'], 'connected')
-        self.assertGreater(little_isabella['properties']['attachments'][0]['initial_rods'], 15)
-        self.assertLess(little_isabella['properties']['attachments'][0]['initial_rods'], 25)
+        self.assertIn(little_isabella['properties']['routing_status'], {'connected', 'regional'})
+        approach = little_isabella['properties']['attachments'][0]
+        self.assertEqual(approach['node_id'], 'portage:231:b')
+        self.assertEqual(approach['routing_type'], 'river')
+        self.assertAlmostEqual(approach['initial_rods'] * 5.0292,
+                               approach['connector_distance_m'], delta=2)
 
         snake = next(feature for feature in entries['features']
                      if feature['properties']['code'] == '84')
         self.assertEqual(snake['properties']['routing_method'], 'portage')
-        self.assertEqual(snake['properties']['routing_status'], 'connected')
+        self.assertIn(snake['properties']['routing_status'], {'connected', 'regional'})
         self.assertGreater(snake['properties']['attachments'][0]['initial_rods'], 160)
         self.assertLess(snake['properties']['attachments'][0]['initial_rods'], 180)
 

@@ -85,23 +85,31 @@ on every application build.
 
 ### Whole-feature water geometry
 
-The checked-in `Data/processed/bwca_lakes.parquet` came from
-`Data/Lakes/test.gpkg`, which is not tracked and was already cut at the BWCA
-boundary. That missing source means the 26 currently disconnected entry
-geometries cannot be reconstructed from this repository alone. Future refreshes
-must select complete lake, river and portage features that intersect a 2 km
-buffer around the wilderness; they must not clip geometry at the legal line.
-The preparation scripts resolve paths from the repository root and retain an
-`in_wilderness` display flag for whole lake polygons.
+The fisheries source retains its original polygon identifiers and parquet hash.
+The map overlays `Data/processed/whole_lake_shorelines.parquet` from Minnesota
+DNR Hydrography, layer 1 (DNR Hydro Features All). This snapshot restores 195
+cut polygons by GUID and numeric feature ID. Each replacement covers the old
+geometry within 0.5 m in NAD83 / UTM 15N. Another 79 complete polygons were
+identified by querying within 25 m of previously unresolved portage endpoints.
+The overlay supplies map geometry and does not create fisheries observations.
 
-`bwca_graph_map_entry_points.json` deliberately preserves the Forest Service
-point separately from its inferred routing attachment. A marker is never moved
-to the wilderness boundary merely to make it routable. Attachments use a nearby
-recorded portage, routable river or lake; the map draws non-trivial approach
-connectors and labels lower-confidence shoreline gaps for review. Entries 47
-and 49 retain both official locations. Snowbank's official landing is preserved
-and connected to the project lake polygon by a visible review-status approach
-connector because the two source geometries are more than 1.5 km apart.
+River geometry uses complete DNR layer 0 features intersecting the 2 km
+wilderness buffer. The production snapshot contains 6,769 line parts.
+The preparation script accepts a native hydrography geodatabase or a parquet
+extract with the same `strm_type_desc`, `kittle_name` and geometry fields.
+
+Source: <https://enterprise.gisdata.mn.gov/aghost/rest/services/us_mn_state_dnr/water_dnr_hydrography/MapServer>.
+
+Forest Service trail corrections include portages 19, 117, 123, 166, 223,
+236, 346, 745 and 885. Each has a unique local trail-number match that agrees
+with the recorded length. The correction file records each trail control number.
+Short segments sharing an ID with a neighboring full trail remain flagged
+where their independent alignment could not be established.
+
+Official entry markers retain their original coordinates. Snowbank now falls
+on its mapped lake. The route planner distinguishes main-network access,
+regional access and entries awaiting review. Straight entry approaches are
+limited to 250 m; a connector that follows a mapped river may be longer.
 
 `lake_access_index.json` schema 3 is a small manifest whose listed shards store
 Pareto-optimal trip states by permit code: cumulative portage rods, portage
@@ -133,19 +141,33 @@ edge is checked for valid node references.
 River topology also joins an endpoint when it lies within 0.1 m of another
 routable river segment's interior. This resolves exact mapped confluences that
 were visually continuous but had different endpoint node IDs; it does not join
-merely nearby waterways. The current snapshot contains 1,013 such junctions.
+merely nearby waterways. The updated snapshot contains 62 such junctions.
 
-Only DNR `Centerline (River)` and `Connector (River)` segments are routable.
-Perennial streams and artificial lake connector lines remain visible but are
-not treated as canoe routes. Users still need current maps, water levels and
-local guidance.
+The default graph includes DNR river centerlines, river connectors, selected
+entry creeks, and creek approaches split at mapped carries. Lake crossings
+must follow a mapped connector contained in the two lake polygons (1 m tolerance).
+The NHD shoreline matches for portages 200, 627 and 847 are recorded in
+`Data/review_water_connections.geojson` with the source feature identifiers.
+Additional Forest Service geometry corrections cover portages 572, 693 and 710.
+
+The 109 m DNR reach joining Thomas and Fraser lakes follows the documented
+paddle channel through the narrows. Its two endpoint keys select this reach
+independently of other segments named Splash Lake Outlet.
+[Paddler's account from Thomas Lake](https://bwca.com/index.cfm?fid=31&fuseaction=bwca_routes.trip_report&trid=7128)
+and [account from Fraser Lake](https://bwca.com/index.cfm?fid=31&fuseaction=bwca_routes.trip_report&trid=243).
+
+Six estimated approaches in `Data/review_portage_approaches.json` are available
+through an opt-in route preference. Each names the target water and caps the
+landing offset. Portages 887 and 888 share a trail junction and depend on
+the same unverified outlet reach to Wood Lake. The portages listed in
+`Data/portage_routing_review.json` retain their review flag until reviewed.
 
 Entry points 75 (Little Isabella River) and 84 (Snake River) retain their
 official markers. Exact confluence repair connects both rivers to the Isabella
 River network; their initial access distances include the visible approach to
 the recorded portage. Entry 84 also uses the corrected official trail 5190.
 
-## Verified snapshot (2026-11-15)
+## Verified snapshot (2026-11-25)
 
 | Measure | Count |
 | --- | ---: |
@@ -158,13 +180,13 @@ the recorded portage. Entry 84 also uses the corrected official trail 5190.
 | Inventory records | 1,807 |
 | Official entry source features | 87 |
 | Published water-entry locations / permit codes | 71 / 69 |
-| Searchable entry permit codes | 11 |
+| Searchable entry permit codes | 69 |
 | Preserved portage segments | 905 |
-| Connected / review-only portages | 661 / 244 |
-| Lake / river / unresolved portage endpoints | 1,338 / 151 / 321 |
-| Routable river segments | 437 |
-| Exact river endpoint/interior junctions | 54 |
-| In-lake pair routes / minimum connecting subset | 4,772 / 1,303 |
+| Portages without / with routing review flags | 769 / 136 |
+| Lake / river / unresolved portage endpoints | 1,525 / 164 / 121 |
+| Routable river segments | 483 |
+| Exact river endpoint/interior junctions | 62 |
+| In-lake pair routes / minimum connecting subset | 6,175 / 1,772 |
 
 All expected snapshot counts matched. Source collection completed without failures.
 The test suite includes every encoded bundle URL and all public application assets,
