@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements-lock.txt --strip-extras requirements-app.txt
 #
-certifi==2026.10.23
+certifi==2026.11.20
     # via
     #   pyogrio
     #   pyproj
