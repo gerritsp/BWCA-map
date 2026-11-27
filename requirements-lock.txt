@@ -21,7 +21,7 @@ numpy==2.5.5
     #   pandas
     #   pyogrio
     #   shapely
-packaging==26.3
+packaging==26.4
     # via
     #   geopandas
     #   pyogrio
